@@ -76,7 +76,7 @@ Done when every open issue is read and each change is drafted.
 
 ## 6. Hand-off
 
-The diff keeps the behaviour of Workcell the same. ADR 010 picks the test runs, and a move of an `ai-sandbox*` package changes what a sandbox runs.
+The diff keeps the behaviour of Workcell the same. The Tests section of `AGENTS.md` picks the test runs, and a move of an `ai-sandbox*` package changes what a sandbox runs.
 
 Show, in this order:
 

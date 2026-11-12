@@ -1,6 +1,6 @@
 # Coding standards
 
-The `code-review` skill checks these judgement calls on each diff ([ADR 003](./adr/003-coding-standards-as-a-review-baseline.md)). oxlint checks the mechanical rules ([ADR 007](./adr/007-oxlint-before-the-coding-standards.md)).
+The `code-review` skill checks these judgement calls on each diff. oxlint checks the mechanical rules, so a rule that oxlint can express moves to an `oxlint.config.ts` and leaves this file.
 
 ## Logs
 
@@ -32,5 +32,5 @@ The `code-review` skill checks these judgement calls on each diff ([ADR 003](./a
 
 ## Tests
 
-- A test of the default run never reaches a model, Slack, Linear or GitHub. Harness logic runs on `fakeText()` ([ADR 010](./adr/010-how-we-test-the-agent.md)).
+- A test of the default run never reaches a model, Slack, Linear or GitHub. Harness logic runs on `fakeText()`.
 - A Workcell package holds no live test: its default run takes every `*.test.ts` file. A test that calls a real model lives in a distribution.
