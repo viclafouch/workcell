@@ -1,0 +1,17 @@
+output:
+  - failure
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint, typecheck and changed tests
+      run: pnpm turbo run lint lint:root typecheck typecheck:root test:changed
+
+    - name: format
+      run: pnpm exec oxfmt --check --no-error-on-unmatched-pattern {staged_files}
+
+    - name: unused code
+      run: pnpm run knip
+
+    - name: package boundaries
+      run: pnpm run boundaries

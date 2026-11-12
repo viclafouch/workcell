@@ -1,0 +1,23 @@
+packages:
+  - packages/*
+
+catalogMode: strict
+catalogPrune: true
+engineStrict: true
+trustPolicy: no-downgrade
+minimumReleaseAgeExclude:
+  - '@tanstack/*'
+
+catalog:
+  '@types/node': ^24.19.2
+  '@viclafouch/oxc-config': ^3.0.0
+  knip: ^6.45.1
+  lefthook: 2.2.1
+  oxfmt: ~0.78.0
+  oxlint: ~1.93.0
+  oxlint-tsgolint: 7.0.2006
+  turbo: ^2.11.11
+  typescript: ^7.0.2
+
+allowBuilds:
+  lefthook: true

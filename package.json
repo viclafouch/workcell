@@ -1,0 +1,42 @@
+{
+  "name": "workcell",
+  "private": true,
+  "description": "Coding agents that take an issue to a merged pull request, each one in its own sandbox.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viclafouch/workcell.git"
+  },
+  "type": "module",
+  "scripts": {
+    "lint": "turbo run lint lint:root",
+    "lint:fix": "turbo run lint:fix lint:fix:root && oxfmt",
+    "lint:root": "oxlint *.ts",
+    "lint:fix:root": "oxlint --fix *.ts",
+    "typecheck": "turbo run typecheck typecheck:root",
+    "typecheck:root": "tsc --noEmit",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "test": "turbo run test",
+    "test:changed": "turbo run test:changed",
+    "test:integration": "turbo run test:integration",
+    "knip": "knip",
+    "boundaries": "turbo boundaries",
+    "check": "pnpm run --no-bail \"/^(lint|typecheck|format:check|knip|boundaries|test)$/\""
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@viclafouch/oxc-config": "catalog:",
+    "knip": "catalog:",
+    "lefthook": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.22.1 <25"
+  },
+  "packageManager": "pnpm@12.18.0"
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "ui": "tui",
+  "agentGuidance": true,
+  "globalDependencies": [".nvmrc"],
+  "globalPassThroughEnv": ["DOCKER_*", "TESTCONTAINERS_*"],
+  "cacheMaxAge": "7d",
+  "futureFlags": {
+    "affectedUsingTaskInputs": true,
+    "filterUsingTasks": true,
+    "strictTaskEntrypointSelection": true,
+    "watchUsingTaskInputs": true
+  },
+  "tasks": {
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "lint": {
+      "outputLogs": "errors-only",
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", "!*.md", "!skills/**"]
+    },
+    "lint:fix": {
+      "outputLogs": "errors-only",
+      "cache": false
+    },
+    "typecheck": {
+      "outputLogs": "errors-only",
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", "!*.md", "!skills/**"]
+    },
+    "test": {
+      "outputLogs": "errors-only",
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", "!*.md"]
+    },
+    "test:changed": {
+      "outputLogs": "errors-only",
+      "cache": false
+    },
+    "test:integration": {
+      "cache": false
+    },
+    "//#lint:root": {
+      "outputLogs": "errors-only",
+      "inputs": ["*.ts", "package.json"]
+    },
+    "//#lint:fix:root": {
+      "outputLogs": "errors-only",
+      "cache": false
+    },
+    "//#typecheck:root": {
+      "outputLogs": "errors-only",
+      "inputs": ["*.ts", "tsconfig*.json", "package.json", "packages/*/*.ts"]
+    }
+  }
+}
