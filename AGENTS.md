@@ -2,6 +2,14 @@
 
 Workcell is an open-source framework built on TanStack AI: coding agents that take a task to a merged pull request, each one in its own sandbox. A project plugs its own models, sandbox image, triggers, channels, skills and limits into it, and runs its own bot. Nothing depends on Workcell yet: break whatever makes the code simpler, with no shim and no deprecation.
 
+## Any project
+
+Workcell serves a public you do not know: any team, any repository, any stack. The projects that run it today are samples of that public. Challenge each request, plan and review against it, and recommend the version that holds everywhere:
+
+- Run the change in your head on other projects: a Next.js app, a Python service, a large monorepo, a repository with no CI, a team on GitHub alone with no Linear and no Slack.
+- Name what the change assumes about a project, and propose the option or the extension point that lifts the assumption.
+- Keep the need of one project in that project, and give Workcell the general seam it plugs into.
+
 ## Invariants
 
 1. **The sandbox is the boundary.** The agent loop runs on the host, and every tool call of the model runs in a sandbox through `sandboxWorkspaceBackend`. The model key and the token of each integration stay on the host.
