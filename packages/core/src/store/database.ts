@@ -187,11 +187,10 @@ function createNotificationHub(directUrl: string, logger: DatabaseLogger) {
       }
     })
 
-    await Promise.all(
-      [...listeners.keys()].map(async (channel) => {
-        return listenTo(client, channel)
-      })
-    )
+    for (const channel of listeners.keys()) {
+      // oxlint-disable-next-line no-await-in-loop -- one client runs the LISTEN of each channel in turn
+      await listenTo(client, channel)
+    }
 
     return { client, ended }
   }

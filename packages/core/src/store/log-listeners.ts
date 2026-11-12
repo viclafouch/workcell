@@ -85,13 +85,9 @@ export function createLogListeners(database: Database) {
 
     const current = await readVersion(logId)
 
-    const subscribed = await Promise.all(
-      uncalled.map(async ([listener, state]) => {
-        return { listener, state, atSubscribe: await state.version }
-      })
-    )
-
-    for (const { listener, state, atSubscribe } of subscribed) {
+    for (const [listener, state] of uncalled) {
+      // oxlint-disable-next-line no-await-in-loop -- each listener is checked right after its own version resolves
+      const atSubscribe = await state.version
       const isGone = !listeners.get(logId)?.has(listener)
       const hasMoved = current === null || current !== atSubscribe
 
