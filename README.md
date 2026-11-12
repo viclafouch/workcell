@@ -7,11 +7,11 @@ Coding agents that take an issue to a merged pull request, each one in its own s
 
 ## How it works
 
-- **A trigger** hands over a task: a label on a GitHub issue or on a Linear ticket.
+- **A trigger** hands over a task: a label on a Linear ticket today.
 - **A worker** takes the task to a pull request in its own Docker sandbox: it clones, installs, changes, tests and pushes.
 - **The host** runs the agent loop, keeps every secret, and stores every thread in Postgres. The model never sees a token.
 - **A worker sleeps at no cost** while it waits, and wakes up on a reply or on a pull request event, also after a restart.
-- **A channel** carries the questions of the worker and the answers of a person: Slack, or the comments of the issue.
+- **A channel** carries the questions of the worker and the answers of a person: Slack today.
 - **Every run is bounded**: each task has a cost budget, and every turn is traced with its cost.
 
 ## Packages
@@ -20,11 +20,11 @@ Each integration is its own package, and a project picks the ones it uses.
 
 | Package | What it brings |
 | --- | --- |
-| `@workcell/core` | The host, the worker engine, the budget, the Postgres stores and the sandbox lifecycle |
-| `@workcell/github` | Issues as triggers, the pull request watcher, the review tools |
+| `@workcell/core` | The host, the worker engine, the budget, the Postgres stores, and the Docker sandbox behind an egress allowlist |
+| `@workcell/github` | The pull request watcher, the read and review tools, and the finish refusal while a pull request is open |
 | `@workcell/linear` | Linear tickets as triggers, and the Linear tools |
 | `@workcell/slack` | Slack as the channel of the workers and of the orchestrator bot |
-| `@workcell/docker` | The Docker sandbox, behind an egress allowlist |
+| `@workcell/host` | What the host process needs on a machine: the logger, the secret stores, the traces, the models, the login service, the live view and the machine check |
 
 ## License
 

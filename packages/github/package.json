@@ -1,0 +1,46 @@
+{
+  "name": "@workcell/github",
+  "private": true,
+  "description": "The GitHub integration: the pull request watch, the read tools, the review thread tools and the finish refusal of an open pull request.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viclafouch/workcell.git",
+    "directory": "packages/github"
+  },
+  "type": "module",
+  "imports": {
+    "#github/*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:changed": "vitest run --changed"
+  },
+  "devDependencies": {
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@tanstack/ai-persistence": "catalog:",
+    "@types/node": "catalog:",
+    "@viclafouch/oxc-config": "catalog:",
+    "@workcell/core": "workspace:*",
+    "msw": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@workcell/core": "workspace:*",
+    "zod": "catalog:"
+  }
+}

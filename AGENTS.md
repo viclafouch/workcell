@@ -40,9 +40,10 @@ Your memory of a library is stale. Before you write, change or install anything 
 
 You work here as a **maintainer** of TanStack AI: its harness, its first-party plugins, their options, and every hook and `ctx` service of a plugin. Your memory holds none of it, so each session builds it from the source:
 
-1. Read the `llms.txt` of [TanStack AI](https://tanstack.com/ai/latest/llms.txt) and of [TanStack Pacer](https://tanstack.com/pacer/latest/llms.txt), and every page of the area you touch. Any plugin or middleware work starts with the harness plugins page.
-2. Read the exports of `@tanstack/ai-harness/plugins` in the installed source, and the JSDoc of each API you call. The docs show the latest release, the installed source is the truth for its version.
-3. Write the plan piece by piece. Each piece names the TanStack API that does it (a plugin, a hook, a `ctx` service, an option), or the page that shows none does.
+1. Run `pnpm docs:tanstack`. It mirrors the `llms.txt` of TanStack AI and Pacer, and every page it lists, into `.tanstack-docs/`.
+2. Read in full each page of the area you touch. Any plugin or middleware work starts with `.tanstack-docs/ai/docs/harness/plugins.md`.
+3. Read the exports of `@tanstack/ai-harness/plugins` in the installed source, and the JSDoc of each API you call. The docs show the latest release, the installed source is the truth for its version.
+4. Write the plan piece by piece. Each piece names the TanStack API that does it (a plugin, a hook, a `ctx` service, an option), or the page that shows none does.
 
 A TanStack plugin keeps its default options. Five reasons allow another value: the sandbox boundary, a bounded run, a cost limit, a host restart, the worker task. A compaction never drops the worker task, the first user message of the session.
 
@@ -50,7 +51,7 @@ The `@tanstack/*` packages are peer dependencies of each Workcell package: a pro
 
 ## Tests
 
-A behaviour that can break in silence gets a test, its restart path included.
+[ADR 010](./adr/010-how-we-test-the-agent.md) sets the test runs and the moment of each one. A behaviour that can break in silence gets a test, its restart path included.
 
 - A database test makes its own database, or closes what it opens.
 - msw 3 fails an unmocked request with `listen({ onUnhandledFrame: 'error' })`.

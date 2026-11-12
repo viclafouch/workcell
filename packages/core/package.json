@@ -1,0 +1,71 @@
+{
+  "name": "@workcell/core",
+  "private": true,
+  "description": "The host, the worker engine, the budget, the Postgres stores and the sandbox lifecycle.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viclafouch/workcell.git",
+    "directory": "packages/core"
+  },
+  "type": "module",
+  "imports": {
+    "#core/*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts",
+    "./fail-on-console": "./src/fail-on-console.ts",
+    "./postgres-global-setup": "./src/store/postgres-global-setup.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:changed": "vitest run --changed",
+    "db:migration:create": "node-pg-migrate create --migrations-dir src/store/migrations --migration-file-language sql"
+  },
+  "dependencies": {
+    "@tanstack/pacer": "catalog:",
+    "dockerode": "catalog:",
+    "node-pg-migrate": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/sdk-trace": "catalog:",
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-compaction": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@tanstack/ai-harness-cli": "catalog:",
+    "@tanstack/ai-persistence": "catalog:",
+    "@tanstack/ai-sandbox": "catalog:",
+    "@tanstack/ai-sandbox-docker": "catalog:",
+    "@tanstack/ai-sandbox-local-process": "catalog:",
+    "@tanstack/ai-skills": "catalog:",
+    "@testcontainers/postgresql": "catalog:",
+    "@types/dockerode": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@viclafouch/oxc-config": "catalog:",
+    "msw": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "catalog:",
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-compaction": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@tanstack/ai-persistence": "catalog:",
+    "@tanstack/ai-sandbox": "catalog:",
+    "@tanstack/ai-sandbox-docker": "catalog:",
+    "@tanstack/ai-skills": "catalog:",
+    "zod": "catalog:"
+  }
+}

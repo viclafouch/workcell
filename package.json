@@ -11,8 +11,8 @@
   "scripts": {
     "lint": "turbo run lint lint:root",
     "lint:fix": "turbo run lint:fix lint:fix:root && oxfmt",
-    "lint:root": "oxlint *.ts",
-    "lint:fix:root": "oxlint --fix *.ts",
+    "lint:root": "oxlint *.ts scripts",
+    "lint:fix:root": "oxlint --fix *.ts scripts",
     "typecheck": "turbo run typecheck typecheck:root",
     "typecheck:root": "tsc --noEmit",
     "format": "oxfmt",
@@ -21,10 +21,12 @@
     "test:changed": "turbo run test:changed",
     "test:integration": "turbo run test:integration",
     "knip": "knip",
+    "docs:tanstack": "node scripts/fetch-tanstack-docs.ts",
     "boundaries": "turbo boundaries",
     "check": "pnpm run --no-bail \"/^(lint|typecheck|format:check|knip|boundaries|test)$/\""
   },
   "devDependencies": {
+    "@tanstack/pacer": "catalog:",
     "@types/node": "catalog:",
     "@viclafouch/oxc-config": "catalog:",
     "knip": "catalog:",

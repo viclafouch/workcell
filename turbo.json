@@ -43,7 +43,7 @@
     },
     "//#lint:root": {
       "outputLogs": "errors-only",
-      "inputs": ["*.ts", "package.json"]
+      "inputs": ["*.ts", "scripts/**", "package.json"]
     },
     "//#lint:fix:root": {
       "outputLogs": "errors-only",
@@ -51,7 +51,13 @@
     },
     "//#typecheck:root": {
       "outputLogs": "errors-only",
-      "inputs": ["*.ts", "tsconfig*.json", "package.json", "packages/*/*.ts"]
+      "inputs": [
+        "*.ts",
+        "scripts/**",
+        "tsconfig*.json",
+        "package.json",
+        "packages/*/*.ts"
+      ]
     }
   }
 }

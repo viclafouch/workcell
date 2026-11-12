@@ -1,0 +1,57 @@
+{
+  "name": "@workcell/host",
+  "private": true,
+  "description": "What the host process needs on a machine: the logger, the secret stores, the traces, the models, the login service, the live view and the machine check.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viclafouch/workcell.git",
+    "directory": "packages/host"
+  },
+  "type": "module",
+  "imports": {
+    "#host/*": "./src/*.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:changed": "vitest run --changed"
+  },
+  "dependencies": {
+    "@opentelemetry/core": "catalog:",
+    "@opentelemetry/sdk-node": "catalog:",
+    "@tanstack/pacer": "catalog:",
+    "pino": "catalog:",
+    "pino-pretty": "catalog:",
+    "pino-roll": "catalog:"
+  },
+  "devDependencies": {
+    "@opentelemetry/api": "catalog:",
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-anthropic": "catalog:",
+    "@tanstack/ai-openai": "catalog:",
+    "@types/node": "catalog:",
+    "@viclafouch/oxc-config": "catalog:",
+    "@workcell/core": "workspace:*",
+    "msw": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "catalog:",
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-anthropic": "catalog:",
+    "@tanstack/ai-openai": "catalog:",
+    "@workcell/core": "workspace:*",
+    "zod": "catalog:"
+  }
+}
