@@ -75,9 +75,11 @@ describe('the paced fetch', () => {
       paced.pacedFetch(`${API_URL}/echo/first`),
       paced.pacedFetch(`${API_URL}/echo/second`)
     ])
-    await vi.waitFor(() => {
-      expect(requests).toBe(2)
-    })
+    await expect
+      .poll(() => {
+        return requests
+      })
+      .toBe(2)
     answers.resolve(null)
 
     await expect(calls).resolves.toStrictEqual([

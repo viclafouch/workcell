@@ -70,17 +70,17 @@ async function expectOneQueuedTurn({
       })
     })
   )
-  await vi.waitFor(async () => {
-    const listed = await agent.workers.listWorkers()
+  await expect
+    .poll(async () => {
+      const listed = await agent.workers.listWorkers()
 
-    expect(
-      listed
+      return listed
         .map(({ liveStatus }) => {
           return liveStatus
         })
         .toSorted()
-    ).toStrictEqual(liveStatuses)
-  })
+    })
+    .toStrictEqual(liveStatuses)
   released.resolve(null)
   await Promise.all(
     workers.map(({ firstTurn }) => {
@@ -214,11 +214,9 @@ describe('the worker lifecycle', () => {
     })
     await worker.firstTurn
 
-    await vi.waitFor(async () => {
-      await expect(liveSandboxKeys()).resolves.not.toContain(
-        agent.sandboxKey(worker.threadId)
-      )
-    })
+    await expect
+      .poll(liveSandboxKeys)
+      .not.toContain(agent.sandboxKey(worker.threadId))
     await expect(agent.workers.listWorkers()).resolves.toMatchObject([
       { name: 'Alpha', liveStatus: 'idle' }
     ])
@@ -293,15 +291,15 @@ describe('the worker lifecycle', () => {
       { idleSandboxMs: SHORT_IDLE_MS }
     )
 
-    await vi.waitFor(async () => {
-      const view = await restarted.host.observe(restarted.harness, {
-        threadId
-      })
+    await expect
+      .poll(async () => {
+        const view = await restarted.host.observe(restarted.harness, {
+          threadId
+        })
 
-      expect(toolResults(await view.transcript())).toContain(
-        'kept for the resumed turn'
-      )
-    })
+        return toolResults(await view.transcript())
+      })
+      .toContain('kept for the resumed turn')
   })
 
   it('runs at start the turn that waits in the store with no host', async () => {
@@ -322,11 +320,11 @@ describe('the worker lifecycle', () => {
 
     await using restarted = await openWorkers(url, [{ text: 'Done.' }])
 
-    await vi.waitFor(async () => {
-      await expect(restarted.workers.listWorkers()).resolves.toMatchObject([
-        { liveStatus: 'idle', usage: { turns: 2 } }
-      ])
-    })
+    await expect
+      .poll(() => {
+        return restarted.workers.listWorkers()
+      })
+      .toMatchObject([{ liveStatus: 'idle', usage: { turns: 2 } }])
   })
 })
 
@@ -463,11 +461,9 @@ describe('a sleeping worker', () => {
     })
     await session.setPluginSetting({ key: 'mode', value: 'bypass' })
     await session.send('Change the files.')
-    await vi.waitFor(async () => {
-      await expect(liveSandboxKeys()).resolves.not.toContain(
-        agent.sandboxKey(worker.threadId)
-      )
-    })
+    await expect
+      .poll(liveSandboxKeys)
+      .not.toContain(agent.sandboxKey(worker.threadId))
 
     await session.send('Check the work.')
     const results = toolResults(await session.transcript())

@@ -4,8 +4,7 @@ import {
   describe,
   expect,
   it,
-  onTestFinished,
-  vi
+  onTestFinished
 } from 'vitest'
 import { definePlugin } from '@tanstack/ai-harness'
 import type { FakeResponseStep } from '@tanstack/ai/testing'
@@ -257,9 +256,11 @@ describe('who starts a worker', () => {
       message: 'Go on.'
     })
 
-    await vi.waitFor(() => {
-      expect(restarted.model.state.callCount).toBe(1)
-    })
+    await expect
+      .poll(() => {
+        return restarted.model.state.callCount
+      })
+      .toBe(1)
   })
 
   it('refuses the steer of a colleague to a running worker, with no trace in the log', async () => {
@@ -309,9 +310,11 @@ describe('who starts a worker', () => {
     await expect(
       restarted.workers.answerApproval({ ...approval, approver: TEST_STARTER })
     ).resolves.toBe(true)
-    await vi.waitFor(() => {
-      expect(restarted.model.state.callCount).toBe(1)
-    })
+    await expect
+      .poll(() => {
+        return restarted.model.state.callCount
+      })
+      .toBe(1)
   })
 
   it('refuses the answer of a colleague to a question after a host restart, and keeps the question open', async () => {
@@ -405,9 +408,11 @@ describe('a refused finish', () => {
     await session.setPluginSetting({ key: 'mode', value: 'bypass' })
     await tellToStop(agent, worker.threadId)
 
-    await vi.waitFor(() => {
-      expect(answeredMessages.join('\n')).toContain(`${refusal} task-9-wake-up`)
-    })
+    await expect
+      .poll(() => {
+        return answeredMessages.join('\n')
+      })
+      .toContain(`${refusal} task-9-wake-up`)
     await expect(agent.workers.listWorkers()).resolves.toMatchObject([
       { threadId: worker.threadId }
     ])
@@ -442,17 +447,19 @@ describe('a refused finish', () => {
       delivery: 'followUp'
     })
 
-    await vi.waitFor(() => {
-      expect(answeredMessages).toStrictEqual([
+    await expect
+      .poll(() => {
+        return answeredMessages
+      })
+      .toStrictEqual([
         expect.stringContaining('No person told you to stop'),
         expect.stringContaining('No person told you to stop')
       ])
-    })
-    await vi.waitFor(async () => {
-      await expect(agent.workers.listWorkers()).resolves.toMatchObject([
-        { threadId: worker.threadId, liveStatus: 'idle' }
-      ])
-    })
+    await expect
+      .poll(() => {
+        return agent.workers.listWorkers()
+      })
+      .toMatchObject([{ threadId: worker.threadId, liveStatus: 'idle' }])
   })
 
   it('ends the worker once a person answers its question with a stop, also after a host restart', async () => {
@@ -520,9 +527,11 @@ describe('a refused finish', () => {
     await worker.firstTurn
     await tellToStop(agent, worker.threadId)
 
-    await vi.waitFor(() => {
-      expect(answeredMessages.join('\n')).toContain(refusal)
-    })
+    await expect
+      .poll(() => {
+        return answeredMessages.join('\n')
+      })
+      .toContain(refusal)
     await expect(agent.workers.listWorkers()).resolves.toMatchObject([
       { threadId: worker.threadId }
     ])

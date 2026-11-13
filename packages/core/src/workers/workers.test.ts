@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { runCli } from '@tanstack/ai-harness-cli'
 import { createMigratedDatabase } from '#/store/test-database.ts'
 import { TEST_STARTER } from './test-doubles.ts'
@@ -346,9 +346,11 @@ describe('the approval of a worker', () => {
       answer: 'once'
     } as const
     await expect(restarted.workers.answerApproval(approval)).resolves.toBe(true)
-    await vi.waitFor(() => {
-      expect(answeredMessages.join('\n')).toContain('exit code: 0')
-    })
+    await expect
+      .poll(() => {
+        return answeredMessages.join('\n')
+      })
+      .toContain('exit code: 0')
 
     await expect(restarted.workers.answerApproval(approval)).resolves.toBe(
       false
@@ -385,11 +387,11 @@ describe('the approval of a worker', () => {
       answer: 'reject'
     })
 
-    await vi.waitFor(() => {
-      expect(answeredMessages.join('\n')).toContain(
-        'A person rejected this call'
-      )
-    })
+    await expect
+      .poll(() => {
+        return answeredMessages.join('\n')
+      })
+      .toContain('A person rejected this call')
     await expect(view.snapshot()).resolves.toMatchObject({ pendingWaits: [] })
   })
 
@@ -457,19 +459,19 @@ describe('the question of a worker', () => {
         })
       })
     )
-    await vi.waitFor(async () => {
-      const listed = await agent.workers.listWorkers()
+    await expect
+      .poll(async () => {
+        const listed = await agent.workers.listWorkers()
 
-      expect(
-        listed
+        return listed
           .filter(({ threadId }) => {
             return threadId !== asker.threadId
           })
           .map(({ liveStatus }) => {
             return liveStatus
           })
-      ).toStrictEqual(['running', 'running'])
-    })
+      })
+      .toStrictEqual(['running', 'running'])
     released.resolve(null)
     await Promise.all(
       holders.map(({ firstTurn }) => {

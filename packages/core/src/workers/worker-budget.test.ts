@@ -1,12 +1,4 @@
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi
-} from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { definePlugin } from '@tanstack/ai-harness'
 import { fakeText } from '@tanstack/ai/testing'
 import { EntrySkillLimits } from '#/budget/limits.ts'
@@ -333,11 +325,11 @@ describe('a worker stopped at its budget', () => {
     const view = await agent.host.observe(agent.harness, {
       threadId: worker.threadId
     })
-    await vi.waitFor(async () => {
-      await expect(view.snapshot()).resolves.toMatchObject({
-        pendingWaits: [{ kind: 'human' }]
+    await expect
+      .poll(() => {
+        return view.snapshot()
       })
-    })
+      .toMatchObject({ pendingWaits: [{ kind: 'human' }] })
     const wakeLines = loggedLines.slice(linesBeforeWake).join('\n')
 
     expect(wakeLines).toContain(
@@ -370,12 +362,11 @@ describe('a worker stopped at its budget', () => {
     const view = await agent.host.observe(agent.harness, {
       threadId: worker.threadId
     })
-    await vi.waitFor(async () => {
-      await expect(view.snapshot()).resolves.toMatchObject({
-        status: 'idle',
-        pendingWaits: []
+    await expect
+      .poll(() => {
+        return view.snapshot()
       })
-    })
+      .toMatchObject({ status: 'idle', pendingWaits: [] })
 
     expect(agent.model.state.callCount).toBe(1)
   })
@@ -411,12 +402,11 @@ describe('a worker stopped at its budget', () => {
     const view = await agent.host.observe(agent.harness, {
       threadId: worker.threadId
     })
-    await vi.waitFor(async () => {
-      await expect(view.snapshot()).resolves.toMatchObject({
-        status: 'idle',
-        pendingWaits: []
+    await expect
+      .poll(() => {
+        return view.snapshot()
       })
-    })
+      .toMatchObject({ status: 'idle', pendingWaits: [] })
     const answered = answeredPrompts.join('\n')
 
     expect(agent.model.state.callCount).toBe(2)

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import {
   defineSandbox,
@@ -228,14 +228,16 @@ describe('the library sandbox', () => {
 
     await commitTo('app', 'PULLED.md', 'Pulled from dev.\n')
 
-    await vi.waitFor(async () => {
-      const results = await askLibraryQuestion({
-        workspace: library.workspace,
-        toolCalls: [{ name: 'read_file', input: { path: 'app/PULLED.md' } }]
-      })
+    await expect
+      .poll(async () => {
+        const results = await askLibraryQuestion({
+          workspace: library.workspace,
+          toolCalls: [{ name: 'read_file', input: { path: 'app/PULLED.md' } }]
+        })
 
-      expect(results.join('\n')).toContain('Pulled from dev.')
-    })
+        return results.join('\n')
+      })
+      .toContain('Pulled from dev.')
   })
 
   it('pulls no other repository once its run stops', async () => {

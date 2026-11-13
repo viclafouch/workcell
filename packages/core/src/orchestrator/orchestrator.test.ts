@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
 import { createMigratedDatabase } from '#/store/test-database.ts'
 import {
@@ -161,13 +161,16 @@ describe('the orchestrator', () => {
       inputId: 'slack:CTEST:1.0002',
       message: 'And TASK-7?'
     })
-    await vi.waitFor(async () => {
-      const view = await agent.host.observe(agent.orchestrator.harness, {
-        threadId: 'slack/CTEST/1.0001'
+    await expect
+      .poll(async () => {
+        const view = await agent.host.observe(agent.orchestrator.harness, {
+          threadId: 'slack/CTEST/1.0001'
+        })
+        const { waitingInputs = [] } = await view.snapshot()
+
+        return waitingInputs
       })
-      const { waitingInputs = [] } = await view.snapshot()
-      expect(waitingInputs).toHaveLength(1)
-    })
+      .toHaveLength(1)
     release.resolve(null)
 
     await expect(steer).resolves.toMatchObject({ ownsTurn: false })
@@ -361,13 +364,16 @@ describe('who the orchestrator works for', () => {
       inputId: 'slack:CTEST:1.0002',
       message: 'Start a worker on TASK-9.'
     })
-    await vi.waitFor(async () => {
-      const view = await agent.host.observe(agent.orchestrator.harness, {
-        threadId: 'slack/CTEST/1.0001'
+    await expect
+      .poll(async () => {
+        const view = await agent.host.observe(agent.orchestrator.harness, {
+          threadId: 'slack/CTEST/1.0001'
+        })
+        const { waitingInputs = [] } = await view.snapshot()
+
+        return waitingInputs
       })
-      const { waitingInputs = [] } = await view.snapshot()
-      expect(waitingInputs).toHaveLength(1)
-    })
+      .toHaveLength(1)
     release.resolve(null)
     const colleagueAnswer = await colleague
 

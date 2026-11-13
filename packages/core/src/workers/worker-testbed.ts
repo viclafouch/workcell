@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, vi } from 'vitest'
+import { expect } from 'vitest'
 import type { StreamChunk } from '@tanstack/ai'
 import { definePlugin, type HarnessPlugin } from '@tanstack/ai-harness'
 import {
@@ -97,12 +97,16 @@ export function tellToStop(agent: OpenedWorkers, threadId: string) {
 
 export async function waitForArchive(agent: OpenedWorkers, threadId: string) {
   const view = await agent.host.observe(agent.harness, { threadId })
-  await vi.waitFor(async () => {
-    await expect(agent.host.sessions.get({ threadId })).resolves.toMatchObject({
-      archived: true
+  await expect
+    .poll(() => {
+      return agent.host.sessions.get({ threadId })
     })
-    await expect(view.snapshot()).resolves.toMatchObject({ status: 'idle' })
-  })
+    .toMatchObject({ archived: true })
+  await expect
+    .poll(() => {
+      return view.snapshot()
+    })
+    .toMatchObject({ status: 'idle' })
 }
 
 export type OpenedWorkers = Awaited<ReturnType<typeof openWorkers>>

@@ -128,9 +128,11 @@ describe('the end of a worker from the host', () => {
     await expect(restarted.workers.finishWorker(finish)).resolves.toBe(true)
     await expect(restarted.workers.finishWorker(finish)).resolves.toBe(true)
 
-    await vi.waitFor(() => {
-      expect(changes).toStrictEqual(['finished Alpha Merged.'])
-    })
+    await expect
+      .poll(() => {
+        return changes
+      })
+      .toStrictEqual(['finished Alpha Merged.'])
     expect(restarted.model.state.callCount).toBe(0)
     await expect(endStateOf(restarted, threadId)).resolves.toStrictEqual({
       archived: true,
@@ -151,11 +153,11 @@ describe('the end of a worker from the host', () => {
       task: 'Run the long checks.'
     })
     const finish = { threadId: worker.threadId, report: 'Merged.' }
-    await vi.waitFor(async () => {
-      await expect(agent.workers.listWorkers()).resolves.toMatchObject([
-        { liveStatus: 'running' }
-      ])
-    })
+    await expect
+      .poll(() => {
+        return agent.workers.listWorkers()
+      })
+      .toMatchObject([{ liveStatus: 'running' }])
 
     await expect(agent.workers.finishWorker(finish)).resolves.toBe(false)
     released.resolve(null)
@@ -231,13 +233,15 @@ describe('a host stop', () => {
       { originUrl: origin.url }
     )
 
-    await vi.waitFor(async () => {
-      const view = await restarted.host.observe(restarted.harness, {
-        threadId: worker.threadId
-      })
+    await expect
+      .poll(async () => {
+        const view = await restarted.host.observe(restarted.harness, {
+          threadId: worker.threadId
+        })
 
-      expect(toolResults(await view.transcript())).toContain(RESTORED_WORK)
-    })
+        return toolResults(await view.transcript())
+      })
+      .toContain(RESTORED_WORK)
   })
 })
 
@@ -267,11 +271,11 @@ describe('the wake of a worker', () => {
       await using agent = await openWorkers(url, [{ text: 'Fixed.' }])
       await agent.workers.wakeWorker(wake)
       await agent.workers.wakeWorker(wake)
-      await vi.waitFor(async () => {
-        await expect(agent.workers.listWorkers()).resolves.toMatchObject([
-          { liveStatus: 'idle', usage: { turns: 2 } }
-        ])
-      })
+      await expect
+        .poll(() => {
+          return agent.workers.listWorkers()
+        })
+        .toMatchObject([{ liveStatus: 'idle', usage: { turns: 2 } }])
     }
 
     await using restarted = await openWorkers(url, [{ text: 'Again.' }])
@@ -321,18 +325,16 @@ describe('the wake of a worker', () => {
     })
     await later.firstTurn
 
-    await vi.waitFor(() => {
-      expect(branchesOf()).toStrictEqual([
-        [earlier.threadId, 'task-1-login'],
-        [later.threadId, 'task-2-signup']
-      ])
-    })
+    await expect.poll(branchesOf).toStrictEqual([
+      [earlier.threadId, 'task-1-login'],
+      [later.threadId, 'task-2-signup']
+    ])
 
     await tellToStop(agent, earlier.threadId)
 
-    await vi.waitFor(() => {
-      expect(branchesOf()).toStrictEqual([[later.threadId, 'task-2-signup']])
-    })
+    await expect
+      .poll(branchesOf)
+      .toStrictEqual([[later.threadId, 'task-2-signup']])
   })
 })
 
@@ -370,9 +372,11 @@ describe('the thread of a worker', () => {
       message: 'Draft'
     })
 
-    await vi.waitFor(() => {
-      expect(answeredMessages.join('\n')).toContain('Answer: Draft')
-    })
+    await expect
+      .poll(() => {
+        return answeredMessages.join('\n')
+      })
+      .toContain('Answer: Draft')
   })
 
   it('wakes a sleeping worker with a message, once for one input id, also after a host restart', async () => {
@@ -392,11 +396,11 @@ describe('the thread of a worker', () => {
       await using agent = await openWorkers(url, [{ text: 'Kept.' }])
       await agent.workers.messageWorker(steer)
       await agent.workers.messageWorker(steer)
-      await vi.waitFor(async () => {
-        await expect(agent.workers.listWorkers()).resolves.toMatchObject([
-          { liveStatus: 'idle', usage: { turns: 2 } }
-        ])
-      })
+      await expect
+        .poll(() => {
+          return agent.workers.listWorkers()
+        })
+        .toMatchObject([{ liveStatus: 'idle', usage: { turns: 2 } }])
     }
 
     await using restarted = await openWorkers(url, [{ text: 'Again.' }])
@@ -492,12 +496,11 @@ describe('the thread of a worker', () => {
 
     await expect(restarted.workers.stopWorker(stop)).resolves.toBe(true)
     const view = await restarted.host.observe(restarted.harness, { threadId })
-    await vi.waitFor(async () => {
-      await expect(view.snapshot()).resolves.toMatchObject({
-        status: 'idle',
-        pendingWaits: []
+    await expect
+      .poll(() => {
+        return view.snapshot()
       })
-    })
+      .toMatchObject({ status: 'idle', pendingWaits: [] })
     await expect(restarted.workers.stopWorker(stop)).resolves.toBe(false)
     expect(restarted.model.state.callCount).toBe(0)
   })
@@ -519,9 +522,11 @@ describe('the thread of a worker', () => {
       task: 'Ask first.'
     })
     await worker.firstTurn
-    await vi.waitFor(() => {
-      expect(changes.at(-1)).toBe('waiting')
-    })
+    await expect
+      .poll(() => {
+        return changes.at(-1)
+      })
+      .toBe('waiting')
 
     await agent.workers.messageWorker({
       threadId: worker.threadId,
@@ -529,14 +534,18 @@ describe('the thread of a worker', () => {
       inputId: 'slack:answer',
       message: 'Draft'
     })
-    await vi.waitFor(() => {
-      expect(changes.at(-1)).toBe('idle')
-    })
+    await expect
+      .poll(() => {
+        return changes.at(-1)
+      })
+      .toBe('idle')
     await tellToStop(agent, worker.threadId)
 
-    await vi.waitFor(() => {
-      expect(changes.at(-1)).toBe('finished Alpha Merged.')
-    })
+    await expect
+      .poll(() => {
+        return changes.at(-1)
+      })
+      .toBe('finished Alpha Merged.')
     expect(changes[0]).toBe('running')
     expect(new Set(changes)).toStrictEqual(
       new Set(['running', 'waiting', 'idle', 'finished Alpha Merged.'])

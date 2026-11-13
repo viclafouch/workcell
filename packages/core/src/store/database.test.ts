@@ -1,5 +1,5 @@
 import { inspect } from 'node:util'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   openTestDatabase,
   recordLogs,
@@ -85,15 +85,17 @@ describe('openDatabase', () => {
       'close the other connections',
       'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()'
     )
-    await vi.waitFor(() => {
-      expect(lines).toStrictEqual([
+    await expect
+      .poll(() => {
+        return lines
+      })
+      .toStrictEqual([
         {
           level: 'warn',
           details: { code: '57P01' },
           message: 'The server closed an idle database connection.'
         }
       ])
-    })
     const rows = await database.query('read after the close', 'SELECT 1 AS one')
     await Promise.all([database.close(), admin.close()])
 
