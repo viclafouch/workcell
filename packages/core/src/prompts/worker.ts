@@ -10,6 +10,12 @@ export function branchFact(branch: string) {
   return `The branch of this task: ${branch}.`
 }
 
+export function shallowCloneFact(depth: number) {
+  const commits = depth === 1 ? 'the last commit' : `the last ${depth} commits`
+
+  return `The clone holds ${commits} of one branch. Fetch another branch or older commits with a depth: git fetch --depth <n> origin <branch>, or git fetch --deepen <n>. A fetch with no depth pulls the whole history: on a large repository it takes minutes, so give its bash call a timeoutMs of 600000.`
+}
+
 export const FINISH_TASK_TEXT = {
   description:
     'End the task for good, only in the turn of a message where a person tells you to stop. A task that needs no change, or names the wrong target, is a question for a person: ask whether to close it, retarget it or go on, then end your turn and wait for the answer. It sends your report, archives this worker and destroys its sandbox. Your turn ends right after it.',

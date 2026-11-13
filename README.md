@@ -14,6 +14,21 @@ Coding agents that take an issue to a merged pull request, each one in its own s
 - **A channel** carries the questions of the worker and the answers of a person: Slack today.
 - **Every run is bounded**: each task has a cost budget, and every turn is traced with its cost.
 
+## The clone of a worker
+
+`workerRepo` clones the repository of a worker with its whole history. The worker then reads, rebases and resumes any branch with every git command. It takes the options of `githubRepo` from `@tanstack/ai-sandbox`:
+
+```ts
+defineWorkspace({ source: workerRepo({ repo: 'owner/app', ref: 'main' }) })
+```
+
+Pass `depth` to trade history for a faster start:
+
+| `depth` | Start | History in the sandbox |
+| --- | --- | --- |
+| `'full'`, the default | The slowest: the clone holds the whole repository | Every branch and every commit |
+| A number | Faster | The last commits of one branch. The worker learns it, and fetches more with a depth |
+
 ## Packages
 
 Each integration is its own package, and a project picks the ones it uses.

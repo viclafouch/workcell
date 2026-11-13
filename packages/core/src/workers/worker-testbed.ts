@@ -158,7 +158,7 @@ export async function openWorkers(
       source:
         originUrl === undefined
           ? { type: 'none' }
-          : { type: 'git', url: originUrl, ref: 'dev' },
+          : { type: 'git', url: originUrl, ref: 'dev', depth: 'full' },
       secrets: createSecrets({
         GH_TOKEN: SANDBOX_SECRETS.GITHUB_TOKEN,
         NPM_TOKEN: SANDBOX_SECRETS.NPM_TOKEN,
@@ -174,7 +174,7 @@ export async function openWorkers(
       source:
         secondOriginUrl === undefined
           ? { type: 'none' }
-          : { type: 'git', url: secondOriginUrl, ref: 'dev' }
+          : { type: 'git', url: secondOriginUrl, ref: 'dev', depth: 'full' }
     }),
     lifecycle: { reuse: 'thread', snapshot: 'none' }
   })

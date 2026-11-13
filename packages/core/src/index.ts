@@ -28,6 +28,7 @@ export {
   proxiedDockerSandbox,
   type ProxiedDockerSandboxParams
 } from './sandbox/proxied-docker-sandbox.ts'
+export { workerRepo } from './sandbox/worker-repo.ts'
 export {
   DATABASE_SECRET_NAMES,
   openDatabase,

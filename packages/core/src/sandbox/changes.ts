@@ -57,8 +57,12 @@ const UNPUSHED_PATCH_COMMAND = `git log --patch --cc --text --format=%B ${CHANGE
 const DISCARD_COMMAND = `git update-ref -d ${CHANGES_REF} && rm -f ${BUNDLE}`
 
 const RESTORE_SCRIPT = `set -eu
+depth=
+if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+  depth=--depth=1
+fi
 for commit in $WORKCELL_PREREQUISITES; do
-  git cat-file -e "$commit^{commit}" 2>/dev/null || git fetch --quiet --no-tags --depth=1 origin "$commit"
+  git cat-file -e "$commit^{commit}" 2>/dev/null || git fetch --quiet --no-tags $depth origin "$commit"
 done
 git fetch --quiet --no-tags ${BUNDLE} ${CHANGES_REF}:${CHANGES_REF}
 if [ -n "$WORKCELL_BRANCH" ]; then

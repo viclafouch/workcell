@@ -25,6 +25,7 @@ import {
   branchFact,
   FINISH_TASK_TEXT,
   FINISH_WITHOUT_STOP_REFUSAL,
+  shallowCloneFact,
   workerIdentityPrompt
 } from '#/prompts/worker.ts'
 import type { WorkerSandbox } from '#/sandbox/worker-sandbox.ts'
@@ -180,6 +181,16 @@ async function refuseFinish(
 
 const branchOfTask: TaskFact = ({ branch }) => {
   return branch === undefined ? undefined : branchFact(branch)
+}
+
+function cloneHistoryOf(sandboxes: RepositorySandboxes): TaskFact {
+  return ({ repository }) => {
+    const source = sandboxes[repository]?.workspace?.source
+
+    return source?.type === 'git' && source.depth !== 'full'
+      ? shallowCloneFact(source.depth ?? 1)
+      : undefined
+  }
 }
 
 type PromptFacts = () => {
@@ -592,6 +603,7 @@ export function createWorkerLifecycle({
         tools: [finishTask],
         contribute: [
           TaskFacts.item(branchOfTask),
+          TaskFacts.item(cloneHistoryOf(sandboxes)),
           PermissionRules.item({
             tool: FINISH_TASK,
             decision: 'allow',

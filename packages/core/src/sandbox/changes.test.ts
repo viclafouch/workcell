@@ -48,6 +48,8 @@ const MERGE_THE_STALE_BRANCH = [
 
 const PUSH = `git push --quiet origin ${BRANCH}`
 
+const DELETE_THE_REMOTE_BRANCH = `git push --quiet origin --delete ${BRANCH}`
+
 const LEFT_NOTHING_BEHIND = `find .git -maxdepth 1 -name '*.bundle' && git for-each-ref refs/workcell`
 
 let hostFree: Awaited<ReturnType<typeof createHostFreeProvider>>
@@ -83,6 +85,13 @@ async function shallowClone(origin: string) {
   return sandbox
 }
 
+async function fullClone(origin: string) {
+  const sandbox = await hostFree.provider.create({})
+  await exec(sandbox, `git clone --quiet --branch dev ${origin} .`)
+
+  return sandbox
+}
+
 async function workerOnTheStaleBranch() {
   const origin = await seedOrigin()
   const sandbox = await shallowClone(origin)
@@ -101,7 +110,7 @@ async function capture(handle: SandboxHandle) {
   return captured
 }
 
-describe('the save of the worker changes from a shallow clone', () => {
+describe('the save of the worker changes', () => {
   beforeAll(async () => {
     hostFree = await createHostFreeProvider()
   })
@@ -180,5 +189,22 @@ describe('the save of the worker changes from a shallow clone', () => {
     ).resolves.toBe(
       `## ${BRANCH}\n?? uncommitted.md\nkeep my work\nmine\ntwo\n`
     )
+  })
+
+  it('comes back in a fresh full clone that lacks its pushed commit, and the clone keeps its whole history', async () => {
+    const { origin, sandbox } = await workerOnTheStaleBranch()
+    await exec(sandbox, PUSH)
+    const captured = await capture(sandbox)
+    await exec(sandbox, DELETE_THE_REMOTE_BRANCH)
+    const fresh = await fullClone(origin)
+
+    await restoreChanges(fresh, captured)
+
+    await expect(
+      exec(
+        fresh,
+        'git rev-parse --is-shallow-repository && git rev-list --count dev && cat mine.md uncommitted.md'
+      )
+    ).resolves.toBe(`false\n${HISTORY_COMMITS}\nmine\ntwo\n`)
   })
 })
