@@ -2,15 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  onTestFinished,
-  vi
-} from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import {
   defineSandbox,
@@ -39,9 +31,9 @@ type LibraryLogger = Parameters<typeof createLibrarySandbox>[0]['logger']
 
 const FOLDERS = ['app', 'tooling', 'design'] as const
 
-function stopAtFirstPull(
-  stopPulling: AbortController,
-  pulled: string[]
+function recordPulls(
+  pulled: string[],
+  firstPull: PromiseWithResolvers<null>
 ): LibraryLogger {
   return {
     child: () => {
@@ -49,7 +41,7 @@ function stopAtFirstPull(
         info: (fields: { folder?: string }, message: string) => {
           if (message === 'library pulled') {
             pulled.push(fields.folder ?? '')
-            stopPulling.abort()
+            firstPull.resolve(null)
           }
         },
         warn: () => {},
@@ -231,12 +223,7 @@ describe('the library sandbox', () => {
 
   it('stays at most one pull interval behind the default branch', async () => {
     const library = openLibrary('library-pulls', { pullIntervalMs: 20 })
-    const stopPulling = new AbortController()
-    const pulling = library.run(stopPulling.signal)
-    onTestFinished(async () => {
-      stopPulling.abort()
-      await pulling
-    })
+    await using pulling = library.start()
     await library.pullOnce()
 
     await commitTo('app', 'PULLED.md', 'Pulled from dev.\n')
@@ -252,13 +239,16 @@ describe('the library sandbox', () => {
   })
 
   it('pulls no other repository once its run stops', async () => {
-    const stopPulling = new AbortController()
     const pulled: string[] = []
+    const firstPull = Promise.withResolvers<null>()
     const library = openLibrary('library-stop', {
-      logger: stopAtFirstPull(stopPulling, pulled)
+      logger: recordPulls(pulled, firstPull)
     })
 
-    await library.run(stopPulling.signal)
+    {
+      await using pulling = library.start()
+      await firstPull.promise
+    }
 
     expect(pulled).toStrictEqual(['app'])
   })

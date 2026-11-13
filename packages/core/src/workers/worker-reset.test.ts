@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import type { Database } from '#core/store/database'
-import { createSandboxInstanceStore } from '#core/store/sandbox-instance-store'
-import { createPostgresSessionIndexStore } from '#core/store/session-index-store'
+import type { Database } from '#/store/database.ts'
+import { createSandboxInstanceStore } from '#/store/sandbox-instance-store.ts'
+import { createPostgresSessionIndexStore } from '#/store/session-index-store.ts'
 import {
   createMigratedDatabase,
   openTestDatabase
-} from '#core/store/test-database'
-import { createWorkerChangesStore } from '#core/store/worker-changes-store'
+} from '#/store/test-database.ts'
+import { createWorkerChangesStore } from '#/store/worker-changes-store.ts'
 import { WORKER_HARNESS_NAME } from './harness.ts'
 import { planWorkerReset, resetWorkers } from './worker-reset.ts'
 

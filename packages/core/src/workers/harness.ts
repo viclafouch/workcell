@@ -22,15 +22,15 @@ import {
   untilABudgetStop,
   workerBudget,
   type ModelPricing
-} from '#core/budget/budget'
-import type { BudgetLimits } from '#core/budget/limits'
-import { WORKER_DURABILITY } from '#core/host/agent-durability'
-import { durableCompaction } from '#core/host/durable-compaction'
-import { repositoryRulesPrompt } from '#core/prompts/worker'
+} from '#/budget/budget.ts'
+import type { BudgetLimits } from '#/budget/limits.ts'
+import { WORKER_DURABILITY } from '#/host/agent-durability.ts'
+import { durableCompaction } from '#/host/durable-compaction.ts'
+import { repositoryRulesPrompt } from '#/prompts/worker.ts'
 import {
   workerTelemetry,
   type WorkerObservability
-} from '#core/telemetry/worker-telemetry'
+} from '#/telemetry/worker-telemetry.ts'
 import { denyGuard } from './deny-guard.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
 import { workerMetadataSchema } from './metadata.ts'

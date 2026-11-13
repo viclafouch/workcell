@@ -51,7 +51,7 @@ function rateLimitWaitMs(
 
   return resetAt === undefined
     ? UNNAMED_RATE_LIMIT_WAIT_MS
-    : Math.max(resetAt - Date.now(), 0)
+    : Math.max(resetAt - Temporal.Now.instant().epochMilliseconds, 0)
 }
 
 export function createPacedFetch({
@@ -68,7 +68,7 @@ export function createPacedFetch({
     window: WINDOW_MS,
     windowType: 'sliding'
   })
-  let rateLimitedUntil = 0
+  let rateLimitedUntil = Temporal.Instant.fromEpochMilliseconds(0)
 
   const fetchOnce = async (
     url: string,
@@ -103,12 +103,14 @@ export function createPacedFetch({
 
   const rateLimitError = () => {
     return new Error(
-      `${apiName} rate limits ${subject} until ${new Date(rateLimitedUntil).toISOString()}. The call did not run.`
+      `${apiName} rate limits ${subject} until ${rateLimitedUntil.toString({ smallestUnit: 'millisecond' })}. The call did not run.`
     )
   }
 
   const pacedFetch = async (url: string, init: PacedRequest = {}) => {
-    if (Date.now() < rateLimitedUntil) {
+    if (
+      Temporal.Instant.compare(Temporal.Now.instant(), rateLimitedUntil) < 0
+    ) {
       throw rateLimitError()
     }
 
@@ -134,7 +136,9 @@ export function createPacedFetch({
     }
 
     if ('rateLimitedForMs' in attempt) {
-      rateLimitedUntil = Date.now() + attempt.rateLimitedForMs
+      rateLimitedUntil = Temporal.Now.instant().add({
+        milliseconds: Math.ceil(attempt.rateLimitedForMs)
+      })
       throw rateLimitError()
     }
 

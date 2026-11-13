@@ -2,15 +2,15 @@ import { z } from 'zod'
 import { toolDefinition } from '@tanstack/ai'
 import { definePlugin, PermissionRules } from '@tanstack/ai-harness'
 import { workerMetadataSchema } from '@workcell/core'
-import type { PullRequestHeadRef } from '#github/github-api'
-import type { GithubReader } from '#github/github-reader'
+import type { PullRequestHeadRef } from '#/github-api.ts'
+import type { GithubReader } from '#/github-reader.ts'
 import {
   REPLY_TOOL_NAME,
   RESOLVE_TOOL_NAME,
   REVIEW_THREADS_TEXT,
   REVIEW_THREADS_TOOL_NAME
-} from '#github/prompts/github'
-import type { ReviewThreadWriter } from '#github/review-thread-writer'
+} from '#/prompts/github.ts'
+import type { ReviewThreadWriter } from '#/review-thread-writer.ts'
 
 type ReviewThreadToolsParams = {
   reader: GithubReader

@@ -1,6 +1,11 @@
 import { setTimeout } from 'node:timers/promises'
-import type { ThreadLine, WakeWorkerParams, WorkerFinish } from '@workcell/core'
-import type { PullRequestLines } from '#github/prompts/github'
+import {
+  startLoop,
+  type ThreadLine,
+  type WakeWorkerParams,
+  type WorkerFinish
+} from '@workcell/core'
+import type { PullRequestLines } from '#/prompts/github.ts'
 import type { GithubApi, PullRequestHead } from './github-api.ts'
 import {
   pullRequestEvents,
@@ -185,5 +190,10 @@ export function createPullRequestWatcher({
     }
   }
 
-  return { pollOnce, run }
+  return {
+    pollOnce,
+    start: () => {
+      return startLoop(run)
+    }
+  }
 }

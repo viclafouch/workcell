@@ -4,6 +4,7 @@ import type {
   SessionIndexEntry
 } from '@tanstack/ai-harness'
 import { AsyncQueuer } from '@tanstack/pacer'
+import { startLoop } from '#/host/loop.ts'
 import type { WorkerHarness } from './harness.ts'
 import type { WorkerLogger } from './lifecycle.ts'
 import { workerMetadataSchema, type WorkerMetadata } from './metadata.ts'
@@ -26,7 +27,6 @@ type TrackWorkerChangesParams = {
   harness: WorkerHarness
   readWorkers: () => Promise<ListedWorker[]>
   logger: WorkerLogger
-  signal: AbortSignal
   onChange: OnWorkerChange
 }
 
@@ -48,7 +48,6 @@ export async function trackWorkerChanges({
   harness,
   readWorkers,
   logger,
-  signal,
   onChange
 }: TrackWorkerChangesParams) {
   const live = new Map<string, ListedWorker>()
@@ -71,7 +70,7 @@ export async function trackWorkerChanges({
     }
   })
 
-  const readOnce = async () => {
+  const readOnce = async (signal: AbortSignal) => {
     const changedThreads = new Set<string>()
 
     const remember = (threadId: string, worker: ListedWorker) => {
@@ -160,11 +159,11 @@ export async function trackWorkerChanges({
     await reading
   }
 
-  const keepReading = async () => {
+  const keepReading = async (signal: AbortSignal) => {
     try {
       while (!signal.aborted) {
         // oxlint-disable-next-line no-await-in-loop -- each read starts when the one before it ends
-        await readOnce()
+        await readOnce(signal)
       }
     } catch (error) {
       firstListing.reject(error)
@@ -172,10 +171,13 @@ export async function trackWorkerChanges({
     }
   }
 
-  void keepReading()
+  const reading = startLoop(keepReading)
   await firstListing.promise
 
-  return () => {
-    return [...live.values()].map(liveWorkerOf)
+  return {
+    liveWorkers: () => {
+      return live.values().map(liveWorkerOf).toArray()
+    },
+    [Symbol.asyncDispose]: reading[Symbol.asyncDispose]
   }
 }

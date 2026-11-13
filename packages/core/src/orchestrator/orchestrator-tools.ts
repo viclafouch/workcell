@@ -5,12 +5,12 @@ import {
   PermissionRules,
   type HarnessRunContext
 } from '@tanstack/ai-harness'
-import type { IsStarter } from '#core/host/allowed-senders'
+import type { IsStarter } from '#/host/allowed-senders.ts'
 import {
   ORCHESTRATOR_TOOLS_TEXT,
   repositoryChoice
-} from '#core/prompts/orchestrator'
-import type { Workers } from '#core/workers/workers'
+} from '#/prompts/orchestrator.ts'
+import type { Workers } from '#/workers/workers.ts'
 
 const TOOLS_PLUGIN = 'workcell/orchestrator-tools'
 
@@ -87,7 +87,9 @@ export function orchestratorTools({
             repository: worker.repository,
             branch: worker.branch,
             status: worker.liveStatus,
-            updatedAt: new Date(worker.updatedAt).toISOString()
+            updatedAt: Temporal.Instant.fromEpochMilliseconds(
+              worker.updatedAt
+            ).toString({ smallestUnit: 'millisecond' })
           }
         })
       })

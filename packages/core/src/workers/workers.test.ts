@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { runCli } from '@tanstack/ai-harness-cli'
-import { createMigratedDatabase } from '#core/store/test-database'
+import { createMigratedDatabase } from '#/store/test-database.ts'
 import { TEST_STARTER } from './test-doubles.ts'
 import {
   ASK_DRAFT_OR_READY,

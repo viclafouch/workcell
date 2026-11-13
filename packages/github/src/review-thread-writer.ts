@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { createPacedFetch } from '@workcell/core'
-import { REVIEW_THREADS_TEXT } from '#github/prompts/github'
+import { REVIEW_THREADS_TEXT } from '#/prompts/github.ts'
 import {
   GITHUB_GRAPHQL_URL,
   GITHUB_JSON_MEDIA_TYPE,

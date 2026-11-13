@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { defineHarness } from '@tanstack/ai-harness'
 import { fakeText } from '@tanstack/ai/testing'
-import type { Database } from '#core/store/database'
-import { createHarnessPersistence } from '#core/store/harness-persistence'
+import type { Database } from '#/store/database.ts'
+import { createHarnessPersistence } from '#/store/harness-persistence.ts'
 import {
   openTestDatabase,
   createMigratedDatabase
-} from '#core/store/test-database'
+} from '#/store/test-database.ts'
 import { createAgentHost } from './agent-host.ts'
 
 const SILENT_LOGGER = {

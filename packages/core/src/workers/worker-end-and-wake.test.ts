@@ -5,11 +5,10 @@ import {
   describe,
   expect,
   it,
-  onTestFinished,
   vi
 } from 'vitest'
-import { SENDER_REFUSAL } from '#core/host/allowed-senders'
-import { createMigratedDatabase } from '#core/store/test-database'
+import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
+import { createMigratedDatabase } from '#/store/test-database.ts'
 import { TEST_STARTER } from './test-doubles.ts'
 import {
   ASK_DRAFT_OR_READY,
@@ -121,13 +120,11 @@ describe('the end of a worker from the host', () => {
       originUrl: origin.url
     })
     const changes: string[] = []
-    const tracking = new AbortController()
-    onTestFinished(() => {
-      tracking.abort()
-    })
-    await restarted.workers.trackLiveWorkers(tracking.signal, (change) => {
-      changes.push(describeChange(change))
-    })
+    await using tracking = await restarted.workers.trackLiveWorkers(
+      (change) => {
+        changes.push(describeChange(change))
+      }
+    )
     await expect(restarted.workers.finishWorker(finish)).resolves.toBe(true)
     await expect(restarted.workers.finishWorker(finish)).resolves.toBe(true)
 
@@ -306,11 +303,8 @@ describe('the wake of a worker', () => {
       [{ text: 'On it.' }, finishTask()],
       { workerNames: TWO_NAMES }
     )
-    const tracking = new AbortController()
-    onTestFinished(() => {
-      tracking.abort()
-    })
-    const liveWorkers = await agent.workers.trackLiveWorkers(tracking.signal)
+    await using tracking = await agent.workers.trackLiveWorkers()
+    const { liveWorkers } = tracking
     const branchesOf = () => {
       return liveWorkers().map(({ threadId, branch }) => {
         return [threadId, branch]
@@ -516,11 +510,7 @@ describe('the thread of a worker', () => {
       finishTask()
     ])
     const changes: string[] = []
-    const tracking = new AbortController()
-    onTestFinished(() => {
-      tracking.abort()
-    })
-    await agent.workers.trackLiveWorkers(tracking.signal, (change) => {
+    await using tracking = await agent.workers.trackLiveWorkers((change) => {
       changes.push(describeChange(change))
     })
     const worker = await agent.workers.startWorker({

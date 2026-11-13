@@ -1,7 +1,7 @@
 import { toolDefinition } from '@tanstack/ai'
 import { definePlugin, PermissionRules } from '@tanstack/ai-harness'
-import type { ModelPricing } from '#core/budget/budget'
-import type { BudgetLimits } from '#core/budget/limits'
+import type { ModelPricing } from '#/budget/budget.ts'
+import type { BudgetLimits } from '#/budget/limits.ts'
 
 export const FREE_MODEL_PRICING: ModelPricing = {
   requirePrices: () => {},

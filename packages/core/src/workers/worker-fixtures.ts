@@ -27,9 +27,9 @@ import {
   type FakeResponse,
   type FakeResponseStep
 } from '@tanstack/ai/testing'
-import { BUDGET_END_EVENT } from '#core/budget/budget'
-import type { BudgetLimits } from '#core/budget/limits'
-import { createModelPricing } from '#core/budget/pricing'
+import { BUDGET_END_EVENT } from '#/budget/budget.ts'
+import type { BudgetLimits } from '#/budget/limits.ts'
+import { createModelPricing } from '#/budget/pricing.ts'
 import type { WorkerChange } from './live-workers.ts'
 import { TEST_STARTER } from './test-doubles.ts'
 import type { WorkerTask } from './workers.ts'

@@ -1,7 +1,7 @@
 import { setTimeout } from 'node:timers/promises'
 import type { HarnessUser } from '@tanstack/ai-harness'
-import type { WorkerTask } from '@workcell/core'
-import { ticketTask } from '#linear/prompts/linear'
+import { startLoop, type WorkerTask } from '@workcell/core'
+import { ticketTask } from '#/prompts/linear.ts'
 import type { LinearApi, LinearTicket } from './linear-api.ts'
 
 const CLAIMABLE_STATE_TYPES = ['backlog', 'unstarted']
@@ -121,5 +121,10 @@ export function createTicketPoller({
     }
   }
 
-  return { pollOnce, run }
+  return {
+    pollOnce,
+    start: () => {
+      return startLoop(run)
+    }
+  }
 }

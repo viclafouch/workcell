@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { SENDER_REFUSAL } from '#core/host/allowed-senders'
-import { createMigratedDatabase } from '#core/store/test-database'
+import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
+import { createMigratedDatabase } from '#/store/test-database.ts'
 import {
   LONG_HOST_TOOL,
   longHostTool,
   OVERLOADED_MODEL_ERROR,
   TEST_STARTER
-} from '#core/workers/test-doubles'
+} from '#/workers/test-doubles.ts'
 import {
   budgetEndsOf,
   callTool,
@@ -18,13 +18,13 @@ import {
   textOf,
   TICKET_START,
   toolResultsOf
-} from '#core/workers/worker-fixtures'
+} from '#/workers/worker-fixtures.ts'
 import {
   askOrchestrator,
   closeWorkerTestbed,
   openWorkers,
   openWorkerTestbed
-} from '#core/workers/worker-testbed'
+} from '#/workers/worker-testbed.ts'
 
 describe('the orchestrator', () => {
   beforeAll(async () => {

@@ -110,7 +110,7 @@ function createSeenEvents() {
   const expiries = new Map<string, number>()
 
   return (eventId: string) => {
-    const now = Date.now()
+    const now = Temporal.Now.instant().epochMilliseconds
 
     for (const [seenId, expiresAt] of expiries) {
       if (expiresAt > now) {

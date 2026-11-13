@@ -11,9 +11,9 @@ import {
 } from '@tanstack/ai-harness/plugins/coding'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
-import { createAgentHost } from '#core/host/agent-host'
-import { SILENT_HOST_LOGGER } from '#core/workers/test-doubles'
-import type { ToolCall } from '#core/workers/tool-call'
+import { createAgentHost } from '#/host/agent-host.ts'
+import { SILENT_HOST_LOGGER } from '#/workers/test-doubles.ts'
+import type { ToolCall } from '#/workers/tool-call.ts'
 
 type LibraryQuestionOptions = {
   workspace: WorkspaceBinder

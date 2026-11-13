@@ -14,8 +14,8 @@ import {
   timersKeepingTheProcessAlive,
   type ToolCall
 } from '@workcell/core/testing'
-import { GITHUB_GRAPHQL_URL, GITHUB_REST_URL } from '#github/github-api'
-import { createGithubReader } from '#github/github-reader'
+import { GITHUB_GRAPHQL_URL, GITHUB_REST_URL } from '#/github-api.ts'
+import { createGithubReader } from '#/github-reader.ts'
 import { GITHUB_TOOL_NAMES, githubTools } from './github-tools.ts'
 
 const GITHUB_TOKEN = 'github_pat_reader_test_token'

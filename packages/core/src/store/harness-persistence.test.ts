@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUIDv7 } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { NO_OWNER_EPOCH } from '@tanstack/ai-persistence'
 import { runPersistenceConformance } from '@tanstack/ai-persistence/testkit'
@@ -28,7 +28,7 @@ let twinDatabase: Database
 let stopTwinListener: () => void
 
 async function listenOnTheTwin() {
-  const logId = `twin-probe-${randomUUID()}`
+  const logId = `twin-probe-${randomUUIDv7()}`
   const primary = createPostgresLogStore({ database, logger: SILENT_LOGGER })
   let isHeard = false
   let seq = 1
@@ -82,7 +82,7 @@ describe('createHarnessPersistence', () => {
     const url = await createMigratedDatabase()
     await using writer = openTestDatabase(url)
     await using reader = openTestDatabase(url)
-    const logId = `cold-${randomUUID()}`
+    const logId = `cold-${randomUUIDv7()}`
     let calls = 0
     const stopListening = createPostgresLogStore({
       database: reader,
@@ -124,12 +124,12 @@ describe('createHarnessPersistence', () => {
       database: writer,
       logger: SILENT_LOGGER
     })
-    const probeLogId = `probe-${randomUUID()}`
+    const probeLogId = `probe-${randomUUIDv7()}`
     let quietCalls = 0
     let probeCalls = 0
     let seq = 1
     const stopQuiet = readerStore.subscribe({
-      logId: `quiet-${randomUUID()}`,
+      logId: `quiet-${randomUUIDv7()}`,
       listener: () => {
         quietCalls += 1
       }

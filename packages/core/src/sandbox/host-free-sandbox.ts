@@ -9,8 +9,8 @@ import {
   type SandboxProvider
 } from '@tanstack/ai-sandbox'
 import { localProcessSandbox } from '@tanstack/ai-sandbox-local-process'
-import { createWorkerLifecycle } from '#core/workers/lifecycle'
-import { TEST_MAX_RUNNING_TURNS } from '#core/workers/test-doubles'
+import { createWorkerLifecycle } from '#/workers/lifecycle.ts'
+import { TEST_MAX_RUNNING_TURNS } from '#/workers/test-doubles.ts'
 
 const SILENT_WORKER_LOGGER = {
   child: () => {
@@ -94,7 +94,7 @@ export async function createHostFreeProvider() {
     provider,
     list: async () => {
       const listed = await Promise.all(
-        [...keysById].map(async ([id, key]) => {
+        keysById.entries().map(async ([id, key]) => {
           return (await exists(id)) ? [{ id, key }] : []
         })
       )

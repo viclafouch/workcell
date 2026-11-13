@@ -97,7 +97,7 @@ async function connectWithRetry<Connection>(
         return { opened: await open() }
       } catch (error) {
         if (
-          error instanceof Error &&
+          Error.isError(error) &&
           REFUSED_CREDENTIALS_OR_DATABASE.test(readErrorCode(error) ?? '')
         ) {
           return { error }
@@ -293,10 +293,11 @@ function createNotificationHub(directUrl: string, logger: DatabaseLogger) {
 
   return {
     listen: (channel: string, listener: NoticeListener) => {
-      const channelListeners = listeners.get(channel) ?? new Set()
+      const channelListeners = listeners.getOrInsertComputed(channel, () => {
+        return new Set()
+      })
       const isNewChannel = channelListeners.size === 0
       channelListeners.add(listener)
-      listeners.set(channel, channelListeners)
 
       if (isNewChannel || !listening) {
         void listenToChannel(channel)

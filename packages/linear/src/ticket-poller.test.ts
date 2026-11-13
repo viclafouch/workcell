@@ -42,8 +42,6 @@ const STATES = [TODO, IN_PROGRESS, IN_REVIEW]
 
 const RETRY_AFTER_SECONDS = 30
 
-const MS_PER_SECOND = 1000
-
 const REQUESTS_RESET_IN_MS = 90_000
 
 const COMPLEXITY_RESET_LATER_MS = 3_000_000
@@ -205,7 +203,7 @@ function openPoller(
     { error, ...details }: Record<string, unknown>,
     message: string
   ) => {
-    const reason = error instanceof Error ? ` ${error.message}` : ''
+    const reason = Error.isError(error) ? ` ${error.message}` : ''
     lines.push(`${message} ${JSON.stringify(details)}${reason}`)
   }
   const poller = createTicketPoller({
@@ -333,15 +331,18 @@ describe('the ticket poller', () => {
   it('starts at its first poll the worker of a ticket that a stopped host left In Progress', async () => {
     tickets = [{ identifier: 'TASK-7', labels: APP_TICKET, state: IN_PROGRESS }]
     const started: StartedWorker[] = []
-    const stopped = new AbortController()
+    const firstStart = Promise.withResolvers<null>()
     const { poller } = openPoller(async (task) => {
       started.push({ task, stateAtStart: stateOf(task.subject) })
-      stopped.abort()
+      firstStart.resolve(null)
 
       return { name: 'Alpha', isNew: true }
     })
 
-    await poller.run(stopped.signal)
+    {
+      await using polling = poller.start()
+      await firstStart.promise
+    }
 
     expect(
       started.map(({ task, stateAtStart }) => {
@@ -354,7 +355,7 @@ describe('the ticket poller', () => {
   it('calls Linear no more until the Retry-After that Linear gives, then polls again', async () => {
     tickets = [{ identifier: 'TASK-8', labels: APP_TICKET, state: TODO }]
     rateLimitedAnswers = 1
-    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.useFakeTimers({ toFake: ['Date', 'Temporal'] })
     onTestFinished(() => {
       vi.useRealTimers()
     })
@@ -364,14 +365,18 @@ describe('the ticket poller', () => {
     await expect(poller.pollOnce()).rejects.toThrow(
       'Linear rate limits the Linear intake until'
     )
-    vi.setSystemTime(Date.now() + RETRY_AFTER_SECONDS * MS_PER_SECOND - 1)
+    vi.setSystemTime(
+      Temporal.Now.instant()
+        .add({ seconds: RETRY_AFTER_SECONDS })
+        .subtract({ milliseconds: 1 })
+    )
     await expect(poller.pollOnce()).rejects.toThrow(
       'Linear rate limits the Linear intake until'
     )
 
     expect(requests).toBe(1)
 
-    vi.setSystemTime(Date.now() + 1)
+    vi.setSystemTime(Temporal.Now.instant().add({ milliseconds: 1 }))
     await poller.pollOnce()
 
     expect(started).toHaveLength(1)
@@ -380,26 +385,29 @@ describe('the ticket poller', () => {
   it('calls Linear no more until the reset of its spent budget when Linear gives no Retry-After', async () => {
     tickets = [{ identifier: 'TASK-9', labels: APP_TICKET, state: TODO }]
     rateLimitedAnswers = 1
-    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.useFakeTimers({ toFake: ['Date', 'Temporal'] })
     onTestFinished(() => {
       vi.useRealTimers()
     })
-    const resetAt = Date.now() + REQUESTS_RESET_IN_MS
+    const resetAt = Temporal.Now.instant().add({
+      milliseconds: REQUESTS_RESET_IN_MS
+    })
     rateLimitHeaders = new Headers({
       'x-ratelimit-requests-remaining': '0',
-      'x-ratelimit-requests-reset': String(resetAt),
+      'x-ratelimit-requests-reset': String(resetAt.epochMilliseconds),
       'x-ratelimit-complexity-remaining': '2999000',
       'x-ratelimit-complexity-reset': String(
-        resetAt + COMPLEXITY_RESET_LATER_MS
+        resetAt.add({ milliseconds: COMPLEXITY_RESET_LATER_MS })
+          .epochMilliseconds
       )
     })
     const started: StartedWorker[] = []
     const { poller } = openPoller(recordStarts(started))
 
     await expect(poller.pollOnce()).rejects.toThrow(
-      `Linear rate limits the Linear intake until ${new Date(resetAt).toISOString()}.`
+      `Linear rate limits the Linear intake until ${resetAt.toString({ smallestUnit: 'millisecond' })}.`
     )
-    vi.setSystemTime(resetAt - 1)
+    vi.setSystemTime(resetAt.subtract({ milliseconds: 1 }))
     await expect(poller.pollOnce()).rejects.toThrow(
       'Linear rate limits the Linear intake until'
     )

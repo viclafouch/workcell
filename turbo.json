@@ -16,41 +16,33 @@
       "dependsOn": ["^transit"]
     },
     "lint": {
-      "outputLogs": "errors-only",
       "dependsOn": ["transit"],
       "inputs": ["$TURBO_DEFAULT$", "!*.md", "!skills/**"]
     },
     "lint:fix": {
-      "outputLogs": "errors-only",
       "cache": false
     },
     "typecheck": {
-      "outputLogs": "errors-only",
       "dependsOn": ["transit"],
       "inputs": ["$TURBO_DEFAULT$", "!*.md", "!skills/**"]
     },
     "test": {
-      "outputLogs": "errors-only",
       "dependsOn": ["transit"],
       "inputs": ["$TURBO_DEFAULT$", "!*.md"]
     },
     "test:changed": {
-      "outputLogs": "errors-only",
       "cache": false
     },
     "test:integration": {
       "cache": false
     },
     "//#lint:root": {
-      "outputLogs": "errors-only",
       "inputs": ["*.ts", "scripts/**", "package.json"]
     },
     "//#lint:fix:root": {
-      "outputLogs": "errors-only",
       "cache": false
     },
     "//#typecheck:root": {
-      "outputLogs": "errors-only",
       "inputs": [
         "*.ts",
         "scripts/**",

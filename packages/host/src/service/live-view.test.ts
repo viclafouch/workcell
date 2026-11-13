@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { WorkerView } from '@workcell/core'
-import { createLogger } from '#host/logger'
+import { createLogger } from '#/logger.ts'
 import { liveViewUrl, openLiveView, readLiveView } from './live-view.ts'
 
 const WORKER_VIEW: WorkerView = {

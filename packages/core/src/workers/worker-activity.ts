@@ -6,7 +6,7 @@ import {
   type OperationReport
 } from '@tanstack/ai-harness'
 import { scrubSecrets } from '@tanstack/ai/byok'
-import type { ModelPricing } from '#core/budget/budget'
+import type { ModelPricing } from '#/budget/budget.ts'
 
 const ACTIVITY_PLUGIN = 'workcell/worker-activity'
 

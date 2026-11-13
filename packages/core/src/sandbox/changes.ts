@@ -1,5 +1,5 @@
 import type { SandboxHandle } from '@tanstack/ai-sandbox'
-import { WORKSPACE_ROOT } from '#core/workers/harness'
+import { WORKSPACE_ROOT } from '#/workers/harness.ts'
 
 const BUNDLE = '.git/workcell-changes.bundle'
 

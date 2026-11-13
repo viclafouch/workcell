@@ -7,12 +7,9 @@ import {
 } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
-import {
-  CUT_OFF_NOTE,
-  TRUNCATED_TOOL_RESULT
-} from '#core/host/agent-durability'
-import { createAgentHost } from '#core/host/agent-host'
-import { createHostFreeSandbox } from '#core/sandbox/host-free-sandbox'
+import { CUT_OFF_NOTE, TRUNCATED_TOOL_RESULT } from '#/host/agent-durability.ts'
+import { createAgentHost } from '#/host/agent-host.ts'
+import { createHostFreeSandbox } from '#/sandbox/host-free-sandbox.ts'
 import {
   LONG_HOST_TOOL,
   longHostTool,

@@ -163,7 +163,7 @@ function fakeOrchestrator({
         await onEvent(event)
       }
 
-      if (answer instanceof Error) {
+      if (Error.isError(answer)) {
         throw answer
       }
 

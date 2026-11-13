@@ -15,15 +15,15 @@ import {
   TEST_STARTER,
   type ToolCall
 } from '@workcell/core/testing'
-import { GITHUB_GRAPHQL_URL, GITHUB_REST_URL } from '#github/github-api'
-import { createGithubReader } from '#github/github-reader'
+import { GITHUB_GRAPHQL_URL, GITHUB_REST_URL } from '#/github-api.ts'
+import { createGithubReader } from '#/github-reader.ts'
 import {
   REPLY_TOOL_NAME,
   RESOLVE_TOOL_NAME,
   REVIEW_THREADS_TOOL_NAME
-} from '#github/prompts/github'
-import { pullRequestEvents } from '#github/pull-request-events'
-import { createReviewThreadWriter } from '#github/review-thread-writer'
+} from '#/prompts/github.ts'
+import { pullRequestEvents } from '#/pull-request-events.ts'
+import { createReviewThreadWriter } from '#/review-thread-writer.ts'
 import { reviewThreadTools } from './review-threads.ts'
 
 const GITHUB_TOKEN = 'github_pat_review_threads_test_token'

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { definePlugin } from '@tanstack/ai-harness'
 import { TaskFacts, workerMetadataSchema } from '@workcell/core'
-import { pullRequestFact } from '#github/prompts/github'
+import { pullRequestFact } from '#/prompts/github.ts'
 
 const pullRequestMetadataSchema = workerMetadataSchema.extend({
   pullRequest: z.string().optional()

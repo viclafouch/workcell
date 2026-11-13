@@ -9,7 +9,7 @@ import {
   onTestFinished,
   vi
 } from 'vitest'
-import { createMigratedDatabase } from '#core/store/test-database'
+import { createMigratedDatabase } from '#/store/test-database.ts'
 import { TEST_STARTER } from './test-doubles.ts'
 import {
   bash,
@@ -276,11 +276,13 @@ describe('the worker lifecycle', () => {
       inputId: 'read-the-file'
     })
     await submitter.host.close()
-    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.useFakeTimers({ toFake: ['Date', 'Temporal'] })
     onTestFinished(() => {
       vi.useRealTimers()
     })
-    vi.setSystemTime(Date.now() + SHORT_IDLE_MS * 2)
+    vi.setSystemTime(
+      Temporal.Now.instant().add({ milliseconds: SHORT_IDLE_MS * 2 })
+    )
 
     await using restarted = await openWorkers(
       url,

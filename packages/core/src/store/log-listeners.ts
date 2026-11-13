@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUIDv7 } from 'node:crypto'
 import { z } from 'zod'
 import type { LogStore } from '@tanstack/ai-persistence'
 import type { Database, DatabaseNotice, TransactionQuery } from './database.ts'
@@ -40,7 +40,7 @@ const LOG_VERSION_QUERY = `SELECT concat_ws(
 ) AS version`
 
 export function createLogListeners(database: Database) {
-  const instanceId = randomUUID()
+  const instanceId = randomUUIDv7()
   const listeners = new Map<string, Map<() => void, ListenerState>>()
   let stopListening: (() => void) | null = null
 
@@ -75,9 +75,14 @@ export function createLogListeners(database: Database) {
   }
 
   const catchUp = async (logId: string) => {
-    const uncalled = [...(listeners.get(logId) ?? [])].filter(([, state]) => {
-      return !state.isCalled
-    })
+    const uncalled =
+      listeners
+        .get(logId)
+        ?.entries()
+        .filter(([, state]) => {
+          return !state.isCalled
+        })
+        .toArray() ?? []
 
     if (uncalled.length === 0) {
       return
@@ -126,13 +131,13 @@ export function createLogListeners(database: Database) {
       ])
     },
     subscribe: ({ logId, listener }: Parameters<LogStore['subscribe']>[0]) => {
-      const logListeners =
-        listeners.get(logId) ?? new Map<() => void, ListenerState>()
+      const logListeners = listeners.getOrInsertComputed(logId, () => {
+        return new Map()
+      })
       logListeners.set(listener, {
         isCalled: false,
         version: readVersion(logId)
       })
-      listeners.set(logId, logListeners)
       stopListening ??= database.listen(LOG_CHANNEL, onNotice)
 
       return () => {

@@ -16,9 +16,9 @@ import {
   otelMiddleware,
   type OtelSpanInfo
 } from '@tanstack/ai/middlewares/otel'
-import type { ModelPricing } from '#core/budget/budget'
-import { SummaryMiddleware } from '#core/host/durable-compaction'
-import { agentMetadataSchema, type AgentMetadata } from '#core/workers/metadata'
+import type { ModelPricing } from '#/budget/budget.ts'
+import { SummaryMiddleware } from '#/host/durable-compaction.ts'
+import { agentMetadataSchema, type AgentMetadata } from '#/workers/metadata.ts'
 
 const TELEMETRY_PLUGIN = 'workcell/worker-telemetry'
 
@@ -76,10 +76,9 @@ export function workerTelemetry({
       let attributes = taskAttributes(threadId)
 
       const usagesOf = (chat: ChatMiddlewareContext) => {
-        const chatUsages = usagesOfChats.get(chat) ?? { usages: [] }
-        usagesOfChats.set(chat, chatUsages)
-
-        return chatUsages
+        return usagesOfChats.getOrInsertComputed(chat, () => {
+          return { usages: [] }
+        })
       }
 
       const priceUnpricedSpan = (info: OtelSpanInfo, span: Span) => {

@@ -66,7 +66,9 @@ let requests: number
 
 let rateLimitedAnswers: number
 
-const RATE_LIMIT_WINDOW_MS = 600_000
+const RATE_LIMIT_WINDOW = Temporal.Duration.from({ minutes: 10 })
+
+const PAST_THE_RATE_LIMIT = RATE_LIMIT_WINDOW.add({ seconds: 1 })
 
 const MS_PER_SECOND = 1000
 
@@ -153,6 +155,8 @@ const network = setupServer(
     if (rateLimitedAnswers > 0) {
       rateLimitedAnswers -= 1
 
+      const resetAt = Temporal.Now.instant().add(RATE_LIMIT_WINDOW)
+
       return HttpResponse.json(
         { message: 'API rate limit exceeded' },
         {
@@ -160,7 +164,7 @@ const network = setupServer(
           headers: {
             'x-ratelimit-remaining': '0',
             'x-ratelimit-reset': String(
-              Math.ceil((Date.now() + RATE_LIMIT_WINDOW_MS) / MS_PER_SECOND)
+              Math.ceil(resetAt.epochMilliseconds / MS_PER_SECOND)
             )
           }
         }
@@ -202,7 +206,7 @@ function openWatcher({
     { error, ...details }: Record<string, unknown>,
     message: string
   ) => {
-    const reason = error instanceof Error ? ` ${error.message}` : ''
+    const reason = Error.isError(error) ? ` ${error.message}` : ''
     lines.push(`${message} ${JSON.stringify(details)}${reason}`)
   }
   const watcher = createPullRequestWatcher({
@@ -229,18 +233,7 @@ function openWatcher({
   return { watcher, wakes, posts, finishes, lines }
 }
 
-async function pollTwice(watcher: { pollOnce: () => Promise<void> }) {
-  await watcher.pollOnce()
-  await watcher.pollOnce()
-}
-
-function inputIdsAndDeliveries(wakes: WakeWorkerParams[]) {
-  return wakes.map(({ inputId, delivery }) => {
-    return [inputId, delivery]
-  })
-}
-
-describe('the events that wake a worker', () => {
+function serveGithubPerTest() {
   beforeAll(() => {
     network.listen({ onUnhandledFrame: 'error' })
   })
@@ -254,6 +247,21 @@ describe('the events that wake a worker', () => {
   afterAll(() => {
     network.close()
   })
+}
+
+async function pollTwice(watcher: { pollOnce: () => Promise<void> }) {
+  await watcher.pollOnce()
+  await watcher.pollOnce()
+}
+
+function inputIdsAndDeliveries(wakes: WakeWorkerParams[]) {
+  return wakes.map(({ inputId, delivery }) => {
+    return [inputId, delivery]
+  })
+}
+
+describe('the events that wake a worker', () => {
+  serveGithubPerTest()
 
   it('calls GitHub only when a live worker has a branch', async () => {
     const { watcher } = openWatcher({
@@ -486,19 +494,7 @@ describe('the events that wake a worker', () => {
 })
 
 describe('the pull request watch', () => {
-  beforeAll(() => {
-    network.listen({ onUnhandledFrame: 'error' })
-  })
-
-  beforeEach(() => {
-    pullRequests = []
-    requests = 0
-    rateLimitedAnswers = 0
-  })
-
-  afterAll(() => {
-    network.close()
-  })
+  serveGithubPerTest()
 
   it('leaves no timer behind once its GitHub API is disposed', async () => {
     const timersBefore = timersKeepingTheProcessAlive()
@@ -608,7 +604,7 @@ describe('the pull request watch', () => {
       }
     ]
     rateLimitedAnswers = 1
-    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.useFakeTimers({ toFake: ['Date', 'Temporal'] })
     onTestFinished(() => {
       vi.useRealTimers()
     })
@@ -623,7 +619,7 @@ describe('the pull request watch', () => {
 
     expect(requests).toBe(1)
 
-    vi.setSystemTime(Date.now() + RATE_LIMIT_WINDOW_MS + MS_PER_SECOND)
+    vi.setSystemTime(Temporal.Now.instant().add(PAST_THE_RATE_LIMIT))
     await pollTwice(watcher)
 
     expect(requests - 1).toBe(2)
@@ -632,19 +628,7 @@ describe('the pull request watch', () => {
 })
 
 describe('the line of a pull request whose checks turn green', () => {
-  beforeAll(() => {
-    network.listen({ onUnhandledFrame: 'error' })
-  })
-
-  beforeEach(() => {
-    pullRequests = []
-    requests = 0
-    rateLimitedAnswers = 0
-  })
-
-  afterAll(() => {
-    network.close()
-  })
+  serveGithubPerTest()
 
   it('posts one line in its thread once per head commit when its checks turn green, and wakes nothing', async () => {
     const pullRequest = openPullRequest(

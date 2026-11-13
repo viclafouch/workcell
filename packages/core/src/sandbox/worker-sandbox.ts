@@ -7,17 +7,17 @@ import {
   type SandboxInstanceStore
 } from '@tanstack/ai-sandbox'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
-import { WORKSPACE_ROOT } from '#core/workers/harness'
+import { WORKSPACE_ROOT } from '#/workers/harness.ts'
 import {
   workerIdentityEnv,
   type WorkerIdentityEnvParams
-} from '#core/workers/identity'
+} from '#/workers/identity.ts'
 import type {
   ListSandboxes,
   NamedWorker,
   RepositorySandboxes,
   WorkerLogger
-} from '#core/workers/lifecycle'
+} from '#/workers/lifecycle.ts'
 import {
   captureChanges,
   restoreChanges,

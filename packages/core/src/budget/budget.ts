@@ -13,10 +13,10 @@ import {
   type SessionUsage
 } from '@tanstack/ai-harness'
 import { formatTodos, type usage } from '@tanstack/ai-harness/plugins'
-import { SummaryMiddleware } from '#core/host/durable-compaction'
-import { budgetAnswerPrompt } from '#core/prompts/worker'
-import { agentMetadataSchema, type AgentMetadata } from '#core/workers/metadata'
-import { todosOf } from '#core/workers/todo-list'
+import { SummaryMiddleware } from '#/host/durable-compaction.ts'
+import { budgetAnswerPrompt } from '#/prompts/worker.ts'
+import { agentMetadataSchema, type AgentMetadata } from '#/workers/metadata.ts'
+import { todosOf } from '#/workers/todo-list.ts'
 import { EntrySkillLimits, type BudgetLimits } from './limits.ts'
 
 const BUDGET_PLUGIN = 'workcell/worker-budget'

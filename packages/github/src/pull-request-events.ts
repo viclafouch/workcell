@@ -5,7 +5,7 @@ import {
   RESOLVE_TOOL_NAME,
   REVIEW_THREADS_TOOL_NAME,
   type PullRequestLines
-} from '#github/prompts/github'
+} from '#/prompts/github.ts'
 import type { Author, StatusContext, WatchedPullRequest } from './github-api.ts'
 
 const RED_STATES = new Set(['FAILURE', 'ERROR'])

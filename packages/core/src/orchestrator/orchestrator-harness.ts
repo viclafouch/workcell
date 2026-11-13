@@ -15,21 +15,18 @@ import {
   untilABudgetStop,
   workerBudget,
   type ModelPricing
-} from '#core/budget/budget'
-import type { BudgetLimits } from '#core/budget/limits'
-import { AGENT_DURABILITY } from '#core/host/agent-durability'
-import type { IsStarter } from '#core/host/allowed-senders'
-import { durableCompaction } from '#core/host/durable-compaction'
-import {
-  libraryMapPrompt,
-  orchestratorPrompt
-} from '#core/prompts/orchestrator'
+} from '#/budget/budget.ts'
+import type { BudgetLimits } from '#/budget/limits.ts'
+import { AGENT_DURABILITY } from '#/host/agent-durability.ts'
+import type { IsStarter } from '#/host/allowed-senders.ts'
+import { durableCompaction } from '#/host/durable-compaction.ts'
+import { libraryMapPrompt, orchestratorPrompt } from '#/prompts/orchestrator.ts'
 import {
   workerTelemetry,
   type WorkerObservability
-} from '#core/telemetry/worker-telemetry'
-import { agentMetadataSchema } from '#core/workers/metadata'
-import type { Workers } from '#core/workers/workers'
+} from '#/telemetry/worker-telemetry.ts'
+import { agentMetadataSchema } from '#/workers/metadata.ts'
+import type { Workers } from '#/workers/workers.ts'
 import { orchestratorTools } from './orchestrator-tools.ts'
 
 const ORCHESTRATOR_HARNESS_NAME = 'workcell/orchestrator'

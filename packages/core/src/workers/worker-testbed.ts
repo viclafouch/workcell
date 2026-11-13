@@ -14,14 +14,14 @@ import {
   FakeTextAdapter,
   type FakeResponseStep
 } from '@tanstack/ai/testing'
-import type { ModelPricing } from '#core/budget/budget'
-import type { BudgetLimits } from '#core/budget/limits'
-import { createHostFreeProvider } from '#core/sandbox/host-free-sandbox'
-import { createSandboxInstanceStore } from '#core/store/sandbox-instance-store'
-import { openTestDatabase } from '#core/store/test-database'
-import { createWorkerChangesStore } from '#core/store/worker-changes-store'
-import type { WorkerObservability } from '#core/telemetry/worker-telemetry'
-import { openWorkcell } from '#core/workcell'
+import type { ModelPricing } from '#/budget/budget.ts'
+import type { BudgetLimits } from '#/budget/limits.ts'
+import { createHostFreeProvider } from '#/sandbox/host-free-sandbox.ts'
+import { createSandboxInstanceStore } from '#/store/sandbox-instance-store.ts'
+import { openTestDatabase } from '#/store/test-database.ts'
+import { createWorkerChangesStore } from '#/store/worker-changes-store.ts'
+import type { WorkerObservability } from '#/telemetry/worker-telemetry.ts'
+import { openWorkcell } from '#/workcell.ts'
 import { workerMetadataSchema } from './metadata.ts'
 import {
   ROOMY_LIMITS,

@@ -1,5 +1,5 @@
 import type { SandboxProvider } from '@tanstack/ai-sandbox'
-import type { ListSandboxes } from '#core/workers/lifecycle'
+import type { ListSandboxes } from '#/workers/lifecycle.ts'
 
 type ListingProvider = Pick<SandboxProvider, 'destroy'> & {
   list: ListSandboxes

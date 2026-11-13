@@ -9,9 +9,9 @@ import {
 } from 'vitest'
 import { definePlugin } from '@tanstack/ai-harness'
 import { fakeText } from '@tanstack/ai/testing'
-import { EntrySkillLimits } from '#core/budget/limits'
-import { createModelPricing } from '#core/budget/pricing'
-import { createMigratedDatabase } from '#core/store/test-database'
+import { EntrySkillLimits } from '#/budget/limits.ts'
+import { createModelPricing } from '#/budget/pricing.ts'
+import { createMigratedDatabase } from '#/store/test-database.ts'
 import { TEST_STARTER } from './test-doubles.ts'
 import {
   bash,

@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUIDv7 } from 'node:crypto'
 import Dockerode from 'dockerode'
 import type { SandboxDefinition } from '@tanstack/ai-sandbox'
 import { findImage, hasStatus, isNotFound } from './proxied-docker-sandbox.ts'
@@ -62,8 +62,8 @@ async function commitSetup(
   { sandbox, tag, labels }: ImageCommit
 ) {
   const handle = await sandbox.ensure({
-    threadId: `${IMAGE_THREAD}/${randomUUID()}`,
-    runId: randomUUID()
+    threadId: `${IMAGE_THREAD}/${randomUUIDv7()}`,
+    runId: randomUUIDv7()
   })
 
   try {

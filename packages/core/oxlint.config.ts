@@ -1,5 +1,5 @@
 import { defineConfig, type OxlintConfig, type OxlintOverride } from 'oxlint'
-import { imports, typescript, vitest } from '@viclafouch/oxc-config'
+import { imports, turbo, typescript, vitest } from '@viclafouch/oxc-config'
 
 const ROOT_LOGGER_PATH = {
   name: 'pino',
@@ -132,8 +132,11 @@ const VITEST_PROVIDED_CONTEXT_MERGES_ONLY_AS_AN_INTERFACE = {
 const SHARED_MODULE_GRAPH_MESSAGE =
   'The tests share one module graph (isolate: false). A module mock leaks across files. Pass the dependency in, or put a local server in front of the network.'
 
+const [UNUSED_VARS_LEVEL, UNUSED_VARS_OPTIONS] =
+  typescript.rules['no-unused-vars']
+
 export default defineConfig({
-  extends: [typescript, imports, vitest],
+  extends: [typescript, turbo, vitest, imports],
   options: {
     typeAware: true,
     reportUnusedDisableDirectives: 'error',
@@ -141,6 +144,10 @@ export default defineConfig({
   },
   ignorePatterns: ['node_modules/**'],
   rules: {
+    'no-unused-vars': [
+      UNUSED_VARS_LEVEL,
+      { ...UNUSED_VARS_OPTIONS, ignoreUsingDeclarations: true }
+    ],
     'import/extensions': FULL_FILE_NAME_FOR_NODE_TYPE_STRIPPING,
     'no-restricted-imports': restrictImportsExcept(),
     'vitest/no-restricted-vi-methods': [

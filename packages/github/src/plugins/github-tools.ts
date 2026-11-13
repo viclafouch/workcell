@@ -1,12 +1,12 @@
 import { z } from 'zod'
 import { toolDefinition } from '@tanstack/ai'
 import { definePlugin, PermissionRules } from '@tanstack/ai-harness'
-import type { GithubReader } from '#github/github-reader'
+import type { GithubReader } from '#/github-reader.ts'
 import {
   GITHUB_TOOLS_TEXT,
   githubPrompt,
   outsideRepositoriesRefusal
-} from '#github/prompts/github'
+} from '#/prompts/github.ts'
 
 const MAX_HISTORY_LIMIT = 30
 

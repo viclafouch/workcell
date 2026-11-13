@@ -20,14 +20,14 @@ import {
 import type { SandboxDefinition, SandboxProvider } from '@tanstack/ai-sandbox'
 import { scrubSecrets } from '@tanstack/ai/byok'
 import { AsyncQueuer } from '@tanstack/pacer'
-import type { LogLine } from '#core/host/mcp-server-log'
+import type { LogLine } from '#/host/mcp-server-log.ts'
 import {
   branchFact,
   FINISH_TASK_TEXT,
   FINISH_WITHOUT_STOP_REFUSAL,
   workerIdentityPrompt
-} from '#core/prompts/worker'
-import type { WorkerSandbox } from '#core/sandbox/worker-sandbox'
+} from '#/prompts/worker.ts'
+import type { WorkerSandbox } from '#/sandbox/worker-sandbox.ts'
 import { workerMetadataSchema, type WorkerMetadata } from './metadata.ts'
 
 const MS_PER_MINUTE = 60_000
@@ -631,7 +631,8 @@ export function createWorkerLifecycle({
           return
         }
 
-        const idleMs = Date.now() - worker.updatedAt
+        const idleMs =
+          Temporal.Now.instant().epochMilliseconds - worker.updatedAt
 
         if (idleMs >= idleSandboxMs) {
           await destroySandboxOf(worker)

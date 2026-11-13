@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PullRequestLines } from '#github/prompts/github'
+import type { PullRequestLines } from '#/prompts/github.ts'
 import type { WatchedPullRequest } from './github-api.ts'
 import { pullRequestEvents, type ReviewGate } from './pull-request-events.ts'
 

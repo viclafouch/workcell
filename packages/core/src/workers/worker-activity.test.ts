@@ -9,7 +9,7 @@ import {
 } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
-import type { ModelPricing } from '#core/budget/budget'
+import type { ModelPricing } from '#/budget/budget.ts'
 import {
   FREE_MODEL_PRICING,
   SILENT_HOST_LOGGER,

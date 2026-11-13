@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUIDv7 } from 'node:crypto'
 import { inject } from 'vitest'
 import { openDatabase, type LogLine } from './database.ts'
 import { MIGRATIONS_DIRECTORY, migrateDatabase } from './migrate-database.ts'
@@ -41,7 +41,7 @@ export function openTestDatabase(
 
 export async function createDatabase() {
   const postgresUrl = inject('postgresUrl')
-  const name = `test_${randomUUID().replaceAll('-', '')}`
+  const name = `test_${randomUUIDv7().replaceAll('-', '')}`
   await using admin = openTestDatabase(postgresUrl)
   await admin.query('create a test database', `CREATE DATABASE ${name}`)
   const databaseUrl = new URL(postgresUrl)

@@ -1,6 +1,6 @@
 import { definePlugin } from '@tanstack/ai-harness'
 import { TaskFacts } from '@workcell/core'
-import { ticketFact } from '#linear/prompts/linear'
+import { ticketFact } from '#/prompts/linear.ts'
 
 export const ticketTaskFact = definePlugin({
   name: 'workcell/linear-task-facts',

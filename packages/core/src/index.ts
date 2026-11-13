@@ -16,6 +16,7 @@ export {
 } from './http/secret-probe.ts'
 export { openWorkcell } from './workcell.ts'
 export { joinCutOffAnswer, WORKER_DURABILITY } from './host/agent-durability.ts'
+export { startLoop } from './host/loop.ts'
 export { toTanStackLogger } from './host/tanstack-logger.ts'
 export type {
   AskOrchestratorParams,

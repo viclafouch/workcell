@@ -1,6 +1,6 @@
 import type { SessionIndexEntry } from '@tanstack/ai-persistence'
-import type { Database } from '#core/store/database'
-import { createPostgresSessionIndexStore } from '#core/store/session-index-store'
+import type { Database } from '#/store/database.ts'
+import { createPostgresSessionIndexStore } from '#/store/session-index-store.ts'
 import { WORKER_HARNESS_NAME } from './harness.ts'
 import { listedWorkerOf, type ListedWorker } from './live-workers.ts'
 
@@ -60,7 +60,7 @@ async function resetWorker(database: Database, reset: WorkerReset) {
       throw new Error(`The worker of the thread ${threadId} has no entry.`)
     }
 
-    const updatedAt = Date.now()
+    const updatedAt = Temporal.Now.instant().epochMilliseconds
     const entry: SessionIndexEntry = {
       ...row.entry,
       archived: true,

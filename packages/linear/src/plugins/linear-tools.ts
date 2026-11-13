@@ -7,7 +7,7 @@ import {
 } from '@tanstack/ai-harness'
 import { mcp } from '@tanstack/ai-mcp/harness'
 import { agentMetadataSchema } from '@workcell/core'
-import { linearPrompt } from '#linear/prompts/linear'
+import { linearPrompt } from '#/prompts/linear.ts'
 
 export const LINEAR_MCP_URL = 'https://mcp.linear.app/mcp'
 

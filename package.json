@@ -29,6 +29,7 @@
     "@tanstack/pacer": "catalog:",
     "@types/node": "catalog:",
     "@viclafouch/oxc-config": "catalog:",
+    "eslint-plugin-turbo": "catalog:",
     "knip": "catalog:",
     "lefthook": "catalog:",
     "oxfmt": "catalog:",
@@ -38,7 +39,7 @@
     "typescript": "catalog:"
   },
   "engines": {
-    "node": ">=24.22.1 <25"
+    "node": ">=26.13.1 <27"
   },
   "packageManager": "pnpm@12.18.0"
 }

@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomUUIDv7 } from 'node:crypto'
 import type {
   HarnessHost,
   HarnessSession,
@@ -8,8 +8,8 @@ import type {
   SubmitInput
 } from '@tanstack/ai-harness'
 import { InMemoryLockStore } from '@tanstack/ai/locks'
-import { refusalOf, type IsStarter } from '#core/host/allowed-senders'
-import { logMcpServerChanges } from '#core/host/mcp-server-log'
+import { refusalOf, type IsStarter } from '#/host/allowed-senders.ts'
+import { logMcpServerChanges } from '#/host/mcp-server-log.ts'
 import type { WorkerHarness } from './harness.ts'
 import {
   personInputId,
@@ -239,18 +239,8 @@ export function createWorkers({
     })
   }
 
-  const trackLiveWorkers = (
-    signal: AbortSignal,
-    onChange: OnWorkerChange = () => {}
-  ) => {
-    return trackWorkerChanges({
-      host,
-      harness,
-      readWorkers,
-      logger,
-      signal,
-      onChange
-    })
+  const trackLiveWorkers = (onChange: OnWorkerChange = () => {}) => {
+    return trackWorkerChanges({ host, harness, readWorkers, logger, onChange })
   }
 
   const findWorkerOfInput = async (inputId: string) => {
@@ -286,7 +276,7 @@ export function createWorkers({
       inputId
     }
     const session = await host.open(harness, {
-      threadId: randomUUID(),
+      threadId: randomUUIDv7(),
       user: starter
     })
     await session.updateIndexEntry({

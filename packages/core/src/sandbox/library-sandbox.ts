@@ -6,8 +6,9 @@ import type {
   SandboxInstanceStore
 } from '@tanstack/ai-sandbox'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
-import { WORKSPACE_ROOT } from '#core/workers/harness'
-import type { ListSandboxes, WorkerLogger } from '#core/workers/lifecycle'
+import { startLoop } from '#/host/loop.ts'
+import { WORKSPACE_ROOT } from '#/workers/harness.ts'
+import type { ListSandboxes, WorkerLogger } from '#/workers/lifecycle.ts'
 import { followCurrent } from './follow-current.ts'
 
 const LIBRARY_THREAD = 'workcell/library'
@@ -266,6 +267,8 @@ export function createLibrarySandbox({
       return map
     },
     pullOnce,
-    run
+    start: () => {
+      return startLoop(run)
+    }
   }
 }

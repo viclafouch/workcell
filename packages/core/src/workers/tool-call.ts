@@ -11,12 +11,12 @@ import {
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { fakeText } from '@tanstack/ai/testing'
-import { createAgentHost } from '#core/host/agent-host'
-import { readOnlyCredentials } from '#core/host/read-only-credentials'
+import { createAgentHost } from '#/host/agent-host.ts'
+import { readOnlyCredentials } from '#/host/read-only-credentials.ts'
 import {
   createHostFreeLifecycle,
   type createHostFreeSandbox
-} from '#core/sandbox/host-free-sandbox'
+} from '#/sandbox/host-free-sandbox.ts'
 import { defineWorkerHarness, WORKSPACE_ROOT } from './harness.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
 import type { WorkerMetadata } from './metadata.ts'

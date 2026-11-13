@@ -1,5 +1,5 @@
 import type { SandboxHandle } from '@tanstack/ai-sandbox'
-import { WORKSPACE_ROOT } from '#core/workers/harness'
+import { WORKSPACE_ROOT } from '#/workers/harness.ts'
 
 const FACTS_SCRIPT = `branch=$(git symbolic-ref --short --quiet HEAD || true)
 base=$(git merge-base HEAD "origin/$WORKCELL_BASE_REF" 2>/dev/null || git rev-parse HEAD)

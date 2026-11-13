@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { fakeText, FakeTextAdapter } from '@tanstack/ai/testing'
-import { createMigratedDatabase } from '#core/store/test-database'
-import type { WorkerObservability } from '#core/telemetry/worker-telemetry'
+import { createMigratedDatabase } from '#/store/test-database.ts'
+import type { WorkerObservability } from '#/telemetry/worker-telemetry.ts'
 import { TEST_STARTER } from './test-doubles.ts'
 import {
   budgetEndsOf,

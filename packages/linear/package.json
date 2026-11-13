@@ -10,7 +10,7 @@
   },
   "type": "module",
   "imports": {
-    "#linear/*": "./src/*.ts"
+    "#/*": "./src/*"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -31,6 +31,7 @@
     "@types/node": "catalog:",
     "@viclafouch/oxc-config": "catalog:",
     "@workcell/core": "workspace:*",
+    "eslint-plugin-turbo": "catalog:",
     "msw": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",

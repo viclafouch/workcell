@@ -9,8 +9,8 @@ import {
 } from 'vitest'
 import { definePlugin } from '@tanstack/ai-harness'
 import type { FakeResponseStep } from '@tanstack/ai/testing'
-import { SENDER_REFUSAL } from '#core/host/allowed-senders'
-import { createMigratedDatabase } from '#core/store/test-database'
+import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
+import { createMigratedDatabase } from '#/store/test-database.ts'
 import { FinishRefusals, TaskFacts } from './lifecycle.ts'
 import { TEST_STARTER } from './test-doubles.ts'
 import {
