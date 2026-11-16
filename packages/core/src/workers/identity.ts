@@ -4,24 +4,29 @@ export type GitIdentity = { name: string; email: string }
 
 export type WorkerIdentityEnvParams = GitIdentity & { coAuthorEmail: string }
 
-function readGlobalGitConfig(key: string) {
+type ReadHostGitIdentityParams = { directory: string }
+
+function readGitConfig(directory: string, key: string) {
   try {
-    return execFileSync('git', ['config', 'get', '--global', key], {
+    return execFileSync('git', ['config', 'get', key], {
+      cwd: directory,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore']
     }).trim()
   } catch (error) {
     throw new Error(
-      `The host git config has no ${key}: run git config set --global ${key} <value>.`,
+      `The git config of ${directory} has no ${key}: run git config set ${key} <value> in its repository, or with --global.`,
       { cause: error }
     )
   }
 }
 
-export function readHostGitIdentity(): GitIdentity {
+export function readHostGitIdentity({
+  directory
+}: ReadHostGitIdentityParams): GitIdentity {
   return {
-    name: readGlobalGitConfig('user.name'),
-    email: readGlobalGitConfig('user.email')
+    name: readGitConfig(directory, 'user.name'),
+    email: readGitConfig(directory, 'user.email')
   }
 }
 
