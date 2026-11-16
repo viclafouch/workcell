@@ -1,8 +1,8 @@
 import { setTimeout } from 'node:timers/promises'
 import type { HarnessUser } from '@tanstack/ai-harness'
 import { startLoop, type WorkerTask } from '@workcell/core'
-import { ticketTask } from '#/prompts/linear.ts'
 import type { LinearApi, LinearTicket } from './linear-api.ts'
+import { ticketTask } from './prompts/linear.ts'
 
 const CLAIMABLE_STATE_TYPES = ['backlog', 'unstarted']
 

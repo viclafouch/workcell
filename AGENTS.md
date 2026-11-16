@@ -42,6 +42,7 @@ A Workcell package holds the default run only: no model call, the harness on `fa
 
 A behaviour that can break in silence gets a test, with its host restart path: a restart during a turn, during a wait for a person, with a worker asleep.
 
+- A test and its fixtures live in the `__tests__/` folder of the module they cover, and import that module through `#/`.
 - A database test makes its own database, or closes what it opens.
 - msw 3 fails an unmocked request with `listen({ onUnhandledFrame: 'error' })`.
 - A sandbox test destroys its sandbox. Check `docker ps` after each one.

@@ -27,16 +27,15 @@ import type { BudgetLimits } from '#/budget/limits.ts'
 import { WORKER_DURABILITY } from '#/host/agent-durability.ts'
 import { durableCompaction } from '#/host/durable-compaction.ts'
 import { repositoryRulesPrompt } from '#/prompts/worker.ts'
+import { WORKSPACE_ROOT } from '#/sandbox/sandbox-facts.ts'
+import { workerMetadataSchema } from '#/session/metadata.ts'
 import {
   workerTelemetry,
   type WorkerObservability
 } from '#/telemetry/worker-telemetry.ts'
 import { denyGuard } from './deny-guard.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
-import { workerMetadataSchema } from './metadata.ts'
 import { SANDBOX_PERMISSION_RULES } from './permission-rules.ts'
-
-export const WORKSPACE_ROOT = '/workspace'
 
 export const WORKER_HARNESS_NAME = 'workcell/worker'
 

@@ -5,9 +5,12 @@ import type {
 } from '@tanstack/ai-harness'
 import { AsyncQueuer } from '@tanstack/pacer'
 import { startLoop } from '#/host/loop.ts'
+import {
+  workerMetadataSchema,
+  type WorkerMetadata
+} from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
 import type { WorkerLogger } from './lifecycle.ts'
-import { workerMetadataSchema, type WorkerMetadata } from './metadata.ts'
 
 export type ListedWorker = WorkerMetadata &
   Pick<SessionIndexEntry, 'threadId' | 'updatedAt' | 'usage'>

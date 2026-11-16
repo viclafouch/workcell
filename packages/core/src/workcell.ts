@@ -18,7 +18,7 @@ import {
   createLibrarySandbox,
   type LibraryRepositories
 } from './sandbox/library-sandbox.ts'
-import { createWorkerSandbox } from './sandbox/worker-sandbox.ts'
+import { workerMetadataSchema } from './session/metadata.ts'
 import type { Database } from './store/database.ts'
 import { createHarnessPersistence } from './store/harness-persistence.ts'
 import { createSandboxInstanceStore } from './store/sandbox-instance-store.ts'
@@ -32,8 +32,8 @@ import {
   type ListedSandboxProvider,
   type RepositorySandboxes
 } from './workers/lifecycle.ts'
-import { workerMetadataSchema } from './workers/metadata.ts'
 import { createWorkerActivity } from './workers/worker-activity.ts'
+import { createWorkerSandbox } from './workers/worker-sandbox.ts'
 import { createWorkerView } from './workers/worker-view.ts'
 import { createWorkers } from './workers/workers.ts'
 

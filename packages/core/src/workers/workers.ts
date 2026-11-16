@@ -10,6 +10,7 @@ import type {
 import { InMemoryLockStore } from '@tanstack/ai/locks'
 import { refusalOf, type IsStarter } from '#/host/allowed-senders.ts'
 import { logMcpServerChanges } from '#/host/mcp-server-log.ts'
+import type { WorkerMetadata } from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
 import {
   personInputId,
@@ -22,7 +23,6 @@ import {
   type ListedWorker,
   type OnWorkerChange
 } from './live-workers.ts'
-import type { WorkerMetadata } from './metadata.ts'
 import { pickFreeName } from './worker-names.ts'
 
 const REJECTED_BY_A_PERSON =

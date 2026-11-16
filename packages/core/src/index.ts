@@ -48,9 +48,9 @@ export {
   agentMetadataSchema,
   workerMetadataSchema,
   type WorkerMetadata
-} from './workers/metadata.ts'
+} from './session/metadata.ts'
 export type { ThreadLine } from './workers/thread-line.ts'
-export { todosOf } from './workers/todo-list.ts'
+export { todosOf } from './session/todo-list.ts'
 export type {
   ListedWorker,
   LiveWorker,

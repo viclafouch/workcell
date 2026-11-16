@@ -18,7 +18,7 @@ import {
 } from '@tanstack/ai/middlewares/otel'
 import type { ModelPricing } from '#/budget/budget.ts'
 import { SummaryMiddleware } from '#/host/durable-compaction.ts'
-import { agentMetadataSchema, type AgentMetadata } from '#/workers/metadata.ts'
+import { agentMetadataSchema, type AgentMetadata } from '#/session/metadata.ts'
 
 const TELEMETRY_PLUGIN = 'workcell/worker-telemetry'
 

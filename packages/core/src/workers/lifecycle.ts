@@ -28,8 +28,12 @@ import {
   shallowCloneFact,
   workerIdentityPrompt
 } from '#/prompts/worker.ts'
-import type { WorkerSandbox } from '#/sandbox/worker-sandbox.ts'
-import { workerMetadataSchema, type WorkerMetadata } from './metadata.ts'
+import type { ListSandboxes } from '#/sandbox/sandboxes-under-keys.ts'
+import {
+  workerMetadataSchema,
+  type WorkerMetadata
+} from '#/session/metadata.ts'
+import type { WorkerSandbox } from './worker-sandbox.ts'
 
 const MS_PER_MINUTE = 60_000
 
@@ -52,8 +56,6 @@ function isPersonInput(inputId: string | undefined) {
 }
 
 const commandSchema = z.object({ command: z.string() })
-
-export type ListSandboxes = () => Promise<{ id: string; key: string }[]>
 
 export type ListedSandboxProvider = Pick<SandboxProvider, 'destroy'> & {
   list: ListSandboxes

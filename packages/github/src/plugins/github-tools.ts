@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { toolDefinition } from '@tanstack/ai'
 import { definePlugin, PermissionRules } from '@tanstack/ai-harness'
-import type { GithubReader } from '#/github-reader.ts'
+import type { GithubReader } from '#/api/github-reader.ts'
 import {
   GITHUB_TOOLS_TEXT,
   githubPrompt,

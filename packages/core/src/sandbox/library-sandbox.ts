@@ -7,9 +7,10 @@ import type {
 } from '@tanstack/ai-sandbox'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { startLoop } from '#/host/loop.ts'
-import { WORKSPACE_ROOT } from '#/workers/harness.ts'
-import type { ListSandboxes, WorkerLogger } from '#/workers/lifecycle.ts'
+import type { LogLine } from '#/host/mcp-server-log.ts'
 import { followCurrent } from './follow-current.ts'
+import { WORKSPACE_ROOT } from './sandbox-facts.ts'
+import type { ListSandboxes } from './sandboxes-under-keys.ts'
 
 const LIBRARY_THREAD = 'workcell/library'
 
@@ -68,13 +69,19 @@ type LibraryRepository = { url: string; ref: string }
 
 export type LibraryRepositories = Readonly<Record<string, LibraryRepository>>
 
+type LibraryLog = Record<'info' | 'warn' | 'error', LogLine>
+
+type LibraryLogger = {
+  child: (bindings: Record<string, unknown>) => LibraryLog
+}
+
 type CreateLibrarySandboxParams = {
   sandbox: SandboxDefinition
   repositories: LibraryRepositories
   pullIntervalMs: number
   listSandboxes: ListSandboxes
   instances: SandboxInstanceStore
-  logger: WorkerLogger
+  logger: LibraryLogger
   mapFolders?: readonly string[]
 }
 

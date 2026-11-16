@@ -25,7 +25,7 @@ const MODEL_PROVIDER_PATTERN = {
 const LOCAL_SANDBOX_PATH = {
   name: '@tanstack/ai-sandbox-local-process',
   message:
-    'Take a sandbox from createHostFreeProvider() or createHostFreeSandbox() of src/sandbox/host-free-sandbox.ts. Its HOME holds no login of the host, so a command that a rule lets through never reaches GitHub.'
+    'Take a sandbox from createHostFreeProvider() or createHostFreeSandbox() of src/testing/host-free-sandbox.ts. Its HOME holds no login of the host, so a command that a rule lets through never reaches GitHub.'
 }
 
 const DATABASE_DRIVER_PATH = {
@@ -71,7 +71,7 @@ const HARNESS_HOST_PATH = {
 const POSTGRES_CONTAINER_PATH = {
   name: '@testcontainers/postgresql',
   message:
-    'Take a database from createMigratedDatabase() or createDatabase() of src/store/test-database.ts. The global setup starts one Postgres container for the whole test run.'
+    'Take a database from createMigratedDatabase() or createDatabase() of src/testing/test-database.ts. The global setup starts one Postgres container for the whole test run.'
 }
 
 const RESTRICTED_IMPORT_PATHS = [
@@ -123,7 +123,7 @@ const FOUR_ARGUMENT_SET_IF_OF_TANSTACK_METADATA_STORE = {
 } satisfies OxlintOverride
 
 const VITEST_PROVIDED_CONTEXT_MERGES_ONLY_AS_AN_INTERFACE = {
-  files: ['src/store/test-database.ts'],
+  files: ['src/testing/test-database.ts'],
   rules: {
     '@typescript-eslint/consistent-type-definitions': 'off'
   }
@@ -162,7 +162,7 @@ export default defineConfig({
     FOUR_ARGUMENT_SET_IF_OF_TANSTACK_METADATA_STORE,
     VITEST_PROVIDED_CONTEXT_MERGES_ONLY_AS_AN_INTERFACE,
     {
-      files: ['src/fail-on-console.ts'],
+      files: ['src/testing/fail-on-console.ts'],
       plugins: ['vitest'],
       rules: {
         'vitest/require-top-level-describe': 'off',
@@ -195,13 +195,13 @@ export default defineConfig({
       }
     },
     {
-      files: ['src/sandbox/host-free-sandbox.ts'],
+      files: ['src/testing/host-free-sandbox.ts'],
       rules: {
         'no-restricted-imports': restrictImportsExcept(LOCAL_SANDBOX_PATH)
       }
     },
     {
-      files: ['src/workers/tool-call.ts', 'src/sandbox/library-question.ts'],
+      files: ['src/testing/tool-call.ts', 'src/testing/library-question.ts'],
       rules: {
         'no-restricted-imports': restrictImportsExcept(MEMORY_PERSISTENCE_PATH)
       }
@@ -213,7 +213,7 @@ export default defineConfig({
       }
     },
     {
-      files: ['src/store/postgres-global-setup.ts'],
+      files: ['src/testing/postgres-global-setup.ts'],
       rules: {
         'no-restricted-imports': restrictImportsExcept(POSTGRES_CONTAINER_PATH)
       }

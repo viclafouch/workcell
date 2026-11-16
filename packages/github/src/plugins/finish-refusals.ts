@@ -1,6 +1,6 @@
 import { definePlugin } from '@tanstack/ai-harness'
 import { FinishRefusals } from '@workcell/core'
-import type { GithubReader } from '#/github-reader.ts'
+import type { GithubReader } from '#/api/github-reader.ts'
 import { openPullRequestRefusal } from '#/prompts/github.ts'
 
 export function refuseFinishWithAnOpenPullRequest(reader: GithubReader) {

@@ -9,6 +9,9 @@
     "directory": "packages/slack"
   },
   "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"

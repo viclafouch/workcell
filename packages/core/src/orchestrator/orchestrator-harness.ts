@@ -21,11 +21,11 @@ import { AGENT_DURABILITY } from '#/host/agent-durability.ts'
 import type { IsStarter } from '#/host/allowed-senders.ts'
 import { durableCompaction } from '#/host/durable-compaction.ts'
 import { libraryMapPrompt, orchestratorPrompt } from '#/prompts/orchestrator.ts'
+import { agentMetadataSchema } from '#/session/metadata.ts'
 import {
   workerTelemetry,
   type WorkerObservability
 } from '#/telemetry/worker-telemetry.ts'
-import { agentMetadataSchema } from '#/workers/metadata.ts'
 import type { Workers } from '#/workers/workers.ts'
 import { orchestratorTools } from './orchestrator-tools.ts'
 

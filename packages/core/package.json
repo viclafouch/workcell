@@ -14,9 +14,9 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./testing": "./src/testing.ts",
-    "./fail-on-console": "./src/fail-on-console.ts",
-    "./postgres-global-setup": "./src/store/postgres-global-setup.ts",
+    "./testing": "./src/testing/index.ts",
+    "./fail-on-console": "./src/testing/fail-on-console.ts",
+    "./postgres-global-setup": "./src/testing/postgres-global-setup.ts",
     "./package.json": "./package.json"
   },
   "scripts": {

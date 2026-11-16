@@ -15,8 +15,8 @@ import {
 import { formatTodos, type usage } from '@tanstack/ai-harness/plugins'
 import { SummaryMiddleware } from '#/host/durable-compaction.ts'
 import { budgetAnswerPrompt } from '#/prompts/worker.ts'
-import { agentMetadataSchema, type AgentMetadata } from '#/workers/metadata.ts'
-import { todosOf } from '#/workers/todo-list.ts'
+import { agentMetadataSchema, type AgentMetadata } from '#/session/metadata.ts'
+import { todosOf } from '#/session/todo-list.ts'
 import { EntrySkillLimits, type BudgetLimits } from './limits.ts'
 
 const BUDGET_PLUGIN = 'workcell/worker-budget'

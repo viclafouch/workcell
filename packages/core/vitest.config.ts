@@ -18,7 +18,7 @@ export default defineConfig({
     unstubGlobals: true,
     unstubEnvs: true,
     sequence: { shuffle: { files: true, tests: true } },
-    globalSetup: ['src/store/postgres-global-setup.ts'],
-    setupFiles: ['src/fail-on-console.ts']
+    globalSetup: ['src/testing/postgres-global-setup.ts'],
+    setupFiles: ['src/testing/fail-on-console.ts']
   }
 })

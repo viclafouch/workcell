@@ -2,11 +2,11 @@ import { z } from 'zod'
 import type { HarnessHost, PendingWait } from '@tanstack/ai-harness'
 import type { ModelPricing } from '#/budget/budget.ts'
 import type { SandboxFacts } from '#/sandbox/sandbox-facts.ts'
-import type { WorkerSandbox } from '#/sandbox/worker-sandbox.ts'
 import type { WorkerHarness } from './harness.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
 import type { ListedWorker } from './live-workers.ts'
 import type { TurnActivity, WorkerActivity } from './worker-activity.ts'
+import type { WorkerSandbox } from './worker-sandbox.ts'
 
 export const workerViewSchema = z.object({
   threadId: z.string(),
