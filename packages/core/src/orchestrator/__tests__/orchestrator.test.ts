@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import type { FakeResponseStep } from '@tanstack/ai/testing'
 import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
+import { DEFAULT_ORCHESTRATOR_SCOPE } from '#/prompts/orchestrator.ts'
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import {
   LONG_HOST_TOOL,
@@ -17,6 +19,7 @@ import {
   routedResponses,
   textOf,
   TICKET_START,
+  systemPromptTexts,
   toolResultsOf
 } from '#/workers/__tests__/worker-fixtures.ts'
 import {
@@ -26,6 +29,14 @@ import {
   openWorkerTestbed
 } from '#/workers/__tests__/worker-testbed.ts'
 
+function recordSystemPrompts(systemPrompts: string[]): FakeResponseStep {
+  return ({ request }) => {
+    systemPrompts.push(...systemPromptTexts(request.systemPrompts))
+
+    return { text: 'Out of my scope.' }
+  }
+}
+
 describe('the orchestrator', () => {
   beforeAll(async () => {
     await openWorkerTestbed()
@@ -33,6 +44,37 @@ describe('the orchestrator', () => {
 
   afterAll(async () => {
     await closeWorkerTestbed()
+  })
+
+  it('tells the model the scope that config gives it', async () => {
+    const systemPrompts: string[] = []
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses([recordSystemPrompts(systemPrompts)]),
+      { orchestratorScope: 'the code of the shop and its tickets' }
+    )
+
+    await askOrchestrator(agent, { message: 'Give me a pancake recipe.' })
+
+    expect(systemPrompts.join('\n')).toContain(
+      'Your scope: the code of the shop and its tickets.'
+    )
+  })
+
+  it('keeps to the code and the work when config gives no scope', async () => {
+    const systemPrompts: string[] = []
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses([recordSystemPrompts(systemPrompts)])
+    )
+
+    await askOrchestrator(agent, { message: 'Give me a pancake recipe.' })
+
+    expect(systemPrompts.join('\n')).toContain(
+      `Your scope: ${DEFAULT_ORCHESTRATOR_SCOPE}.`
+    )
   })
 
   it('answers what runs from the live registry', async () => {

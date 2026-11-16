@@ -121,6 +121,7 @@ export async function openWorkers(
     holdSecondTurnStart = Promise.resolve(null),
     limits = ROOMY_LIMITS,
     orchestratorLimits = ROOMY_LIMITS,
+    orchestratorScope,
     model = fakeText(),
     compactionModel = model,
     pricing = FAKE_MODEL_PRICING,
@@ -138,6 +139,7 @@ export async function openWorkers(
     holdSecondTurnStart?: Promise<null>
     limits?: BudgetLimits
     orchestratorLimits?: BudgetLimits
+    orchestratorScope?: string
     model?: FakeTextAdapter<string>
     compactionModel?: FakeTextAdapter<string>
     pricing?: ModelPricing
@@ -228,6 +230,7 @@ export async function openWorkers(
       },
       orchestrator: {
         name: ORCHESTRATOR_NAME,
+        scope: orchestratorScope,
         limits: orchestratorLimits,
         plugins: orchestratorPlugins
       },

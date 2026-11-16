@@ -20,7 +20,11 @@ import type { BudgetLimits } from '#/budget/limits.ts'
 import { AGENT_DURABILITY } from '#/host/agent-durability.ts'
 import type { IsStarter } from '#/host/allowed-senders.ts'
 import { durableCompaction } from '#/host/durable-compaction.ts'
-import { libraryMapPrompt, orchestratorPrompt } from '#/prompts/orchestrator.ts'
+import {
+  DEFAULT_ORCHESTRATOR_SCOPE,
+  libraryMapPrompt,
+  orchestratorPrompt
+} from '#/prompts/orchestrator.ts'
 import { agentMetadataSchema } from '#/session/metadata.ts'
 import {
   workerTelemetry,
@@ -48,6 +52,7 @@ type DefineOrchestratorHarnessParams = {
   pricing: ModelPricing
   limits: BudgetLimits
   plugins: readonly HarnessPlugin[]
+  scope?: string
   observability?: WorkerObservability
 }
 
@@ -68,6 +73,7 @@ function libraryMap(map: () => string) {
 
 export function defineOrchestratorHarness({
   name,
+  scope = DEFAULT_ORCHESTRATOR_SCOPE,
   adapter,
   compactionAdapter,
   library,
@@ -86,7 +92,12 @@ export function defineOrchestratorHarness({
     turn: { onModelError: retryTransientErrors() },
     metadataSchema: agentMetadataSchema,
     systemPrompts: [
-      orchestratorPrompt({ name, libraryRoot: library.root, repositories })
+      orchestratorPrompt({
+        name,
+        scope,
+        libraryRoot: library.root,
+        repositories
+      })
     ],
     durability: AGENT_DURABILITY,
     plugins: () => {
