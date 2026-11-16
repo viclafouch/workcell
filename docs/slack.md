@@ -18,6 +18,8 @@ A reply in that thread reaches it too, also while it works, and so does a direct
 - **The work**: it tells which robot works on what, right now.
 - **New work**: it starts a robot on a task that needs one, such as a ticket to take to a pull request.
 
+When numbers read better as a picture, it adds a card under its answer: a table, a chart, or a few key figures.
+
 ## Who the robot answers
 
 - **The people on the allowed list** talk to it in any channel where it is a member. They start, steer and stop work.
@@ -40,7 +42,7 @@ A reply wakes a robot that sleeps. The stop button stops the robot at once, also
 A robot does its work alone, and it never does the dangerous actions, such as an erase of history on GitHub. It asks you only for an action it cannot judge safe by itself. It then waits, at no cost, until you answer.
 
 1. Read the action in its message, in the thread.
-2. Click Approve, then confirm. Or click Reject.
+2. Click Approve, or click Reject.
 3. Read the decision and its author on the message. The robot goes on.
 
 The buttons show only for the people on the allowed list. An approval waits for its answer across a restart of the robot. A reply in the thread instead of a button refuses the action, with your words as the reason.
@@ -50,7 +52,7 @@ The buttons show only for the people on the allowed list. An approval waits for 
 - **A first message**: the robot greets you with its name, and says what it takes, with the links your team chose, such as its ticket or its review page.
 - **A name and a picture** for each robot, drawn at random from the list your team set.
 - **A status on the thread**: "working" while the robot thinks, "waiting" when it asks you, "ready" when it waits for you, "closed" when its work is done.
-- **A stop button** on the thread, and a "stop" action in the menu of each of its messages.
+- **A stop button** on the thread, and a Stop button on its first message.
 - **A line at each step of its review page**: checks green, in line to merge, then the report with its link once merged.
 
 ## Today

@@ -11,7 +11,7 @@ Coding agents that take an issue to a merged pull request, each one in its own s
 - **A worker** takes the task to a pull request in its own Docker sandbox: it clones, installs, changes, tests and pushes.
 - **The host** runs the agent loop, keeps every secret, and stores every thread in Postgres. The model never sees a token.
 - **A worker sleeps at no cost** while it waits, and wakes up on a reply or on a pull request event, also after a restart.
-- **A channel** carries the questions of the worker and the answers of a person: Slack today.
+- **A chat** carries the questions of the worker and the answers of a person, on any platform that [Chat SDK](https://chat-sdk.dev) adapts: Slack, Microsoft Teams, Discord, Telegram, WhatsApp and more.
 - **Every run is bounded**: each task has a cost budget, and every turn is traced with its cost.
 
 ## The clone of a worker
@@ -38,7 +38,8 @@ Each integration is its own package, and a project picks the ones it uses.
 | `@workcell/core` | The host, the worker engine, the budget, the Postgres stores, and the Docker sandbox behind an egress allowlist |
 | `@workcell/github` | The pull request watcher, the read and review tools, and the finish refusal while a pull request is open |
 | `@workcell/linear` | Linear tickets as triggers, and the Linear tools |
-| `@workcell/slack` | Slack as the channel of the workers and of the orchestrator bot |
+| `@workcell/chat` | The chat of the workers and of the orchestrator bot on [Chat SDK](https://chat-sdk.dev), and `show_card`: tables, charts and key figures as native cards |
+| `@workcell/chat-slack` | What Slack adds on top of Chat SDK: the name and the picture of each worker, the session status, the card limits and the token checks |
 | `@workcell/host` | What the host process needs on a machine: the logger, the secret stores, the traces, the models, the login service, the live view and the machine check |
 
 ## License

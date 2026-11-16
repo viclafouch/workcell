@@ -1,0 +1,55 @@
+{
+  "name": "@workcell/chat",
+  "private": true,
+  "description": "The chat integration on Chat SDK: the connection, the orchestrator threads, the worker threads, the cards, the thread cleaner and the voice of the chat agents, on any platform that Chat SDK adapts.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viclafouch/workcell.git",
+    "directory": "packages/chat"
+  },
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:changed": "vitest run --changed"
+  },
+  "dependencies": {
+    "@json-render/chat": "catalog:",
+    "@tanstack/pacer": "catalog:"
+  },
+  "devDependencies": {
+    "@chat-adapter/slack": "catalog:",
+    "@chat-adapter/state-memory": "catalog:",
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@tanstack/ai-persistence": "catalog:",
+    "@types/node": "catalog:",
+    "@viclafouch/oxc-config": "catalog:",
+    "@workcell/core": "workspace:*",
+    "chat": "catalog:",
+    "eslint-plugin-turbo": "catalog:",
+    "msw": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@workcell/core": "workspace:*",
+    "chat": "catalog:",
+    "zod": "catalog:"
+  }
+}

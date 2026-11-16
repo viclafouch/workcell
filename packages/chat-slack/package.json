@@ -1,0 +1,51 @@
+{
+  "name": "@workcell/chat-slack",
+  "private": true,
+  "description": "The Slack parts that Chat SDK leaves out: the identity of each worker on its posts, and the probes of the Slack tokens.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viclafouch/workcell.git",
+    "directory": "packages/chat-slack"
+  },
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:changed": "vitest run --changed"
+  },
+  "devDependencies": {
+    "@chat-adapter/slack": "catalog:",
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@tanstack/ai-persistence": "catalog:",
+    "@types/node": "catalog:",
+    "@viclafouch/oxc-config": "catalog:",
+    "@workcell/chat": "workspace:*",
+    "@workcell/core": "workspace:*",
+    "chat": "catalog:",
+    "eslint-plugin-turbo": "catalog:",
+    "msw": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@chat-adapter/slack": "catalog:",
+    "@workcell/chat": "workspace:*",
+    "@workcell/core": "workspace:*",
+    "chat": "catalog:",
+    "zod": "catalog:"
+  }
+}
