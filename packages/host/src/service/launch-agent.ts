@@ -23,6 +23,7 @@ export function defineLaunchAgent({
 }: LaunchAgentParams) {
   const logFolder = join(homedir(), 'Library', 'Logs', appName)
   const userDomain = `gui/${userInfo().uid}`
+  const serviceTarget = `${userDomain}/${label}`
 
   return {
     label,
@@ -36,7 +37,18 @@ export function defineLaunchAgent({
     ),
     stopTimeoutSeconds: STOP_TIMEOUT_SECONDS,
     userDomain,
-    serviceTarget: `${userDomain}/${label}`,
+    serviceTarget,
+    isLoaded: () => {
+      try {
+        execFileSync('/bin/launchctl', ['print', serviceTarget], {
+          stdio: 'ignore'
+        })
+
+        return true
+      } catch {
+        return false
+      }
+    },
     plist: () => {
       const launchdLog = join(logFolder, 'launchd.log')
       const definition = {
