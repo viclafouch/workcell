@@ -83,7 +83,16 @@ type OpenWorkcellParams = {
   onWorkerStart?: OnWorkerStart
 }
 
-export class SchemaBehindError extends Error {
+export abstract class StartRefusalError extends Error {
+  abstract readonly details: Record<string, unknown>
+
+  constructor(message: string) {
+    super(message)
+    this.name = 'StartRefusalError'
+  }
+}
+
+export class SchemaBehindError extends StartRefusalError {
   readonly pendingMigrations: readonly string[]
 
   constructor(pendingMigrations: readonly string[], migrateCommand: string) {
@@ -93,9 +102,13 @@ export class SchemaBehindError extends Error {
     this.name = 'SchemaBehindError'
     this.pendingMigrations = pendingMigrations
   }
+
+  get details() {
+    return { pendingMigrations: this.pendingMigrations }
+  }
 }
 
-export class DuplicateSandboxPackageError extends Error {
+export class DuplicateSandboxPackageError extends StartRefusalError {
   readonly sandboxIds: readonly string[]
 
   constructor(sandboxIds: readonly string[]) {
@@ -104,6 +117,10 @@ export class DuplicateSandboxPackageError extends Error {
     )
     this.name = 'DuplicateSandboxPackageError'
     this.sandboxIds = sandboxIds
+  }
+
+  get details() {
+    return { sandboxIds: this.sandboxIds }
   }
 }
 
