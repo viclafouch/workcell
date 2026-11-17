@@ -99,6 +99,8 @@ export const COLLEAGUE = { id: 'colleague' }
 
 export const ORCHESTRATOR_NAME = 'Orchestrator'
 
+export const MIGRATE_COMMAND = 'pnpm db:migrate'
+
 export const COLLEAGUE_THREAD_PREFIX = 'slack/CTEST/'
 
 export const SHORT_IDLE_MS = 500

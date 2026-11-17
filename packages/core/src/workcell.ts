@@ -43,6 +43,7 @@ type WorkcellLogger = {
 
 type OpenWorkcellParams = {
   database: Database
+  migrateCommand: string
   logger: WorkcellLogger
   models: {
     orchestrator: AnyTextAdapter
@@ -77,8 +78,40 @@ type OpenWorkcellParams = {
   observability?: WorkerObservability
 }
 
+export class SchemaBehindError extends Error {
+  readonly pendingMigrations: readonly string[]
+
+  constructor(pendingMigrations: readonly string[], migrateCommand: string) {
+    super(
+      `The database schema is behind the code: ${pendingMigrations.join(', ')} never ran. Run ${migrateCommand}, then start again.`
+    )
+    this.name = 'SchemaBehindError'
+    this.pendingMigrations = pendingMigrations
+  }
+}
+
+async function requireCurrentSchema(
+  database: Database,
+  migrateCommand: string,
+  log: LeveledLog
+) {
+  await waitUntilReady(
+    'database',
+    async () => {
+      return database.query('host-start', 'SELECT 1')
+    },
+    log
+  )
+  const pendingMigrations = await database.pendingMigrations()
+
+  if (pendingMigrations.length > 0) {
+    throw new SchemaBehindError(pendingMigrations, migrateCommand)
+  }
+}
+
 export async function openWorkcell({
   database,
+  migrateCommand,
   logger,
   models,
   pricing,
@@ -98,6 +131,8 @@ export async function openWorkcell({
   idleSandboxMs,
   observability
 }: OpenWorkcellParams) {
+  const startLog = logger.child({ module: 'host' })
+  await requireCurrentSchema(database, migrateCommand, startLog)
   pricing.requirePrices([
     models.orchestrator.model,
     models.worker.model,
@@ -182,14 +217,6 @@ export async function openWorkcell({
     pricing,
     observability
   })
-  const startLog = logger.child({ module: 'host' })
-  await waitUntilReady(
-    'database',
-    async () => {
-      return database.query('host-start', 'SELECT 1')
-    },
-    startLog
-  )
   await waitUntilReady('sandbox provider', sandboxProvider.list, startLog)
   await workers.recover()
 

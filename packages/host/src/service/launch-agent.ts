@@ -59,7 +59,7 @@ export function defineLaunchAgent({
           ...environment,
           [logFileVariable]: join(logFolder, 'host.log')
         },
-        KeepAlive: true,
+        KeepAlive: { SuccessfulExit: false },
         ExitTimeOut: STOP_TIMEOUT_SECONDS,
         StandardOutPath: launchdLog,
         StandardErrorPath: launchdLog

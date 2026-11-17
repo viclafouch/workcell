@@ -17,6 +17,7 @@ export default defineConfig({
     unstubGlobals: true,
     unstubEnvs: true,
     sequence: { shuffle: { files: true, tests: true } },
+    globalSetup: ['@workcell/core/postgres-global-setup'],
     setupFiles: ['@workcell/core/fail-on-console']
   }
 })

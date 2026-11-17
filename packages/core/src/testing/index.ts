@@ -15,7 +15,11 @@ export {
   createHostFreeSandbox,
   HOST_FREE_REPOSITORY
 } from './host-free-sandbox.ts'
-export { createMigratedDatabase, openTestDatabase } from './test-database.ts'
+export {
+  createDatabase,
+  createMigratedDatabase,
+  openTestDatabase
+} from './test-database.ts'
 export { SILENT_HOST_LOGGER, TEST_STARTER } from './test-doubles.ts'
 export {
   decideWorkerToolCall,

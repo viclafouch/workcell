@@ -37,6 +37,7 @@ import {
   FAKE_MODEL_PRICING,
   finishTask,
   HOST_GIT_IDENTITY,
+  MIGRATE_COMMAND,
   ORCHESTRATOR_NAME,
   RECORDING_WORKER_LOGGER,
   REPOSITORY,
@@ -199,6 +200,7 @@ export async function openWorkers(
   try {
     const workcell = await openWorkcell({
       database,
+      migrateCommand: MIGRATE_COMMAND,
       logger: RECORDING_WORKER_LOGGER,
       models: {
         orchestrator: model,

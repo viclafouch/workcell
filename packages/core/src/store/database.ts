@@ -10,6 +10,10 @@ import {
 } from 'pg'
 import { z } from 'zod'
 import { AsyncRetryer } from '@tanstack/pacer'
+import {
+  findPendingMigrations,
+  MIGRATIONS_DIRECTORY
+} from './migrate-database.ts'
 
 export type LogLine = (
   details: Record<string, unknown>,
@@ -417,6 +421,12 @@ export function openDatabase({ url, directUrl, logger }: OpenDatabaseParams) {
       } finally {
         client.release(isBroken)
       }
+    },
+    pendingMigrations: async () => {
+      return findPendingMigrations({
+        url: directUrl,
+        directory: MIGRATIONS_DIRECTORY
+      })
     },
     listen: notifications.listen,
     close,
