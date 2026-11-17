@@ -1,6 +1,10 @@
 import type { AnyTextAdapter } from '@tanstack/ai'
 import type { HarnessPlugin, PermissionMode } from '@tanstack/ai-harness'
-import type { SandboxDefinition } from '@tanstack/ai-sandbox'
+import {
+  resolveAllSecrets,
+  type SandboxDefinition,
+  type Secrets
+} from '@tanstack/ai-sandbox'
 import type { ModelPricing } from './budget/budget.ts'
 import type { BudgetLimits } from './budget/limits.ts'
 import { createAgentHost } from './host/agent-host.ts'
@@ -91,6 +95,41 @@ export class SchemaBehindError extends Error {
   }
 }
 
+export class DuplicateSandboxPackageError extends Error {
+  readonly sandboxIds: readonly string[]
+
+  constructor(sandboxIds: readonly string[]) {
+    super(
+      `The core cannot read the workspace secrets of ${sandboxIds.join(', ')}: two copies of @tanstack/ai-sandbox are loaded. Install from the parent workspace only, then force a reinstall, such as \`pnpm install --force\`.`
+    )
+    this.name = 'DuplicateSandboxPackageError'
+    this.sandboxIds = sandboxIds
+  }
+}
+
+function isReadableByTheCore(secrets: Secrets) {
+  try {
+    resolveAllSecrets(secrets)
+
+    return true
+  } catch {
+    return false
+  }
+}
+
+function requireOneSandboxPackage(sandboxes: readonly SandboxDefinition[]) {
+  const unreadableIds = sandboxes.flatMap(({ id, workspace }) => {
+    return workspace?.secrets === undefined ||
+      isReadableByTheCore(workspace.secrets)
+      ? []
+      : [id]
+  })
+
+  if (unreadableIds.length > 0) {
+    throw new DuplicateSandboxPackageError(unreadableIds)
+  }
+}
+
 async function requireCurrentSchema(
   database: Database,
   migrateCommand: string,
@@ -133,6 +172,10 @@ export async function openWorkcell({
   observability,
   onWorkerStart
 }: OpenWorkcellParams) {
+  requireOneSandboxPackage([
+    ...Object.values(sandboxes),
+    libraryOptions.sandbox
+  ])
   const startLog = logger.child({ module: 'host' })
   await requireCurrentSchema(database, migrateCommand, startLog)
   pricing.requirePrices([

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SchemaBehindError } from '@workcell/core'
+import { DuplicateSandboxPackageError, SchemaBehindError } from '@workcell/core'
 import { runHost } from '#/service/run-host.ts'
 
 function recordErrors() {
@@ -28,6 +28,22 @@ describe('runHost', () => {
         details: { pendingMigrations: ['2_create_turns'] },
         message:
           'The database schema is behind the code: 2_create_turns never ran. Run acme db:migrate, then start again.'
+      }
+    ])
+  })
+
+  it('ends cleanly a host that loads two copies of the sandbox package, and logs the refusal', async () => {
+    const { lines, log } = recordErrors()
+
+    await runHost(async () => {
+      throw new DuplicateSandboxPackageError(['repo-sandbox'])
+    }, log)
+
+    expect(lines).toStrictEqual([
+      {
+        details: { sandboxIds: ['repo-sandbox'] },
+        message:
+          'The core cannot read the workspace secrets of repo-sandbox: two copies of @tanstack/ai-sandbox are loaded. Install from the parent workspace only, then force a reinstall, such as `pnpm install --force`.'
       }
     ])
   })

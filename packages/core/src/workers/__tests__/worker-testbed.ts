@@ -7,7 +7,8 @@ import { definePlugin, type HarnessPlugin } from '@tanstack/ai-harness'
 import {
   createSecrets,
   defineSandbox,
-  defineWorkspace
+  defineWorkspace,
+  type Secrets
 } from '@tanstack/ai-sandbox'
 import {
   fakeText,
@@ -133,7 +134,13 @@ export async function openWorkers(
     workerNames = TEST_NAMES,
     maxRunningTurns = TEST_MAX_RUNNING_TURNS,
     observability,
-    onWorkerStart
+    onWorkerStart,
+    sandboxSecrets = createSecrets({
+      GH_TOKEN: SANDBOX_SECRETS.GITHUB_TOKEN,
+      NPM_TOKEN: SANDBOX_SECRETS.NPM_TOKEN,
+      ASSETS_CDN_TOKEN: SANDBOX_SECRETS.ASSETS_CDN_TOKEN
+    }),
+    librarySecrets
   }: {
     idleSandboxMs?: number
     maxRunningTurns?: number
@@ -153,6 +160,8 @@ export async function openWorkers(
     workerNames?: readonly string[]
     observability?: WorkerObservability
     onWorkerStart?: OnWorkerStart
+    sandboxSecrets?: Secrets
+    librarySecrets?: Secrets
   } = {}
 ) {
   const testbed = openedWorkerTestbed()
@@ -167,11 +176,7 @@ export async function openWorkers(
           ? { type: 'none' }
           : { type: 'git', url: originUrl, ref: 'dev', depth: 'full' },
       setup,
-      secrets: createSecrets({
-        GH_TOKEN: SANDBOX_SECRETS.GITHUB_TOKEN,
-        NPM_TOKEN: SANDBOX_SECRETS.NPM_TOKEN,
-        ASSETS_CDN_TOKEN: SANDBOX_SECRETS.ASSETS_CDN_TOKEN
-      })
+      secrets: sandboxSecrets
     }),
     lifecycle: { reuse: 'thread', snapshot: 'none' }
   })
@@ -223,7 +228,10 @@ export async function openWorkers(
         sandbox: defineSandbox({
           id: 'worker-test-library',
           provider: testbed.hostFree.provider,
-          workspace: defineWorkspace({ source: { type: 'none' } }),
+          workspace: defineWorkspace({
+            source: { type: 'none' },
+            secrets: librarySecrets
+          }),
           lifecycle: { reuse: 'thread', snapshot: 'none' }
         }),
         repositories: {},

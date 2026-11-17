@@ -14,7 +14,11 @@ export {
   type ProbeVerdict,
   type SecretProbe
 } from './http/secret-probe.ts'
-export { openWorkcell, SchemaBehindError } from './workcell.ts'
+export {
+  DuplicateSandboxPackageError,
+  openWorkcell,
+  SchemaBehindError
+} from './workcell.ts'
 export { joinCutOffAnswer, WORKER_DURABILITY } from './host/agent-durability.ts'
 export { startLoop } from './host/loop.ts'
 export { toTanStackLogger } from './host/tanstack-logger.ts'
