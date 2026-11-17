@@ -8,7 +8,9 @@ import {
 import type { IsStarter } from '#/host/allowed-senders.ts'
 import {
   ORCHESTRATOR_TOOLS_TEXT,
-  repositoryChoice
+  repositoryChoice,
+  senderPrompt,
+  STARTER_RULE
 } from '#/prompts/orchestrator.ts'
 import type { Workers } from '#/workers/workers.ts'
 
@@ -45,7 +47,7 @@ function busyLine(workers: LiveWorkers, subject: string | undefined) {
 }
 
 function starterOnlyRefusal(action: string) {
-  return `The user of this message may not ${action}. Only an allowed starter can start, steer or stop a worker.`
+  return `The user of this message may not ${action}. ${STARTER_RULE}`
 }
 
 export function orchestratorTools({
@@ -184,6 +186,15 @@ export function orchestratorTools({
 
       return {
         tools: [listWorkers, startWorker, messageWorker, stopWorker],
+        prompts: [
+          {
+            id: `${TOOLS_PLUGIN}:sender`,
+            placement: 'context',
+            text: ({ run }) => {
+              return senderPrompt(run.user, isStarter)
+            }
+          }
+        ],
         contribute: [
           PermissionRules.item({
             tool: LIST_WORKERS,

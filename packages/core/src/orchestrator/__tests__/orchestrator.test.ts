@@ -292,6 +292,77 @@ describe('who the orchestrator works for', () => {
     await closeWorkerTestbed()
   })
 
+  it('tells the model that an allowed starter sends the message', async () => {
+    const systemPrompts: string[] = []
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses([recordSystemPrompts(systemPrompts)])
+    )
+
+    await askOrchestrator(agent, { user: TEST_STARTER })
+
+    expect(systemPrompts.join('\n')).toContain(
+      'This message comes from test-starter, an allowed starter.'
+    )
+  })
+
+  it('tells the model that a colleague sends the message', async () => {
+    const systemPrompts: string[] = []
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses([recordSystemPrompts(systemPrompts)])
+    )
+
+    await askOrchestrator(agent, { user: COLLEAGUE })
+
+    expect(systemPrompts.join('\n')).toContain(
+      'This message comes from colleague, a colleague.'
+    )
+  })
+
+  it('still names the allowed starter of a turn that a host crash cut, when a colleague reopens the thread after the restart', async () => {
+    const url = await createMigratedDatabase()
+    const threadId = 'slack/CTEST/1.0001'
+    const inputId = 'slack:CTEST:1.0001'
+    const turnCut = Promise.withResolvers<null>()
+    const agent = await openWorkers(
+      url,
+      routedResponses([holdUntilStopped(turnCut)])
+    )
+    const cutTurn = askOrchestrator(agent, {
+      user: TEST_STARTER,
+      threadId,
+      inputId
+    }).catch(() => {
+      return null
+    })
+
+    try {
+      await turnCut.promise
+    } finally {
+      await agent.crash()
+    }
+
+    await cutTurn
+    const systemPrompts: string[] = []
+
+    await using restarted = await openWorkers(
+      url,
+      routedResponses([recordSystemPrompts(systemPrompts)])
+    )
+    await using session = await restarted.host.open(
+      restarted.orchestrator.harness,
+      { threadId, user: COLLEAGUE }
+    )
+    await session.settled({ inputId })
+
+    expect(systemPrompts.join('\n')).toContain(
+      'This message comes from test-starter, an allowed starter.'
+    )
+  })
+
   it('refuses work to a colleague in a sentence, and names the worker already on the topic', async () => {
     const url = await createMigratedDatabase()
     await using agent = await openWorkers(
