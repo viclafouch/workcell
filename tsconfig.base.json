@@ -3,22 +3,16 @@
   "compilerOptions": {
     "target": "es2025",
     "lib": ["es2025", "esnext.collection", "esnext.error", "esnext.temporal"],
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "module": "nodenext",
     "types": ["node"],
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "resolveJsonModule": true,
     "skipLibCheck": true,
-    "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true
+    "noFallthroughCasesInSwitch": true
   }
 }

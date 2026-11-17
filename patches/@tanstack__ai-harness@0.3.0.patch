@@ -1,0 +1,545 @@
+diff --git a/dist/esm/first-party/agents.d.ts b/dist/esm/first-party/agents.d.ts
+index b22d52587f0b564aa92314fbcb139453a672174f..b7403fee1eae18d1486ce91495b4474676f03f5a 100644
+--- a/dist/esm/first-party/agents.d.ts
++++ b/dist/esm/first-party/agents.d.ts
+@@ -88,9 +88,9 @@ export declare function agents(options: {
+     dirs?: ReadonlyArray<string>;
+     builtIns?: boolean;
+     default?: string;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/agents";
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => Promise<{
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => Promise<{
+         config: {
+             agent: {
+                 type: "select";
+@@ -101,7 +101,7 @@ export declare function agents(options: {
+             };
+         };
+         commands: {
+-            agent: import('..').CommandDefinition<any>;
++            agent: import('../index.js').CommandDefinition<any>;
+         };
+         prompts: {
+             id: string;
+@@ -111,10 +111,10 @@ export declare function agents(options: {
+         prepareTools: ({ tools, model, run }: {
+             tools: ReadonlyArray<AnyTool>;
+             model: string;
+-            run: import('..').RunContext;
++            run: import('../index.js').RunContext;
+         }) => readonly AnyTool[];
+         middleware: ChatMiddleware<unknown, never>[];
+         subagents: import('@tanstack/ai').DefinedAgent<string, readonly [], undefined, readonly [], undefined, import('@tanstack/ai').ChatStream, undefined>[];
+-        contribute: import('..').ExtensionItem<PermissionRule>[];
++        contribute: import('../index.js').ExtensionItem<PermissionRule>[];
+     }>;
+ }>, Record<string, unknown>>;
+diff --git a/dist/esm/first-party/bound-output.d.ts b/dist/esm/first-party/bound-output.d.ts
+index 437bfff80ffbfe5e8c08f4a996e8c54cd5f4b308..bcc52a9305e954b5cad6db1b01a7a7ef8f3ad708 100644
+--- a/dist/esm/first-party/bound-output.d.ts
++++ b/dist/esm/first-party/bound-output.d.ts
+@@ -53,7 +53,7 @@ export declare function boundToolOutput(options?: {
+     maxBytes?: number;
+     dir?: string;
+     retentionDays?: number;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/bound-tool-output";
+     readonly setup: () => {
+         middleware: {
+diff --git a/dist/esm/first-party/coding/events.d.ts b/dist/esm/first-party/coding/events.d.ts
+index 7d698779b3e0c6b1720dc2bbfd2e5d6db769a9b9..8071a15f426f31e9740bf96f3cfa026db66e0618 100644
+--- a/dist/esm/first-party/coding/events.d.ts
++++ b/dist/esm/first-party/coding/events.d.ts
+@@ -1,6 +1,6 @@
+ import { WorkspaceBinding } from '../../log-records.js';
+ /** A background `bash` job started. */
+-export declare const JobStarted: import('../..').PluginEvent<{
++export declare const JobStarted: import('../../index.js').PluginEvent<{
+     /** The id that the model gets, like `bash-1`. */
+     jobId: string;
+     command: string;
+@@ -12,12 +12,12 @@ export declare const JobStarted: import('../..').PluginEvent<{
+  * time, the event has the newest 64 KiB, and starts with a line that tells
+  * how many bytes were dropped.
+  */
+-export declare const JobOutput: import('../..').PluginEvent<{
++export declare const JobOutput: import('../../index.js').PluginEvent<{
+     jobId: string;
+     output: string;
+ }>;
+ /** A background `bash` job ended. It comes after its last output event. */
+-export declare const JobEnded: import('../..').PluginEvent<{
++export declare const JobEnded: import('../../index.js').PluginEvent<{
+     jobId: string;
+     exitCode: number;
+ }>;
+@@ -27,7 +27,7 @@ export declare const JobEnded: import('../..').PluginEvent<{
+  * call of the thread fails with `message`. It comes each time the tools try
+  * the workspace again: before a turn, and at a tool call.
+  */
+-export declare const WorkspaceStranded: import('../..').PluginEvent<{
++export declare const WorkspaceStranded: import('../../index.js').PluginEvent<{
+     threadId: string;
+     /** The last binding of the thread in the log. */
+     binding: WorkspaceBinding;
+@@ -38,7 +38,7 @@ export declare const WorkspaceStranded: import('../..').PluginEvent<{
+  * on. When git is missing, or the shadow repository cannot be made, the
+  * event comes once for each session, and snapshots are off in it.
+  */
+-export declare const SnapshotFailed: import('../..').PluginEvent<{
++export declare const SnapshotFailed: import('../../index.js').PluginEvent<{
+     message: string;
+ }>;
+ /**
+@@ -81,9 +81,9 @@ export interface FileChange {
+  * `/undo`, `/redo`, a revert, or `unrevert()` puts back. `snapshots()` sends
+  * at most 100 for each step or restore, and never `'moved'`.
+  */
+-export declare const FileChanged: import('../..').PluginEvent<FileChange>;
++export declare const FileChanged: import('../../index.js').PluginEvent<FileChange>;
+ /** The `formatter()` plugin changed a file after a tool wrote it. */
+-export declare const FormatterRewrote: import('../..').PluginEvent<{
++export declare const FormatterRewrote: import('../../index.js').PluginEvent<{
+     /** The absolute path of the file. */
+     path: string;
+     /** The name of the formatter, like `prettier`. */
+diff --git a/dist/esm/first-party/coding/formatter.d.ts b/dist/esm/first-party/coding/formatter.d.ts
+index ab5cc6392e8d5108a5d4124b2fa2a322d364bfc7..d5bf32087c5008e84262077789ca0bf8e9e4baa7 100644
+--- a/dist/esm/first-party/coding/formatter.d.ts
++++ b/dist/esm/first-party/coding/formatter.d.ts
+@@ -45,7 +45,7 @@ export interface FormatFailure {
+     message: string;
+ }
+ /** Sent when a formatter fails. The tool call does not fail. */
+-export declare const FormatFailed: import('../..').PluginEvent<FormatFailure>;
++export declare const FormatFailed: import('../../index.js').PluginEvent<FormatFailure>;
+ /** The files that one call writes, by path, with their new text when it is known. */
+ export type WrittenFiles = ReadonlyMap<string, string | undefined>;
+ /**
+@@ -137,10 +137,10 @@ export declare function projectFormatters(options: FormatterOptions & {
+  * ]
+  * ```
+  */
+-export declare function formatter(options: FormatterOptions): import('../..').HarnessPlugin<NoInfer<{
++export declare function formatter(options: FormatterOptions): import('../../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/formatter";
+-    readonly optionalRequires: readonly [import('@tanstack/ai').Capability<(tool: string, mode: import('..').PermissionMode, resources?: import('..').CallResources) => import('..').PermissionDecision, "tanstack/permission-decision">, import('@tanstack/ai').Capability<import('./workspace.js').ThreadWorkspaces, "tanstack/thread-workspace">];
+-    readonly setup: (ctx: import('../..').PluginSetupContext<Record<string, unknown>>) => {
+-        contribute: (import('../..').ExtensionItem<import('..').PermissionRule> | import('../..').ExtensionItem<Readonly<Record<string, import('..').ToolResources>>> | import('../..').ExtensionItem<WorkspaceHooks>)[];
++    readonly optionalRequires: readonly [import('@tanstack/ai').Capability<(tool: string, mode: import('../index.js').PermissionMode, resources?: import('../index.js').CallResources) => import('../index.js').PermissionDecision, "tanstack/permission-decision">, import('@tanstack/ai').Capability<import('./workspace.js').ThreadWorkspaces, "tanstack/thread-workspace">];
++    readonly setup: (ctx: import('../../index.js').PluginSetupContext<Record<string, unknown>>) => {
++        contribute: (import('../../index.js').ExtensionItem<import('../index.js').PermissionRule> | import('../../index.js').ExtensionItem<Readonly<Record<string, import('../index.js').ToolResources>>> | import('../../index.js').ExtensionItem<WorkspaceHooks>)[];
+     };
+ }>, Record<string, unknown>>;
+diff --git a/dist/esm/first-party/coding/snapshots.d.ts b/dist/esm/first-party/coding/snapshots.d.ts
+index 10e88192aa799bb5a3b019742c7bb75415b914e6..ee737103895ffb5b9bd7b59c26f3604dec4fc53f 100644
+--- a/dist/esm/first-party/coding/snapshots.d.ts
++++ b/dist/esm/first-party/coding/snapshots.d.ts
+@@ -106,7 +106,7 @@ export declare function purgeSnapshots(options: SnapshotsOptions & {
+  * const { files, patch } = await history.diff(step.from, step.to)
+  * ```
+  */
+-export declare function snapshots(options: SnapshotsOptions): import('../..').HarnessPlugin<NoInfer<{
++export declare function snapshots(options: SnapshotsOptions): import('../../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/snapshots";
+     readonly diff: (from: string, to?: string) => Promise<{
+         files: string[];
+@@ -117,8 +117,8 @@ export declare function snapshots(options: SnapshotsOptions): import('../..').Ha
+     readonly keepRecords: {
+         readonly "tanstack/snapshots:step": 500;
+     };
+-    readonly setup: (ctx: import('../..').PluginSetupContext<Record<string, unknown>>) => Promise<{
+-        contribute: import('../..').ExtensionItem<WorkspaceHooks>[];
++    readonly setup: (ctx: import('../../index.js').PluginSetupContext<Record<string, unknown>>) => Promise<{
++        contribute: import('../../index.js').ExtensionItem<WorkspaceHooks>[];
+         middleware: {
+             name: string;
+             optionalRequires: import('@tanstack/ai').Capability<import('@tanstack/ai').LogRecordsWriter, "log-records">[];
+@@ -129,8 +129,8 @@ export declare function snapshots(options: SnapshotsOptions): import('../..').Ha
+             onError: (ctx: unknown) => Promise<void>;
+         }[];
+         commands: {
+-            undo: import('../..').CommandDefinition<any>;
+-            redo: import('../..').CommandDefinition<any>;
++            undo: import('../../index.js').CommandDefinition<any>;
++            redo: import('../../index.js').CommandDefinition<any>;
+         };
+     } | undefined>;
+ }>, Record<string, unknown>>;
+diff --git a/dist/esm/first-party/coding/workspace.d.ts b/dist/esm/first-party/coding/workspace.d.ts
+index d362b4339103dadb931bbc286349ade4617eae81..4059f6faabeab44880858b3a6ac68cb787578671 100644
+--- a/dist/esm/first-party/coding/workspace.d.ts
++++ b/dist/esm/first-party/coding/workspace.d.ts
+@@ -492,20 +492,20 @@ export declare function createWorkspaceTools(options: WorkspaceToolsOptions, ses
+  * })
+  * ```
+  */
+-export declare function workspaceTools(options: WorkspaceToolsOptions): import('../..').HarnessPlugin<NoInfer<{
++export declare function workspaceTools(options: WorkspaceToolsOptions): import('../../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/workspace-tools";
+-    readonly optionalRequires: readonly [import('@tanstack/ai').Capability<(tool: string, mode: import('..').PermissionMode, resources?: CallResources) => PermissionDecision, "tanstack/permission-decision">];
++    readonly optionalRequires: readonly [import('@tanstack/ai').Capability<(tool: string, mode: import('../index.js').PermissionMode, resources?: CallResources) => PermissionDecision, "tanstack/permission-decision">];
+     readonly provides: readonly [import('@tanstack/ai').Capability<ThreadWorkspaces, "tanstack/thread-workspace">];
+-    readonly setup: (ctx: import('../..').PluginSetupContext<Record<string, unknown>>) => Promise<{
++    readonly setup: (ctx: import('../../index.js').PluginSetupContext<Record<string, unknown>>) => Promise<{
+         prepareTools: (turn: {
+             tools: ReadonlyArray<AnyTool>;
+             model: string;
+             run: RunContext;
+         }) => AnyTool[];
+-        contribute: (import('../..').ExtensionItem<import('..').PermissionRule> | import('../..').ExtensionItem<Readonly<Record<string, ToolResources>>>)[];
+-        onTurnStart?: ((turn: import('../..').TurnInfo) => Promise<void>) | undefined;
++        contribute: (import('../../index.js').ExtensionItem<import('../index.js').PermissionRule> | import('../../index.js').ExtensionItem<Readonly<Record<string, ToolResources>>>)[];
++        onTurnStart?: ((turn: import('../../index.js').TurnInfo) => Promise<void>) | undefined;
+         tools: AnyTool[];
+-        prompts: ((turn: import('../..').TurnInfo) => string)[];
++        prompts: ((turn: import('../../index.js').TurnInfo) => string)[];
+     }>;
+ }>, Record<string, unknown>>;
+ export {};
+diff --git a/dist/esm/first-party/files.d.ts b/dist/esm/first-party/files.d.ts
+index 75f75b363de4805f691ad899e30716c5d1256b78..5d046ad50b3f96d83e0410e6824e6c801fb95e4b 100644
+--- a/dist/esm/first-party/files.d.ts
++++ b/dist/esm/first-party/files.d.ts
+@@ -32,12 +32,12 @@ export declare function projectInstructions(options: {
+     files?: ReadonlyArray<string>;
+     global?: ReadonlyArray<string>;
+     env?: boolean;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/project-instructions";
+     readonly setup: () => Promise<{
+         onTurnStart: () => Promise<void>;
+         prompts: (() => string)[];
+-        contribute: import('..').ExtensionItem<WorkspaceHooks>[];
++        contribute: import('../index.js').ExtensionItem<WorkspaceHooks>[];
+     }>;
+ }>, Record<string, unknown>>;
+ /** A frontmatter value: text, or a list from `[a, b]` or `- a` lines. */
+@@ -67,7 +67,7 @@ export declare function readMarkdownFiles(dir: string): Promise<{
+  */
+ export declare function fileCommands(options: {
+     dir: string;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/file-commands";
+     readonly setup: () => Promise<{
+         commands: Record<string, AnyCommand>;
+diff --git a/dist/esm/first-party/goal.d.ts b/dist/esm/first-party/goal.d.ts
+index 0edf4c67c982d834fa9fd35f8e3f724242dae30a..16b53fbc824c193e7e8a4c7b5c31513a5b33d87e 100644
+--- a/dist/esm/first-party/goal.d.ts
++++ b/dist/esm/first-party/goal.d.ts
+@@ -14,7 +14,7 @@ export interface Goal {
+     queued: string;
+ }
+ /** Sent when the judge says that the goal is met. */
+-export declare const GoalMet: import('..').PluginEvent<{
++export declare const GoalMet: import('../index.js').PluginEvent<{
+     goal: string;
+     reason: string;
+ }>;
+@@ -44,16 +44,16 @@ export declare function selectGoal(state: {
+ export declare function goal(options: {
+     judge: AnyTextAdapter | KeyedAdapter<AnyTextAdapter>;
+     maxRounds?: number;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/goal";
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => Promise<{
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => Promise<{
+         prompts: {
+             id: string;
+             placement: "context";
+             text: () => string;
+         }[];
+         commands: {
+-            goal: import('..').CommandDefinition<any>;
++            goal: import('../index.js').CommandDefinition<any>;
+         };
+         middleware: {
+             name: string;
+diff --git a/dist/esm/first-party/model-picker.d.ts b/dist/esm/first-party/model-picker.d.ts
+index 0a25cca919f12688c236c35ae6fc9265a3926d73..26d3dfe68bb0d6d12332a76ce8c184efe9c43dc3 100644
+--- a/dist/esm/first-party/model-picker.d.ts
++++ b/dist/esm/first-party/model-picker.d.ts
+@@ -20,9 +20,9 @@ import { AnyTextAdapter, KeyedAdapter } from '@tanstack/ai';
+ export declare function modelPicker(options: {
+     choices: Record<string, AnyTextAdapter | KeyedAdapter<AnyTextAdapter>>;
+     default?: string;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/model-picker";
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => {
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => {
+         config: {
+             model: {
+                 type: "select";
+@@ -34,7 +34,7 @@ export declare function modelPicker(options: {
+         };
+         adapter: () => AnyTextAdapter | KeyedAdapter<AnyTextAdapter> | undefined;
+         commands: {
+-            model: import('..').CommandDefinition<any>;
++            model: import('../index.js').CommandDefinition<any>;
+         };
+     };
+ }>, Record<string, unknown>>;
+diff --git a/dist/esm/first-party/permissions.d.ts b/dist/esm/first-party/permissions.d.ts
+index 32a31c13c0f6ae0a6cee1c877ff4a2f0ac8a04d4..688542fbad11d58b60c6a0fd199776803828e59f 100644
+--- a/dist/esm/first-party/permissions.d.ts
++++ b/dist/esm/first-party/permissions.d.ts
+@@ -17,7 +17,7 @@ export interface PermissionRule {
+  * Tool plugins add their rules here. `permissions()` reads them, and adds its
+  * own `rules` too, so other readers like `codeMode()` see them.
+  */
+-export declare const PermissionRules: import('..').ExtensionPoint<PermissionRule>;
++export declare const PermissionRules: import('../index.js').ExtensionPoint<PermissionRule>;
+ /** A list of resources, now or later. */
+ type Listed = ReadonlyArray<string> | Promise<ReadonlyArray<string>>;
+ /**
+@@ -53,7 +53,7 @@ export interface ToolResources {
+  * match it. Each item maps tool names to their resources, for example
+  * `PermissionResources.item({ read_file: { paths: (input) => [...] } })`.
+  */
+-export declare const PermissionResources: import('..').ExtensionPoint<Readonly<Record<string, ToolResources>>>;
++export declare const PermissionResources: import('../index.js').ExtensionPoint<Readonly<Record<string, ToolResources>>>;
+ export declare const PERMISSION_MODES: readonly ["default", "plan", "acceptEdits", "bypass"];
+ export type PermissionMode = (typeof PERMISSION_MODES)[number];
+ /**
+@@ -196,13 +196,13 @@ export declare function permissions(options?: {
+      * to it. Without it, no path counts as outside.
+      */
+     root?: string;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/permissions";
+     readonly provides: readonly [import('@tanstack/ai').Capability<(tool: string, mode: PermissionMode, resources?: CallResources) => PermissionDecision, "tanstack/permission-decision">, import('@tanstack/ai').Capability<(call: {
+         tool: string;
+         args: unknown;
+     }) => Promise<PermissionCallDecision>, "tanstack/permission-call">];
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => {
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => {
+         config: {
+             mode: {
+                 type: "select";
+@@ -218,15 +218,15 @@ export declare function permissions(options?: {
+             text: () => "" | "You are in plan mode. Do not change files or run commands. Read what you need, then describe your plan.";
+         }[];
+         commands: {
+-            mode: import('..').CommandDefinition<any>;
+-            permissions: import('..').CommandDefinition<any>;
++            mode: import('../index.js').CommandDefinition<any>;
++            permissions: import('../index.js').CommandDefinition<any>;
+         };
+         prepareTools: ({ tools }: {
+             tools: ReadonlyArray<import('@tanstack/ai').AnyTool>;
+             model: string;
+-            run: import('..').RunContext;
++            run: import('../index.js').RunContext;
+         }) => import('@tanstack/ai').AnyTool[];
+-        contribute: import('..').ExtensionItem<PermissionRule>[];
++        contribute: import('../index.js').ExtensionItem<PermissionRule>[];
+         middleware: {
+             name: string;
+             onInterruptBoundary: (ctx: import('@tanstack/ai').ChatMiddlewareContext<any> & {
+diff --git a/dist/esm/first-party/provider-keys.d.ts b/dist/esm/first-party/provider-keys.d.ts
+index 6dfa93e2346af83e21e627a26c199ea1bb7f2fbd..d294a4472481812bfffb650d163ee0ae7d3075cb 100644
+--- a/dist/esm/first-party/provider-keys.d.ts
++++ b/dist/esm/first-party/provider-keys.d.ts
+@@ -61,9 +61,9 @@ export interface ProviderKeysState {
+  */
+ export declare function providerKeys(options: {
+     providers: ReadonlyArray<KeyProvider>;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/provider-keys";
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => Promise<{
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => Promise<{
+         commands: Record<string, AnyCommand>;
+     }>;
+ }>, Record<string, unknown>>;
+diff --git a/dist/esm/first-party/question.d.ts b/dist/esm/first-party/question.d.ts
+index 5acf6149c96db2efdaef51f15e4f8e92d370e648..f84e6c1a2d826574c9a0b91de2334e7c9db8e5fd 100644
+--- a/dist/esm/first-party/question.d.ts
++++ b/dist/esm/first-party/question.d.ts
+@@ -13,7 +13,7 @@
+  * plugins: () => [question()]
+  * ```
+  */
+-export declare function question(): import('..').HarnessPlugin<NoInfer<{
++export declare function question(): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/question";
+     readonly setup: () => {
+         tools: (import('@tanstack/ai').ServerTool<{
+diff --git a/dist/esm/first-party/session-tools.d.ts b/dist/esm/first-party/session-tools.d.ts
+index c56828e2e3506419c190d6cc1fce4f63ed664aa1..dd19fa1d0402f297865b034285c7b4f43ace16c2 100644
+--- a/dist/esm/first-party/session-tools.d.ts
++++ b/dist/esm/first-party/session-tools.d.ts
+@@ -10,11 +10,11 @@ export declare function transcriptText(messages: ReadonlyArray<ModelMessage>): s
+ export declare function compact(options: {
+     adapter: AnyTextAdapter | KeyedAdapter<AnyTextAdapter>;
+     keepLast?: number;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/compact";
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => {
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => {
+         commands: {
+-            compact: import('..').CommandDefinition<any>;
++            compact: import('../index.js').CommandDefinition<any>;
+         };
+     };
+ }>, Record<string, unknown>>;
+@@ -54,9 +54,9 @@ export declare function usage(options?: {
+     model?: (modelId: string) => {
+         cost: ModelPrices;
+     } | undefined;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/usage";
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => {
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => {
+         middleware: {
+             onUsage: (_run: import('@tanstack/ai').ChatMiddlewareContext<any>, info: import('@tanstack/ai').UsageInfo) => Promise<void>;
+             name: string;
+@@ -71,7 +71,7 @@ export declare function usage(options?: {
+             onError: () => Promise<void>;
+         }[];
+         commands: {
+-            usage: import('..').CommandDefinition<any>;
++            usage: import('../index.js').CommandDefinition<any>;
+         };
+     };
+ }>, Record<string, unknown>>;
+diff --git a/dist/esm/first-party/title.d.ts b/dist/esm/first-party/title.d.ts
+index 32200a37897784674fb85edac661a58c35769d49..8b7355a69bff0ac10af7bc0c5003accdff547755 100644
+--- a/dist/esm/first-party/title.d.ts
++++ b/dist/esm/first-party/title.d.ts
+@@ -1,7 +1,7 @@
+ import { AnyTextAdapter, KeyedAdapter } from '@tanstack/ai';
+ import { HarnessRunContext } from '../types.js';
+ /** Sent when the title call fails. The turn does not fail. */
+-export declare const TitleFailed: import('..').PluginEvent<{
++export declare const TitleFailed: import('../index.js').PluginEvent<{
+     message: string;
+ }>;
+ /**
+@@ -19,9 +19,9 @@ export declare const TitleFailed: import('..').PluginEvent<{
+  */
+ export declare function title(options: {
+     adapter: AnyTextAdapter | KeyedAdapter<AnyTextAdapter>;
+-}): import('..').HarnessPlugin<NoInfer<{
++}): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/title";
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => {
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => {
+         middleware: {
+             name: string;
+             onConfig: (run: import('@tanstack/ai').ChatMiddlewareContext<HarnessRunContext>, config: import('@tanstack/ai').ChatMiddlewareConfig) => void;
+diff --git a/dist/esm/first-party/todos.d.ts b/dist/esm/first-party/todos.d.ts
+index 0fa0d0823f54ead688203430fe0213b30f577e9e..083f78c9c125fbd7f13cd948e47fcf9072fa1fc6 100644
+--- a/dist/esm/first-party/todos.d.ts
++++ b/dist/esm/first-party/todos.d.ts
+@@ -8,9 +8,9 @@ export declare function formatTodos(items: ReadonlyArray<Todo>): string;
+  * TodoWrite). The list is plugin state, so clients see it change and it
+  * survives restarts. `/todos` shows it.
+  */
+-export declare function todos(): import('..').HarnessPlugin<NoInfer<{
++export declare function todos(): import('../index.js').HarnessPlugin<NoInfer<{
+     readonly name: "tanstack/todos";
+-    readonly setup: (ctx: import('..').PluginSetupContext<Record<string, unknown>>) => Promise<{
++    readonly setup: (ctx: import('../index.js').PluginSetupContext<Record<string, unknown>>) => Promise<{
+         tools: (import('@tanstack/ai').ServerTool<{
+             type: string;
+             properties: {
+@@ -64,7 +64,7 @@ export declare function todos(): import('..').HarnessPlugin<NoInfer<{
+             text: () => string;
+         }[];
+         commands: {
+-            todos: import('..').CommandDefinition<any>;
++            todos: import('../index.js').CommandDefinition<any>;
+         };
+     }>;
+ }>, Record<string, unknown>>;
+diff --git a/dist/esm/first-party/workspace-hooks.d.ts b/dist/esm/first-party/workspace-hooks.d.ts
+index 1cc96c2958abf4a93f54fc4320fa3e646a0b6166..b9a6a80aa5ccd2c6a237d95634676a328b99b38c 100644
+--- a/dist/esm/first-party/workspace-hooks.d.ts
++++ b/dist/esm/first-party/workspace-hooks.d.ts
+@@ -36,4 +36,4 @@ export interface WorkspaceHooks {
+  * })
+  * ```
+  */
+-export declare const WorkspaceHooks: import('..').ExtensionPoint<WorkspaceHooks>;
++export declare const WorkspaceHooks: import('../index.js').ExtensionPoint<WorkspaceHooks>;
+diff --git a/dist/esm/session/agents.d.ts b/dist/esm/session/agents.d.ts
+index 19dd06615f323ab55437255dbd0bae96fb8856d1..892883a80368a308230b16cf5d0904be516a4ebf 100644
+--- a/dist/esm/session/agents.d.ts
++++ b/dist/esm/session/agents.d.ts
+@@ -374,7 +374,7 @@ export declare abstract class SessionAgents<THarness extends AnyHarness = AnyHar
+                 name: string;
+                 ms: number;
+             }) => Promise<void>;
+-            do: <T>(name: string, fn: (step: import('..').StepRun) => T | Promise<T>) => Promise<T>;
++            do: <T>(name: string, fn: (step: import('../index.js').StepRun) => T | Promise<T>) => Promise<T>;
+             ask: <TSchema extends import('@tanstack/ai').SchemaInput | undefined = undefined>(question: import('../durable-tool.js').StepQuestion<TSchema>) => Promise<never>;
+         };
+     };
+diff --git a/dist/esm/session/base.d.ts b/dist/esm/session/base.d.ts
+index 884d806c721048578f5cd0efbe851a7b4cfd0077..cec60a52a3228c1d87e68234cf2fcb9d8bdd84e1 100644
+--- a/dist/esm/session/base.d.ts
++++ b/dist/esm/session/base.d.ts
+@@ -402,20 +402,20 @@ export declare abstract class SessionBase<THarness extends AnyHarness = AnyHarne
+      * )
+      * ```
+      */
+-    readonly onQuestion: import('..').OnHarnessEvent<{
+-        question: import('..').PendingQuestion;
++    readonly onQuestion: import('../index.js').OnHarnessEvent<{
++        question: import('../index.js').PendingQuestion;
+     }>;
+     /**
+      * Call `listener` when a tool needs a sign-in to a connector. Show the
+      * `url` (and the `userCode`, for a device login) to the user.
+      */
+-    readonly onAuthRequired: import('..').OnHarnessEvent<import('..').AuthRequest>;
++    readonly onAuthRequired: import('../index.js').OnHarnessEvent<import('../index.js').AuthRequest>;
+     /** Call `listener` for each media file that an operation of this session saves. */
+-    readonly onMedia: import('..').OnHarnessEvent<{
+-        media: import('..').MediaRecord;
++    readonly onMedia: import('../index.js').OnHarnessEvent<{
++        media: import('../index.js').MediaRecord;
+     }>;
+     /** Call `listener` after each model call, with its usage and the new thread totals. */
+-    readonly onUsage: import('..').OnHarnessEvent<import('..').UsageUpdate>;
++    readonly onUsage: import('../index.js').OnHarnessEvent<import('../index.js').UsageUpdate>;
+     /** The ordered events of every operation, from `from` (exclusive). */
+     events(options?: {
+         from?: Cursor;
+diff --git a/dist/esm/session/state.d.ts b/dist/esm/session/state.d.ts
+index 8c2ed2a9f4a3b27991c31a88d4fd64353a8916a9..6100042aa0a9f64dd0f033eccf1d83c9b73b355c 100644
+--- a/dist/esm/session/state.d.ts
++++ b/dist/esm/session/state.d.ts
+@@ -284,7 +284,7 @@ export declare abstract class SessionState<THarness extends AnyHarness = AnyHarn
+      * part of no turn, so a workspace that no turn opened on this host (after
+      * a restart) opens again from the log.
+      */
+-    protected revertRun(user: HarnessUser | undefined): import('..').RunContext;
++    protected revertRun(user: HarnessUser | undefined): import('../index.js').RunContext;
+     /** Run `fn` while no new turn starts. A held turn starts after it. */
+     protected holding(fn: () => Promise<Receipt>): Promise<Receipt>;
+     /**
+diff --git a/dist/esm/session/turn-parts.d.ts b/dist/esm/session/turn-parts.d.ts
+index d6012fbc06f3070daa67ef449634c04efe14b881..ee1045c4172091c9d42f6adb7e895c94152555aa 100644
+--- a/dist/esm/session/turn-parts.d.ts
++++ b/dist/esm/session/turn-parts.d.ts
+@@ -33,7 +33,7 @@ export declare abstract class SessionTurnParts<THarness extends AnyHarness = Any
+                 name: string;
+                 ms: number;
+             }) => Promise<void>;
+-            do: <T>(name: string, fn: (step: import('..').StepRun) => T | Promise<T>) => Promise<T>;
++            do: <T>(name: string, fn: (step: import('../index.js').StepRun) => T | Promise<T>) => Promise<T>;
+             ask: <TSchema extends SchemaInput | undefined = undefined>(question: StepQuestion<TSchema>) => Promise<never>;
+         };
+         append: (records: ReadonlyArray<LogRecord>) => void;

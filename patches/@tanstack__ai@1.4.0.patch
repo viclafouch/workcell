@@ -1,0 +1,83 @@
+diff --git a/dist/esm/activities/chat/agents/spawn.d.ts b/dist/esm/activities/chat/agents/spawn.d.ts
+index e9d44c9227fd2ccd48625d57818b8c0ef5c29758..e429a0dfbc7d229795ddafecd67c0f3ceabc9793 100644
+--- a/dist/esm/activities/chat/agents/spawn.d.ts
++++ b/dist/esm/activities/chat/agents/spawn.d.ts
+@@ -166,7 +166,7 @@ export declare function withChildUsage(chunk: ParentTerminal, sink: SubagentSink
+  * `interruptIds` only.
+  */
+ export declare function spawnAgentStream(agent: DefinedAgent, input: SubagentRunInput, sink?: SubagentSink, parentToolCallId?: string, binding?: SubagentBinding): AsyncIterable<StreamChunk>;
+-export declare function spawnNamedAgents(entries: ReadonlyArray<SpawnEntry>, bag: SubagentsBag, ctx: SpawnContext, sink?: SubagentSink): AsyncGenerator<import('../../..').AGUIEvent, void, any>;
++export declare function spawnNamedAgents(entries: ReadonlyArray<SpawnEntry>, bag: SubagentsBag, ctx: SpawnContext, sink?: SubagentSink): AsyncGenerator<import('../../../index.js').AGUIEvent, void, any>;
+ /**
+  * Text of the named direct children, in `names` order. Text from nested
+  * children stays out: their chunks carry their own id.
+@@ -179,7 +179,7 @@ export declare function collectNamedText(chunks: Array<StreamChunk>, names: Read
+  */
+ export declare function subagentCallMessages(names: ReadonlySet<string>): {
+     middleware: ChatMiddleware<unknown, never>;
+-    messagesFor: (toolCallId: string | undefined) => ModelMessage<string | import('../../..').ContentPart<unknown, unknown, unknown, unknown, unknown>[] | null>[] | undefined;
++    messagesFor: (toolCallId: string | undefined) => ModelMessage<string | import('../../../index.js').ContentPart<unknown, unknown, unknown, unknown, unknown>[] | null>[] | undefined;
+     childLoader: () => LoadChild | undefined;
+ };
+ export declare function createSyntheticSubagentTools(bag: SubagentsBag, parent: {
+diff --git a/dist/esm/utilities/sanitize-unicode.d.ts b/dist/esm/utilities/sanitize-unicode.d.ts
+index 9f7b97ac70edffe5e3ebc59dab14adc5cb59b79d..a720900581d2b53b0dc52dbb8f62ac8b991e3078 100644
+--- a/dist/esm/utilities/sanitize-unicode.d.ts
++++ b/dist/esm/utilities/sanitize-unicode.d.ts
+@@ -7,7 +7,7 @@ import { ModelMessage, ModelMessageBlock } from '../types.js';
+  */
+ export declare function sanitizeProviderRequest(messages: Array<ModelMessage>, systemPrompts: Array<SystemPrompt> | undefined): {
+     messages: ({
+-        toolCalls?: Array<import('..').ToolCall>;
++        toolCalls?: Array<import('../index.js').ToolCall>;
+         content: string;
+         blockOrder: Array<ModelMessageBlock>;
+         role: "user" | "assistant" | "tool";
+@@ -19,13 +19,13 @@ export declare function sanitizeProviderRequest(messages: Array<ModelMessage>, s
+             redacted?: boolean;
+         }>;
+         error?: string;
+-        midConversationChange?: import('..').MidConversationChange;
++        midConversationChange?: import('../index.js').MidConversationChange;
+         metadata?: Record<string, any>;
+-        structuredOutput?: import('..').StructuredOutputPart;
++        structuredOutput?: import('../index.js').StructuredOutputPart;
+         id?: string;
+         createdAt?: Date;
+     } | {
+-        toolCalls?: Array<import('..').ToolCall>;
++        toolCalls?: Array<import('../index.js').ToolCall>;
+         content: string;
+         role: "user" | "assistant" | "tool";
+         name?: string;
+@@ -37,14 +37,14 @@ export declare function sanitizeProviderRequest(messages: Array<ModelMessage>, s
+         }>;
+         blockOrder?: Array<ModelMessageBlock>;
+         error?: string;
+-        midConversationChange?: import('..').MidConversationChange;
++        midConversationChange?: import('../index.js').MidConversationChange;
+         metadata?: Record<string, any>;
+-        structuredOutput?: import('..').StructuredOutputPart;
++        structuredOutput?: import('../index.js').StructuredOutputPart;
+         id?: string;
+         createdAt?: Date;
+     } | {
+-        toolCalls?: Array<import('..').ToolCall>;
+-        content: (import('..').ImagePart<unknown> | import('..').AudioPart<unknown> | import('..').VideoPart<unknown> | import('..').DocumentPart<unknown> | {
++        toolCalls?: Array<import('../index.js').ToolCall>;
++        content: (import('../index.js').ImagePart<unknown> | import('../index.js').AudioPart<unknown> | import('../index.js').VideoPart<unknown> | import('../index.js').DocumentPart<unknown> | {
+             content: string;
+             type: "text";
+             metadata?: unknown;
+@@ -59,9 +59,9 @@ export declare function sanitizeProviderRequest(messages: Array<ModelMessage>, s
+         }>;
+         blockOrder?: Array<ModelMessageBlock>;
+         error?: string;
+-        midConversationChange?: import('..').MidConversationChange;
++        midConversationChange?: import('../index.js').MidConversationChange;
+         metadata?: Record<string, any>;
+-        structuredOutput?: import('..').StructuredOutputPart;
++        structuredOutput?: import('../index.js').StructuredOutputPart;
+         id?: string;
+         createdAt?: Date;
+     })[];
