@@ -208,6 +208,27 @@ describe('slackPlatform', () => {
     ])
   })
 
+  it('cuts a status line to the 50 characters that Slack shows', async () => {
+    const { setStatusLine } = openPlatform()
+
+    await setStatusLine?.(
+      'slack:C_WORKERS:1.0001',
+      'gets its sandbox ready, which can take a few minutes',
+      ALPHA
+    )
+
+    expect(calls).toMatchObject([
+      {
+        method: 'assistant.threads.setStatus',
+        body: {
+          status: 'gets its sandbox ready, which can take a few minu…',
+          loading_messages:
+            '["gets its sandbox ready, which can take a few minu…"]'
+        }
+      }
+    ])
+  })
+
   it('shows a status line under the identity of a thread, and clears it with no loading message', async () => {
     const { setStatusLine } = openPlatform()
 

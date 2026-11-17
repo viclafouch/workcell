@@ -16,6 +16,8 @@ export const SLACK_SECRET_NAMES = [
   'SLACK_APP_TOKEN'
 ] as const
 
+const SLACK_STATUS_LINE_MAX_LENGTH = 50
+
 export const SLACK_CARD_LIMITS = {
   tables: 1,
   charts: 2,
@@ -26,6 +28,19 @@ export const SLACK_CARD_LIMITS = {
   chartLabel: 20,
   chartSeries: 12,
   chartPoints: 20
+}
+
+function shownStatusLine(line: string) {
+  const characters = Array.from(
+    new Intl.Segmenter().segment(line),
+    ({ segment }) => {
+      return segment
+    }
+  )
+
+  return characters.length > SLACK_STATUS_LINE_MAX_LENGTH
+    ? `${characters.slice(0, SLACK_STATUS_LINE_MAX_LENGTH - 1).join('')}…`
+    : line
 }
 
 function contentOf(message: ChatMessage) {
@@ -85,15 +100,16 @@ export function slackPlatform(adapter: SlackAdapter): PlatformExtras {
     identity?: ChatIdentity
   ) => {
     const { channel, threadTs } = adapter.decodeThreadId(threadId)
+    const shown = shownStatusLine(line)
     await adapter.webClient.apiCall(
       'assistant.threads.setStatus',
-      line === ''
-        ? { channel_id: channel, thread_ts: threadTs, status: line }
+      shown === ''
+        ? { channel_id: channel, thread_ts: threadTs, status: shown }
         : {
             channel_id: channel,
             thread_ts: threadTs,
-            status: line,
-            loading_messages: [line],
+            status: shown,
+            loading_messages: [shown],
             username: identity?.name,
             icon_url: identity?.iconUrl
           }
