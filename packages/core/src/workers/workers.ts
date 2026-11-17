@@ -41,6 +41,7 @@ type WorkersOptions = {
   workerNames: readonly string[]
   permissionMode: PermissionMode
   logger: WorkerLogger
+  onWorkerStart?: OnWorkerStart
 }
 
 export type WorkerTask = {
@@ -52,6 +53,10 @@ export type WorkerTask = {
   branch?: string
   inputId?: string
 }
+
+export type OnWorkerStart = (
+  worker: WorkerMetadata & { threadId: string }
+) => Promise<Readonly<Record<string, unknown>>>
 
 export type WakeWorkerParams = {
   threadId: string
@@ -135,6 +140,43 @@ function approvalAnswers(
     .map(({ waitId }) => {
       return { interruptId: waitId, status: 'resolved' as const, payload }
     })
+}
+
+async function noStartMetadata() {
+  return {}
+}
+
+type OpenedWorker = {
+  session: HarnessSession<WorkerHarness>
+  metadata: WorkerMetadata
+}
+
+type StartHookParams = {
+  session: HarnessSession<WorkerHarness>
+  metadata: WorkerMetadata
+  log: WorkerLog
+  onWorkerStart: OnWorkerStart
+}
+
+async function runStartHook({
+  session,
+  metadata,
+  log,
+  onWorkerStart
+}: StartHookParams) {
+  try {
+    const started = await onWorkerStart({
+      threadId: session.threadId,
+      ...metadata
+    })
+    await session.updateIndexEntry((current) => {
+      return current.metadata === undefined
+        ? {}
+        : { metadata: { ...started, ...current.metadata } }
+    })
+  } catch (error) {
+    log.error({ error }, 'worker start hook failed')
+  }
 }
 
 async function driveFirstTurn(
@@ -229,7 +271,8 @@ export function createWorkers({
   repositories,
   workerNames,
   permissionMode,
-  logger
+  logger,
+  onWorkerStart = noStartMetadata
 }: WorkersOptions) {
   const locks = new InMemoryLockStore()
 
@@ -256,7 +299,9 @@ export function createWorkers({
     })
   }
 
-  const openNamedWorker = async (workerTask: WorkerTask) => {
+  const openNamedWorker = async (
+    workerTask: WorkerTask
+  ): Promise<OpenedWorker> => {
     const { starter, task, entrySkill, repository, subject, branch, inputId } =
       workerTask
 
@@ -289,14 +334,14 @@ export function createWorkers({
       metadata
     })
 
-    return { session, name: metadata.name }
+    return { session, metadata }
   }
 
-  const startNewWorker = async (workerTask: WorkerTask) => {
-    const { session, name } = await openNamedWorker(workerTask)
+  const runNewWorker = async ({ session, metadata }: OpenedWorker) => {
     const { threadId } = session
+    const { name, task, entrySkill, inputId } = metadata
     const log = logger.child({ module: 'agents', threadId, name })
-    const { task, entrySkill, inputId } = workerTask
+    await runStartHook({ session, metadata, log, onWorkerStart })
 
     try {
       await session.setPluginSetting({ key: 'mode', value: permissionMode })
@@ -327,18 +372,22 @@ export function createWorkers({
       )
     }
 
-    return locks.withLock(WORKERS_LOCK, async () => {
+    const opening = await locks.withLock(WORKERS_LOCK, async () => {
       const started =
         inputId === undefined ? undefined : await findWorkerOfInput(inputId)
 
-      if (started !== undefined) {
-        const { threadId, name } = started
-
-        return { threadId, name, isNew: false, firstTurn: Promise.resolve() }
-      }
-
-      return startNewWorker(workerTask)
+      return started === undefined
+        ? { opened: await openNamedWorker(workerTask) }
+        : { started }
     })
+
+    if (opening.started !== undefined) {
+      const { threadId, name } = opening.started
+
+      return { threadId, name, isNew: false, firstTurn: Promise.resolve() }
+    }
+
+    return runNewWorker(opening.opened)
   }
 
   const listWorkers = async () => {

@@ -7,8 +7,7 @@ import {
   ASK_TO_RUN,
   COLLEAGUE,
   GO_ON_TEXT,
-  OPENING,
-  OPENING_LINE,
+  STARTING_LINE,
   STARTED_WORKER,
   STARTER,
   TASK_7_METADATA,
@@ -34,7 +33,6 @@ describe('the questions of a worker thread', () => {
   it('shows the header of a question and the description of each option', async () => {
     const { posts, surface } = recordSurface()
     await using worker = await openWorkerSession(memoryPersistence(), surface, [
-      OPENING,
       {
         toolCalls: [
           {
@@ -75,7 +73,6 @@ describe('the budget stop of a worker thread', () => {
 
     {
       await using worker = await openWorkerSession(persistence, surface, [
-        OPENING,
         { text: 'I look.' }
       ])
       await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
@@ -93,7 +90,7 @@ describe('the budget stop of a worker thread', () => {
       { kind: 'human' }
     ])
     expect(posted(calls)).toStrictEqual([
-      rootPost(OPENING_LINE),
+      rootPost(STARTING_LINE),
       threadPost('I look.'),
       threadPost(GO_ON_TEXT)
     ])
@@ -107,7 +104,6 @@ describe('the approvals of a worker thread', () => {
 
     {
       await using worker = await openWorkerSession(persistence, surface, [
-        OPENING,
         ASK_TO_DEPLOY
       ])
       await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
@@ -161,7 +157,6 @@ describe('the approvals of a worker thread', () => {
 
     {
       await using worker = await openWorkerSession(persistence, surface, [
-        OPENING,
         ASK_TO_DEPLOY
       ])
       await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
@@ -252,7 +247,6 @@ describe('the approvals of a worker thread', () => {
     ).join(' ')}`
     const { posts, surface } = recordSurface()
     await using worker = await openWorkerSession(memoryPersistence(), surface, [
-      OPENING,
       { toolCalls: [{ name: 'run', input: { command } }] }
     ])
     await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
@@ -266,7 +260,6 @@ describe('the approvals of a worker thread', () => {
   it('shows the command alone for a call with a command', async () => {
     const { posts, surface } = recordSurface()
     await using worker = await openWorkerSession(memoryPersistence(), surface, [
-      OPENING,
       ASK_TO_RUN
     ])
     await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })

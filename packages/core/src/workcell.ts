@@ -35,7 +35,7 @@ import {
 import { createWorkerActivity } from './workers/worker-activity.ts'
 import { createWorkerSandbox } from './workers/worker-sandbox.ts'
 import { createWorkerView } from './workers/worker-view.ts'
-import { createWorkers } from './workers/workers.ts'
+import { createWorkers, type OnWorkerStart } from './workers/workers.ts'
 
 type WorkcellLogger = {
   child: (bindings: Record<string, unknown>) => LeveledLog
@@ -76,6 +76,7 @@ type OpenWorkcellParams = {
   permissionMode?: PermissionMode
   idleSandboxMs?: number
   observability?: WorkerObservability
+  onWorkerStart?: OnWorkerStart
 }
 
 export class SchemaBehindError extends Error {
@@ -129,7 +130,8 @@ export async function openWorkcell({
   permissionMode = 'acceptEdits',
   maxRunningTurns,
   idleSandboxMs,
-  observability
+  observability,
+  onWorkerStart
 }: OpenWorkcellParams) {
   const startLog = logger.child({ module: 'host' })
   await requireCurrentSchema(database, migrateCommand, startLog)
@@ -204,7 +206,8 @@ export async function openWorkcell({
     repositories,
     workerNames,
     permissionMode,
-    logger
+    logger,
+    onWorkerStart
   })
   const orchestratorHarness = defineOrchestratorHarness({
     ...orchestratorOptions,

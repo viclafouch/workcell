@@ -1,8 +1,9 @@
+import { once } from 'node:events'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { definePlugin } from '@tanstack/ai-harness'
+import type { ChatMiddleware } from '@tanstack/ai'
+import { definePlugin, type HarnessRunContext } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
-import type { FakeResponseStep } from '@tanstack/ai/testing'
 import { workerMetadataSchema } from '@workcell/core'
 import { openSlackChat } from '#/__tests__/test-doubles.ts'
 import { chatCards, SHOW_CARD_TOOL } from '#/cards/card-tool.ts'
@@ -10,15 +11,13 @@ import {
   ALPHA,
   ASK_DRAFT_OR_READY,
   COLLEAGUE,
-  OPENING,
-  OPENING_LINE,
   QUESTION_TEXT,
   STARTED_WORKER,
   STARTER,
+  STARTING_LINE,
   STOP_BUTTON,
   TASK_7_METADATA,
   TASK_LINK,
-  VOICE,
   WORKER_THREAD,
   actionsOf,
   createTestThreads,
@@ -30,7 +29,6 @@ import {
   rootPost,
   threadPost,
   todoWrite,
-  voiceFile,
   workerSessionOpener
 } from './worker-thread-fixtures.ts'
 
@@ -51,22 +49,8 @@ describe('the chat thread of a worker', () => {
       ]),
       { text: 'Pull request opened as a draft.' }
     ]
-    const systemPrompts: unknown[] = []
-    const opening: FakeResponseStep = ({ request }) => {
-      systemPrompts.push(request.systemPrompts)
-
-      return OPENING
-    }
-
-    const openVoicedWorkerSession = workerSessionOpener({
-      voice: await voiceFile()
-    })
-
     {
-      await using worker = await openVoicedWorkerSession(persistence, surface, [
-        opening,
-        ...steps
-      ])
+      await using worker = await openWorkerSession(persistence, surface, steps)
       await worker.session.updateIndexEntry({
         title: 'Alpha · TASK-7',
         metadata: TASK_7_METADATA
@@ -75,7 +59,7 @@ describe('the chat thread of a worker', () => {
     }
 
     expect(calls).toStrictEqual([
-      rootPost(OPENING_LINE),
+      rootPost(STARTING_LINE),
       `subscribe ${WORKER_THREAD}`,
       `status ${WORKER_THREAD} processing`,
       threadPost('Steps: 0 of 2 done.'),
@@ -99,13 +83,11 @@ describe('the chat thread of a worker', () => {
       threadPost('Done.')
     ])
     expect(entry?.metadata).toMatchObject({ chatThreadId: WORKER_THREAD })
-    expect(systemPrompts).toStrictEqual([[VOICE]])
   })
 
   it('opens with the links of the worker and a stop button for the allowed starters, and shows its plan as steps', async () => {
     const { posts, surface } = recordSurface()
     await using worker = await openWorkerSession(memoryPersistence(), surface, [
-      OPENING,
       todoWrite([
         ['Read the task', 'in_progress'],
         ['Open the pull request', 'pending']
@@ -127,28 +109,12 @@ describe('the chat thread of a worker', () => {
     })
   })
 
-  it('opens the thread on the name of the task when the model fails to write the opening line', async () => {
-    const { calls, surface } = recordSurface()
-    await using worker = await openWorkerSession(memoryPersistence(), surface, [
-      { error: 'The gateway is down.' },
-      { text: 'Pull request opened.' }
-    ])
-    await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
-    await worker.session.send('Do the task TASK-7.')
-
-    expect(posted(calls)).toStrictEqual([
-      rootPost('TASK-7'),
-      threadPost('Pull request opened.')
-    ])
-  })
-
   it('posts each question of the worker once, with its options, also after a restart', async () => {
     const persistence = memoryPersistence()
     const { calls, surface } = recordSurface()
 
     {
       await using worker = await openWorkerSession(persistence, surface, [
-        OPENING,
         ASK_DRAFT_OR_READY
       ])
       await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
@@ -168,7 +134,7 @@ describe('the chat thread of a worker', () => {
     await restarted.session.settled({ inputId: 'chat:answer' })
 
     expect(posted(calls)).toStrictEqual([
-      rootPost(OPENING_LINE),
+      rootPost(STARTING_LINE),
       threadPost(QUESTION_TEXT),
       threadPost('Draft, then.')
     ])
@@ -183,7 +149,6 @@ describe('the chat thread of a worker', () => {
       memoryPersistence(),
       surface,
       [
-        OPENING,
         {
           toolCalls: [
             {
@@ -211,7 +176,7 @@ describe('the chat thread of a worker', () => {
     await worker.session.send('Show the checks.')
 
     expect(posted(calls)).toStrictEqual([
-      rootPost(OPENING_LINE),
+      rootPost(STARTING_LINE),
       threadPost(''),
       threadPost('The checks pass.')
     ])
@@ -359,7 +324,6 @@ describe('an answer that a host stop cut', () => {
       'Pull request opened as a draft, the checks still run on the branch.'
     const inputId = 'chat:cut-answer'
     const cut = await openSlowWorkerSession(persistence, surface, [
-      OPENING,
       { text: answer }
     ])
     await cut.session.updateIndexEntry({ metadata: TASK_7_METADATA })
@@ -386,11 +350,107 @@ describe('an answer that a host stop cut', () => {
     await restarted.session.settled({ inputId })
 
     expect(posted(calls)).toStrictEqual([
-      rootPost(OPENING_LINE),
+      rootPost(STARTING_LINE),
       threadPost(answer)
     ])
     expect(partials).toHaveLength(1)
     expect(partials[0]).not.toBe(answer)
+  })
+})
+
+describe('the opening of a worker thread', () => {
+  it('opens the thread when the worker starts, before any turn, and the first turn posts its plan there with no second intro', async () => {
+    const { calls, surface } = recordSurface()
+    await using worker = await openWorkerSession(memoryPersistence(), surface, [
+      todoWrite([['Read the task', 'in_progress']]),
+      { text: 'Reading.' }
+    ])
+
+    const opened = await worker.threads.open(TASK_7_METADATA)
+
+    expect(calls).toStrictEqual([
+      rootPost(STARTING_LINE),
+      `subscribe ${WORKER_THREAD}`,
+      `status ${WORKER_THREAD} processing`
+    ])
+
+    calls.length = 0
+    await worker.session.updateIndexEntry({
+      metadata: { ...TASK_7_METADATA, ...opened }
+    })
+    await worker.session.send('Do the task TASK-7.')
+
+    expect(posted(calls)).toStrictEqual([
+      threadPost('Steps: 0 of 1 done.'),
+      threadPost('Reading.')
+    ])
+  })
+
+  it('keeps the thread it posted when the chat fails to follow it', async () => {
+    const { calls, surface } = recordSurface()
+    const unfollowedSurface = {
+      ...surface,
+      subscribe: async () => {
+        throw new Error('The chat state is down.')
+      }
+    }
+    await using worker = await openWorkerSession(
+      memoryPersistence(),
+      unfollowedSurface,
+      [{ text: 'Reading.' }]
+    )
+
+    const opened = await worker.threads.open(TASK_7_METADATA)
+    await worker.session.updateIndexEntry({
+      metadata: { ...TASK_7_METADATA, ...opened }
+    })
+    await worker.session.send('Do the task TASK-7.')
+
+    expect(posted(calls)).toStrictEqual([
+      rootPost(STARTING_LINE),
+      threadPost('Reading.')
+    ])
+  })
+
+  it('keeps one thread when the host restarts while the sandbox gets ready', async () => {
+    const persistence = memoryPersistence()
+    const { calls, surface } = recordSurface()
+    const inputId = 'tracker:TASK-7'
+    const setupStarted = Promise.withResolvers<null>()
+    const sandboxSetupUntilTheHostStops = definePlugin({
+      name: 'test/sandbox-setup-until-the-host-stops',
+      setup: () => {
+        const setup: ChatMiddleware<HarnessRunContext> = {
+          name: 'test/sandbox-setup-until-the-host-stops',
+          onStart: async ({ context }) => {
+            setupStarted.resolve(null)
+            await once(context.run.signal, 'abort')
+          }
+        }
+
+        return { middleware: [setup] }
+      }
+    })
+    const starting = await workerSessionOpener({
+      plugins: [sandboxSetupUntilTheHostStops]
+    })(persistence, surface, [])
+    const opened = await starting.threads.open(TASK_7_METADATA)
+    await starting.session.updateIndexEntry({
+      metadata: { ...TASK_7_METADATA, ...opened }
+    })
+    await starting.session.send('Do the task TASK-7.', { inputId }).receipt
+    await setupStarted.promise
+    await starting.host.close({ recoverable: true })
+
+    await using restarted = await openWorkerSession(persistence, surface, [
+      { text: 'Reading.' }
+    ])
+    await restarted.session.settled({ inputId })
+
+    expect(posted(calls)).toStrictEqual([
+      rootPost(STARTING_LINE),
+      threadPost('Reading.')
+    ])
   })
 })
 
@@ -402,7 +462,6 @@ describe('the first message of a worker thread', () => {
 
     {
       await using worker = await openWorkerSession(persistence, surface, [
-        OPENING,
         { text: 'I read the task' }
       ])
       await worker.session.updateIndexEntry({ metadata })
@@ -418,7 +477,7 @@ describe('the first message of a worker thread', () => {
       }
     })
     await restarted.session.send('Go on.')
-    const greeting = `Hi, Release worker Bravo here.\n${OPENING_LINE}`
+    const greeting = `Hi, Release worker Bravo here.\n${STARTING_LINE}`
     const [edit] = edits
 
     expect(posts[0]).toMatchObject({
@@ -476,7 +535,6 @@ describe('the first message of a worker thread', () => {
     await using worker = await workerSessionOpener({
       plugins: [pushesTheBranch]
     })(memoryPersistence(), surface, [
-      OPENING,
       todoWrite([['Push the branch', 'done']]),
       { text: 'Pushed.' }
     ])

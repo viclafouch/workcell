@@ -28,7 +28,7 @@ import {
   TEST_STARTER
 } from '#/testing/test-doubles.ts'
 import { openWorkcell } from '#/workcell.ts'
-import type { WorkerTask } from '#/workers/workers.ts'
+import type { OnWorkerStart, WorkerTask } from '#/workers/workers.ts'
 import {
   allowGit,
   bash,
@@ -131,7 +131,8 @@ export async function openWorkers(
     orchestratorPlugins = [],
     workerNames = TEST_NAMES,
     maxRunningTurns = TEST_MAX_RUNNING_TURNS,
-    observability
+    observability,
+    onWorkerStart
   }: {
     idleSandboxMs?: number
     maxRunningTurns?: number
@@ -149,6 +150,7 @@ export async function openWorkers(
     orchestratorPlugins?: readonly HarnessPlugin[]
     workerNames?: readonly string[]
     observability?: WorkerObservability
+    onWorkerStart?: OnWorkerStart
   } = {}
 ) {
   const testbed = openedWorkerTestbed()
@@ -243,7 +245,8 @@ export async function openWorkers(
       plugins: [holdSecondTurn, allowGit, ...plugins],
       maxRunningTurns,
       idleSandboxMs,
-      observability
+      observability,
+      onWorkerStart
     })
 
     return {

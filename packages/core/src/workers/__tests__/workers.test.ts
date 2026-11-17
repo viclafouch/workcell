@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { definePlugin } from '@tanstack/ai-harness'
 import { runCli } from '@tanstack/ai-harness-cli'
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import { TEST_STARTER } from '#/testing/test-doubles.ts'
@@ -528,5 +529,126 @@ describe('the question of a worker', () => {
 
     expect(pendingWaits).toMatchObject([{ kind: 'question', turn: true }])
     expect(answeredMessages.join('\n')).toContain('Answer: Draft')
+  })
+})
+
+describe('the start hook of a worker', () => {
+  beforeAll(async () => {
+    await openWorkerTestbed()
+  })
+
+  afterAll(async () => {
+    await closeWorkerTestbed()
+  })
+
+  it('runs the start hook before the first turn, and the first turn reads the metadata it returned', async () => {
+    const events: string[] = []
+    const url = await createMigratedDatabase()
+    const readsTheStartMetadata = definePlugin({
+      name: 'test/reads-the-start-metadata',
+      setup: (setupContext) => {
+        return {
+          onTurnStart: async () => {
+            const entry = await setupContext.session.indexEntry()
+            events.push(`turn in ${String(entry?.metadata?.chatThreadId)}`)
+          }
+        }
+      }
+    })
+    await using agent = await openWorkers(url, [{ text: 'On it.' }], {
+      plugins: [readsTheStartMetadata],
+      onWorkerStart: async ({ name, subject }) => {
+        events.push(`start ${name} on ${subject}`)
+
+        return { chatThreadId: 'chat-thread-1' }
+      }
+    })
+
+    const worker = await agent.workers.startWorker({
+      repository: REPOSITORY,
+      starter: TEST_STARTER,
+      task: 'Fix the login.',
+      subject: 'TASK-1'
+    })
+    await worker.firstTurn
+
+    expect(events).toStrictEqual([
+      'start Alpha on TASK-1',
+      'turn in chat-thread-1'
+    ])
+  })
+
+  it('starts a second worker while the start hook of the first one still waits', async () => {
+    const url = await createMigratedDatabase()
+    const secondHook = Promise.withResolvers<null>()
+    const hooks = new Map([
+      [
+        'First task.',
+        async () => {
+          await secondHook.promise
+        }
+      ],
+      [
+        'Second task.',
+        async () => {
+          secondHook.resolve(null)
+        }
+      ]
+    ])
+    await using agent = await openWorkers(
+      url,
+      [{ text: 'On it.' }, { text: 'On it.' }],
+      {
+        workerNames: TWO_NAMES,
+        onWorkerStart: async ({ task }) => {
+          await hooks.get(task)?.()
+
+          return {}
+        }
+      }
+    )
+
+    const workers = await Promise.all(
+      [...hooks.keys()].map((task) => {
+        return agent.workers.startWorker({
+          repository: REPOSITORY,
+          starter: TEST_STARTER,
+          task
+        })
+      })
+    )
+    await Promise.all(
+      workers.map(({ firstTurn }) => {
+        return firstTurn
+      })
+    )
+
+    expect(
+      workers
+        .map(({ name }) => {
+          return name
+        })
+        .toSorted()
+    ).toStrictEqual(['Alpha', 'Bravo'])
+  })
+
+  it('starts the worker when the start hook fails', async () => {
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(url, [{ text: 'On it.' }], {
+      onWorkerStart: async () => {
+        throw new Error('The chat is down.')
+      }
+    })
+
+    const worker = await agent.workers.startWorker({
+      repository: REPOSITORY,
+      starter: TEST_STARTER,
+      task: 'Fix the login.'
+    })
+    await worker.firstTurn
+
+    await expect(agent.workers.listWorkers()).resolves.toMatchObject([
+      { name: 'Alpha', task: 'Fix the login.' }
+    ])
   })
 })

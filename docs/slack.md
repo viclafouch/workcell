@@ -49,7 +49,7 @@ The buttons show only for the people on the allowed list. An approval waits for 
 
 ## What you see
 
-- **A first message**: the robot greets you with its name, and says what it takes, with the links your team chose, such as its ticket or its review page.
+- **A first message, the moment the robot starts**: it greets you with its name, says what it takes and that its closed box is getting ready, with the links your team chose, such as its ticket or its review page. Its plan follows in the same thread.
 - **A name and a picture** for each robot, drawn at random from the list your team set.
 - **A status on the thread**: "working" while the robot thinks, "waiting" when it asks you, "ready" when it waits for you, "closed" when its work is done.
 - **A stop button** on the thread, and a Stop button on its first message.

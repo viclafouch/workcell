@@ -3,8 +3,7 @@ import type { ChatMiddleware } from '@tanstack/ai'
 import {
   definePlugin,
   type AnyHarness,
-  type HarnessHost,
-  type TurnInfo
+  type HarnessHost
 } from '@tanstack/ai-harness'
 import {
   joinCutOffAnswer,
@@ -31,12 +30,7 @@ import type {
   ChatSurface,
   SessionStatus
 } from '#/connection/chat-surface.ts'
-import { readVoice } from '#/plugins/voice.ts'
-import {
-  CHAT_LINES,
-  threadOpeningPrompt,
-  type ChatLines
-} from '#/prompts/chat.ts'
+import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 import {
   approvalCard,
   decidedCard,
@@ -47,7 +41,6 @@ import {
 import {
   markAsked,
   postQuestions,
-  refreshOpening,
   type ThreadPosts
 } from './worker-thread-posts.ts'
 import {
@@ -63,8 +56,6 @@ const THREAD_PLUGIN = 'workcell/chat-worker-thread'
 
 const TODO_WRITE = 'todo_write'
 
-const OPENING_LABEL = 'thread-opening'
-
 const SESSION_STATUS = {
   running: 'processing',
   waiting: 'suspended',
@@ -73,14 +64,23 @@ const SESSION_STATUS = {
 
 const threadSchema = z.object({ chatThreadId: z.string() })
 
+const openingSchema = z.object({ messageId: z.string(), links: z.string() })
+
 const postedLinesSchema = z.object({
   chatPostedLines: z.array(z.string()).default([])
 })
 
 const threadMetadataSchema = workerMetadataSchema.extend({
   ...threadSchema.partial().shape,
+  chatOpening: openingSchema.optional(),
   ...postedLinesSchema.partial().shape
 })
+
+type ThreadMetadata = z.infer<typeof threadMetadataSchema>
+
+const openedThreadSchema = threadSchema.extend({ chatOpening: openingSchema })
+
+type OpenedThreadMetadata = z.infer<typeof openedThreadSchema>
 
 type OpenedThread = { threadId: string; identity: ChatIdentity }
 
@@ -88,7 +88,7 @@ type WorkerThreadState = { opened?: OpenedThread }
 
 export type WorkerProfile = { name: string; title: string; iconUrl?: string }
 
-type WorkerLog = { info: LogLine }
+type WorkerLog = { info: LogLine; error: LogLine }
 
 type CreateWorkerThreadsParams = {
   surface: ChatSurface
@@ -97,7 +97,6 @@ type CreateWorkerThreadsParams = {
   allowedStarters: readonly string[]
   logger: { child: (bindings: Record<string, unknown>) => WorkerLog }
   links?: (worker: WorkerMetadata) => readonly WorkerThreadLink[]
-  voiceFile?: string
   lines?: ChatLines
 }
 
@@ -154,19 +153,8 @@ export function threadOf(metadata: unknown): string | undefined {
   return threadSchema.safeParse(metadata).data?.chatThreadId
 }
 
-type TaskOfThread = { subject?: string; task: string }
-
-function taskName({ subject, task }: TaskOfThread) {
+function taskName({ subject, task }: WorkerMetadata) {
   return subject ?? task.split('\n')[0] ?? task
-}
-
-function openingMessages(task: TaskOfThread) {
-  return [
-    {
-      role: 'user' as const,
-      content: threadOpeningPrompt(taskName(task), task.task)
-    }
-  ]
 }
 
 async function answerClick(
@@ -379,7 +367,6 @@ export function createWorkerThreads({
   allowedStarters,
   logger,
   links: linksOf = noLinks,
-  voiceFile,
   lines = CHAT_LINES
 }: CreateWorkerThreadsParams) {
   const profileOf = workerProfiles(profiles)
@@ -388,8 +375,43 @@ export function createWorkerThreads({
     return identityOfProfile(profileOf(worker))
   }
 
-  const voicePrompts = async () => {
-    return voiceFile === undefined ? [] : [await readVoice(voiceFile)]
+  const openingOf = (metadata: WorkerMetadata) => {
+    const links = linksOf(metadata)
+    const { title } = profileOf(metadata.name)
+    const line = `${lines.greeting(title)}\n${lines.starting(taskName(metadata))}`
+
+    return {
+      linksKey: JSON.stringify(links),
+      message: openingCard({ line, links, approvers: allowedStarters, lines })
+    }
+  }
+
+  const followOpenedThread = async (threadId: string, worker: string) => {
+    try {
+      await surface.subscribe(threadId)
+      await surface.setStatus(threadId, 'processing')
+    } catch (error) {
+      logger
+        .child({ module: 'chat', worker })
+        .error({ error, threadId }, 'worker thread opened, not followed')
+    }
+  }
+
+  const open = async (
+    metadata: WorkerMetadata
+  ): Promise<OpenedThreadMetadata> => {
+    const { linksKey, message } = openingOf(metadata)
+    const opening = await surface.post({
+      target: { channelId },
+      identity: identityOf(metadata.name),
+      message
+    })
+    await followOpenedThread(opening.threadId, metadata.name)
+
+    return {
+      chatThreadId: opening.threadId,
+      chatOpening: { messageId: opening.messageId, links: linksKey }
+    }
   }
 
   const plugin = definePlugin({
@@ -411,44 +433,38 @@ export function createWorkerThreads({
         }
       }
 
-      const openingLine = async (run: TurnInfo['run'], task: TaskOfThread) => {
-        try {
-          const { text } = await setupContext.model.chat({
-            run,
-            label: OPENING_LABEL,
-            options: {
-              systemPrompts: await voicePrompts(),
-              messages: openingMessages(task)
-            }
-          })
-
-          return text.trim() || taskName(task)
-        } catch (error) {
-          setupContext.logger.error(
-            `[${THREAD_PLUGIN}] The opening line failed: the thread opens on the task name.`,
-            { error, threadId: setupContext.session.threadId }
-          )
-
-          return taskName(task)
-        }
-      }
-
-      const refreshLinks = async (metadata: WorkerMetadata) => {
-        if (workerThread.opened === undefined) {
-          return
-        }
-
-        await refreshOpening({
-          surface,
-          posted,
-          threadId: workerThread.opened.threadId,
-          links: linksOf(metadata),
-          approvers: allowedStarters,
-          lines
+      const mergeMetadata = async (extra: Partial<ThreadMetadata>) => {
+        await setupContext.session.updateIndexEntry((current) => {
+          return current.metadata === undefined
+            ? {}
+            : { metadata: { ...current.metadata, ...extra } }
         })
       }
 
-      const openThread = async ({ run }: TurnInfo) => {
+      const refreshLinks = async (metadata: ThreadMetadata) => {
+        const { chatThreadId, chatOpening } = metadata
+
+        if (chatThreadId === undefined || chatOpening === undefined) {
+          return
+        }
+
+        const { linksKey, message } = openingOf(metadata)
+
+        if (chatOpening.links === linksKey) {
+          return
+        }
+
+        await surface.edit({
+          threadId: chatThreadId,
+          messageId: chatOpening.messageId,
+          message
+        })
+        await mergeMetadata({
+          chatOpening: { ...chatOpening, links: linksKey }
+        })
+      }
+
+      const openThread = async () => {
         const entry = await setupContext.session.indexEntry()
         const metadata = entry?.metadata
 
@@ -456,8 +472,7 @@ export function createWorkerThreads({
           return
         }
 
-        const profile = profileOf(metadata.name)
-        const identity = identityOfProfile(profile)
+        const identity = identityOf(metadata.name)
         const openedThreadId = threadOf(metadata)
 
         if (openedThreadId !== undefined) {
@@ -467,41 +482,9 @@ export function createWorkerThreads({
           return
         }
 
-        const links = linksOf(metadata)
-        const line = `${lines.greeting(profile.title)}\n${await openingLine(run, metadata)}`
-        const opening = await surface.post({
-          target: { channelId },
-          identity,
-          message: openingCard({
-            line,
-            links,
-            approvers: allowedStarters,
-            lines
-          })
-        })
-        await posted.update((current) => {
-          return {
-            ...current,
-            opening: {
-              line,
-              links: JSON.stringify(links),
-              messageId: opening.messageId
-            }
-          }
-        })
-        workerThread.opened = { threadId: opening.threadId, identity }
-        await surface.subscribe(opening.threadId)
-        await setupContext.session.updateIndexEntry((current) => {
-          return current.metadata === undefined
-            ? {}
-            : {
-                metadata: {
-                  ...current.metadata,
-                  chatThreadId: opening.threadId
-                }
-              }
-        })
-        await surface.setStatus(opening.threadId, 'processing')
+        const opened = await open(metadata)
+        await mergeMetadata(opened)
+        workerThread.opened = { threadId: opened.chatThreadId, identity }
       }
 
       const postInThread = async (message: ChatMessage) => {
@@ -624,10 +607,8 @@ export function createWorkerThreads({
       }
 
       return {
-        onTurnStart: async (turn) => {
-          await safely('thread start', () => {
-            return openThread(turn)
-          })
+        onTurnStart: async () => {
+          await safely('thread start', openThread)
         },
         middleware: [threadMessages]
       }
@@ -654,5 +635,5 @@ export function createWorkerThreads({
     }
   }
 
-  return { plugin, follow, linePoster, routes }
+  return { plugin, open, follow, linePoster, routes }
 }

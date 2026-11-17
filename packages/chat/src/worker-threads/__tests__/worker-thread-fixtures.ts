@@ -1,8 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import type { ActionsElement } from 'chat'
-import { onTestFinished } from 'vitest'
 import { z } from 'zod'
 import {
   defineInterrupt,
@@ -69,8 +65,6 @@ export const STARTER = 'U_STARTER'
 
 export const COLLEAGUE = 'U_COLLEAGUE'
 
-export const VOICE = 'Answer in one short line.'
-
 export const STARTED_WORKER: LiveWorker = {
   threadId: 'worker-1',
   updatedAt: 0,
@@ -88,9 +82,7 @@ export const QUESTION_TEXT = [
   '2. Ready'
 ].join('\n')
 
-export const OPENING_LINE = 'I take TASK-7'
-
-export const OPENING: FakeResponse = { text: OPENING_LINE }
+export const STARTING_LINE = 'I take TASK-7. My sandbox is getting ready.'
 
 export const ASK_DRAFT_OR_READY: FakeResponse = {
   toolCalls: [
@@ -236,17 +228,6 @@ function testLinks({
   return [...task, ...change]
 }
 
-export async function voiceFile() {
-  const folder = await mkdtemp(join(tmpdir(), 'chat-voice-'))
-  onTestFinished(async () => {
-    await rm(folder, { recursive: true, force: true })
-  })
-  const file = join(folder, 'VOICE.md')
-  await writeFile(file, VOICE)
-
-  return file
-}
-
 function textOf(message: ChatMessage) {
   return 'markdown' in message ? message.markdown : (message.fallbackText ?? '')
 }
@@ -329,28 +310,25 @@ export function posted(calls: readonly string[]) {
   })
 }
 
-export function createTestThreads(surface: ChatSurface, voice?: string) {
+export function createTestThreads(surface: ChatSurface) {
   return createWorkerThreads({
     surface,
     channelId: WORKER_CHANNEL,
     workers: TEST_WORKERS,
     allowedStarters: [STARTER],
     logger: SILENT_CHAT_LOGGER,
-    links: testLinks,
-    voiceFile: voice
+    links: testLinks
   })
 }
 
 type WorkerSessionOpenerParams = {
   plugins?: readonly HarnessPlugin[]
   modelOptions?: FakeTextOptions<string>
-  voice?: string
 }
 
 export function workerSessionOpener({
   plugins = [],
-  modelOptions = {},
-  voice
+  modelOptions = {}
 }: WorkerSessionOpenerParams = {}) {
   return async (
     persistence: ReturnType<typeof memoryPersistence>,
@@ -359,7 +337,7 @@ export function workerSessionOpener({
   ) => {
     const model = fakeText(modelOptions)
     model.setResponses(responses)
-    const threads = createTestThreads(surface, voice)
+    const threads = createTestThreads(surface)
     const harness = defineHarness({
       name: 'test/worker-threads',
       adapter: model,
@@ -392,6 +370,7 @@ export function workerSessionOpener({
       session,
       host,
       harness,
+      threads,
       [Symbol.asyncDispose]: async () => {
         await session.close()
         await host.close()

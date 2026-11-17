@@ -8,6 +8,7 @@ export type ChatLines = {
   settledApproval: string
   noWorkerInThread: string
   greeting: (title: string) => string
+  starting: (taskName: string) => string
   planTitle: string
   planProgress: (progress: PlanProgress) => string
   approvalQuestion: string
@@ -25,6 +26,9 @@ export const CHAT_LINES: ChatLines = {
   greeting: (title) => {
     return `Hi, ${title} here.`
   },
+  starting: (taskName) => {
+    return `I take ${taskName}. My sandbox is getting ready.`
+  },
   planTitle: 'Steps',
   planProgress: ({ done, total }) => {
     return `Steps: ${done} of ${total} done.`
@@ -34,8 +38,4 @@ export const CHAT_LINES: ChatLines = {
   reject: 'Reject',
   stop: 'Stop',
   decisions: { once: 'approved', reject: 'rejected' }
-}
-
-export function threadOpeningPrompt(taskName: string, task: string) {
-  return `Write the first message of your chat thread: one short line that says you take ${taskName}, and what you are going to change, in your own words.\nYour task: ${task}\nReply with the line only.`
 }
