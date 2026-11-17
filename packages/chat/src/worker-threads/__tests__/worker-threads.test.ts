@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
+import { definePlugin } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import type { FakeResponseStep } from '@tanstack/ai/testing'
+import { workerMetadataSchema } from '@workcell/core'
 import { openSlackChat } from '#/__tests__/test-doubles.ts'
 import { chatCards, SHOW_CARD_TOOL } from '#/cards/card-tool.ts'
 import {
@@ -434,6 +436,58 @@ describe('the first message of a worker thread', () => {
       message: { fallbackText: greeting }
     })
     expect(actionsOf(edit?.message)).toStrictEqual([
+      TASK_LINK,
+      {
+        type: 'link-button',
+        id: 'worker_link_change',
+        label: 'Change',
+        url: 'https://code.example.com/acme/app/changes/task-7-fix'
+      },
+      STOP_BUTTON
+    ])
+  })
+
+  it('adds the link of a field that the host writes during a turn, at the end of that turn', async () => {
+    const pushesTheBranch = definePlugin({
+      name: 'test/push-the-branch',
+      metadataSchema: workerMetadataSchema,
+      setup: (setupContext) => {
+        return {
+          middleware: [
+            {
+              name: 'test/push-the-branch',
+              onAfterToolCall: async () => {
+                await setupContext.session.updateIndexEntry((current) => {
+                  return {
+                    metadata: {
+                      ...TASK_7_METADATA,
+                      ...current.metadata,
+                      branch: 'task-7-fix'
+                    }
+                  }
+                })
+              }
+            }
+          ]
+        }
+      }
+    })
+    const { edits, surface } = recordSurface()
+    await using worker = await workerSessionOpener({
+      plugins: [pushesTheBranch]
+    })(memoryPersistence(), surface, [
+      OPENING,
+      todoWrite([['Push the branch', 'done']]),
+      { text: 'Pushed.' }
+    ])
+    await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
+
+    await worker.session.send('Do the task TASK-7.')
+    const openingEdit = edits.find(({ messageId }) => {
+      return messageId === '1.0001'
+    })
+
+    expect(actionsOf(openingEdit?.message)).toStrictEqual([
       TASK_LINK,
       {
         type: 'link-button',

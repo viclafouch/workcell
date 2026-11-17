@@ -2,6 +2,7 @@ import { setTimeout } from 'node:timers/promises'
 import {
   startLoop,
   type ThreadLine,
+  type UpdateWorkerParams,
   type WakeWorkerParams,
   type WorkerFinish
 } from '@workcell/core'
@@ -20,11 +21,13 @@ export type WatchedWorker = {
   repository: string
   subject?: string
   branch?: string
+  pullRequest?: string
 }
 
 type PullRequestWatcherParams = {
   github: GithubApi
   liveWorkers: () => readonly WatchedWorker[]
+  updateWorker: (update: UpdateWorkerParams) => Promise<void>
   wakeWorker: (wake: WakeWorkerParams) => Promise<void>
   postLine: (line: ThreadLine) => Promise<void>
   finishWorker: (finish: WorkerFinish) => Promise<boolean>
@@ -43,6 +46,7 @@ function matchIsOnABranch(worker: WatchedWorker): worker is WorkerOnABranch {
 export function createPullRequestWatcher({
   github,
   liveWorkers,
+  updateWorker,
   wakeWorker,
   postLine,
   finishWorker,
@@ -104,6 +108,25 @@ export function createPullRequestWatcher({
     }
   }
 
+  const recordPullRequest = async (
+    { threadId, pullRequest: recorded }: WatchedWorker,
+    pullRequest: string
+  ) => {
+    if (recorded === pullRequest) {
+      return
+    }
+
+    try {
+      await updateWorker({ threadId, metadata: { pullRequest } })
+      logger.info({ threadId, pullRequest }, 'pull request recorded')
+    } catch (error) {
+      logger.error(
+        { threadId, pullRequest, error },
+        'pull request not recorded: the next poll records it again'
+      )
+    }
+  }
+
   const headOf = ({
     threadId,
     repository,
@@ -132,6 +155,8 @@ export function createPullRequestWatcher({
       }
 
       pullRequestNumbers.set(worker.threadId, read.number)
+      // oxlint-disable-next-line no-await-in-loop -- the pull request is recorded before its events reach the worker
+      await recordPullRequest(worker, read.url)
       const { pullRequest } = read
 
       if (pullRequest === undefined) {

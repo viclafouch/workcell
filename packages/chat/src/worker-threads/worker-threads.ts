@@ -433,6 +433,21 @@ export function createWorkerThreads({
         }
       }
 
+      const refreshLinks = async (metadata: WorkerMetadata) => {
+        if (workerThread.opened === undefined) {
+          return
+        }
+
+        await refreshOpening({
+          surface,
+          posted,
+          threadId: workerThread.opened.threadId,
+          links: linksOf(metadata),
+          approvers: allowedStarters,
+          lines
+        })
+      }
+
       const openThread = async ({ run }: TurnInfo) => {
         const entry = await setupContext.session.indexEntry()
         const metadata = entry?.metadata
@@ -442,24 +457,17 @@ export function createWorkerThreads({
         }
 
         const profile = profileOf(metadata.name)
-        const links = linksOf(metadata)
         const identity = identityOfProfile(profile)
         const openedThreadId = threadOf(metadata)
 
         if (openedThreadId !== undefined) {
           workerThread.opened = { threadId: openedThreadId, identity }
-          await refreshOpening({
-            surface,
-            posted,
-            threadId: openedThreadId,
-            links,
-            approvers: allowedStarters,
-            lines
-          })
+          await refreshLinks(metadata)
 
           return
         }
 
+        const links = linksOf(metadata)
         const line = `${lines.greeting(profile.title)}\n${await openingLine(run, metadata)}`
         const opening = await surface.post({
           target: { channelId },
@@ -604,6 +612,13 @@ export function createWorkerThreads({
           })
           await safely('approval post', () => {
             return askApprovals(waitsOfKind(waits, 'approval'))
+          })
+          await safely('links refresh', async () => {
+            const entry = await setupContext.session.indexEntry()
+
+            if (entry?.metadata !== undefined) {
+              await refreshLinks(entry.metadata)
+            }
           })
         }
       }

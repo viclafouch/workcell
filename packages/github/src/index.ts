@@ -3,7 +3,7 @@ export {
   GITHUB_REST_URL,
   type GithubApi
 } from './api/github-api.ts'
-export { branchPullRequestsUrl } from './pull-requests/branch-links.ts'
+export { pullRequestUrlOf } from './pull-requests/pull-request-url.ts'
 export { createGithubReader, type GithubReader } from './api/github-reader.ts'
 export {
   createPullRequestCloser,
@@ -21,7 +21,7 @@ export {
 } from './api/review-thread-writer.ts'
 export { refuseFinishWithAnOpenPullRequest } from './plugins/finish-refusals.ts'
 export { GITHUB_TOOL_NAMES, githubTools } from './plugins/github-tools.ts'
-export { pullRequestTaskFact } from './plugins/pull-request-fact.ts'
+export { taskPullRequest } from './plugins/task-pull-request.ts'
 export { reviewThreadTools } from './plugins/review-threads.ts'
 export {
   PULL_REQUEST_LINES,

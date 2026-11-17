@@ -67,6 +67,7 @@ export { workerViewSchema, type WorkerView } from './workers/worker-view.ts'
 export type {
   MessageWorkerParams,
   StopWorkerParams,
+  UpdateWorkerParams,
   WakeWorkerParams,
   WorkerApproval,
   WorkerFinish,

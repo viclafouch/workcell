@@ -149,6 +149,39 @@ describe('a worker', () => {
     ])
   })
 
+  it('keeps a field that the host adds, with the rest of its metadata, after a restart', async () => {
+    const url = await createMigratedDatabase()
+    const threadId = await (async () => {
+      await using agent = await openWorkers(url, [{ text: 'On it.' }])
+      const worker = await agent.workers.startWorker({
+        repository: REPOSITORY,
+        starter: TEST_STARTER,
+        task: 'Fix the login.',
+        subject: 'TASK-3'
+      })
+      await worker.firstTurn
+      await agent.workers.updateWorker({
+        threadId: worker.threadId,
+        metadata: { reviewer: 'U_REVIEWER' }
+      })
+
+      return worker.threadId
+    })()
+
+    await using restarted = await openWorkers(url, [])
+
+    await expect(restarted.workers.listWorkers()).resolves.toMatchObject([
+      {
+        threadId,
+        name: 'Alpha',
+        task: 'Fix the login.',
+        repository: REPOSITORY,
+        subject: 'TASK-3',
+        reviewer: 'U_REVIEWER'
+      }
+    ])
+  })
+
   it('never gives a worker name twice, also after a restart', async () => {
     const url = await createMigratedDatabase()
     const options = { workerNames: TWO_NAMES }

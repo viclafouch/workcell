@@ -84,7 +84,9 @@ const watchedPullRequestSchema = z.object({
 })
 
 const foundPullRequestSchema = z.object({
-  pullRequests: z.object({ nodes: z.array(z.object({ number: z.number() })) })
+  pullRequests: z.object({
+    nodes: z.array(z.object({ number: z.number(), url: z.string() }))
+  })
 })
 
 const readPullRequestSchema = z.object({
@@ -122,7 +124,12 @@ export type PullRequestHead = {
 
 export type PullRequestRead =
   | { found: false }
-  | { found: true; number: number; pullRequest: WatchedPullRequest | undefined }
+  | {
+      found: true
+      number: number
+      url: string
+      pullRequest: WatchedPullRequest | undefined
+    }
 
 const watchedPullRequestFields = (numberVariable: string) => {
   return `number url merged mergeable headRefOid
@@ -170,7 +177,7 @@ function watchQuery(heads: readonly PullRequestHead[]) {
       variables[`branch${index}`] = branch
       declarations.push(`$branch${index}: String!`)
       selections.push(`pr${index}: repository(owner: $owner${index}, name: $name${index}) {
-    pullRequests(headRefName: $branch${index}, first: 1, states: [OPEN, MERGED], orderBy: { field: CREATED_AT, direction: DESC }) { nodes { number } }
+    pullRequests(headRefName: $branch${index}, first: 1, states: [OPEN, MERGED], orderBy: { field: CREATED_AT, direction: DESC }) { nodes { number url } }
   }`)
     } else {
       variables[`number${index}`] = number
@@ -196,14 +203,19 @@ function readOf(head: PullRequestHead, selection: unknown): PullRequestRead {
 
     return found === undefined
       ? { found: false }
-      : { found: true, number: found.number, pullRequest: undefined }
+      : { found: true, ...found, pullRequest: undefined }
   }
 
   const { pullRequest } = readPullRequestSchema.parse(selection)
 
   return pullRequest === null
     ? { found: false }
-    : { found: true, number: head.number, pullRequest }
+    : {
+        found: true,
+        number: head.number,
+        url: pullRequest.url,
+        pullRequest
+      }
 }
 
 const watchDataSchema = z.record(z.string(), z.unknown())

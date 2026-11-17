@@ -62,6 +62,11 @@ export type WakeWorkerParams = {
 
 export type WorkerFinish = { threadId: string; report: string }
 
+export type UpdateWorkerParams = {
+  threadId: string
+  metadata: Readonly<Record<string, unknown>>
+}
+
 export type StopWorkerParams = { threadId: string; user: HarnessUser }
 
 export type MessageWorkerParams = {
@@ -382,6 +387,18 @@ export function createWorkers({
     return finishIdleWorker({ host, harness, lifecycle }, finish)
   }
 
+  const updateWorker = async ({ threadId, metadata }: UpdateWorkerParams) => {
+    await host.sessions.update({
+      harness,
+      threadId,
+      update: (current) => {
+        return current.metadata === undefined
+          ? {}
+          : { metadata: { ...current.metadata, ...metadata } }
+      }
+    })
+  }
+
   const messageWorker = async ({
     threadId,
     sender,
@@ -480,6 +497,7 @@ export function createWorkers({
     trackLiveWorkers,
     wakeWorker,
     finishWorker,
+    updateWorker,
     messageWorker,
     answerApproval,
     stopWorker,
