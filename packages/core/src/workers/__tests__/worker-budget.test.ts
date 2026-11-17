@@ -333,7 +333,7 @@ describe('a worker stopped at its budget', () => {
     const wakeLines = loggedLines.slice(linesBeforeWake).join('\n')
 
     expect(wakeLines).toContain(
-      '[{"command":"git status --short --untracked-files=no"},"bash call"]'
+      '"command":"git status --short --untracked-files=no"},"bash call"]'
     )
     expect(wakeLines).toContain('"kind":"human"')
     expect(wakeLines).toContain('worker waits for a person')

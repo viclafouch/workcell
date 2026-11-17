@@ -34,7 +34,8 @@ import type {
   ChatEditParams,
   ChatMessage,
   ChatPost,
-  ChatSurface
+  ChatSurface,
+  SessionStatus
 } from '#/connection/chat-surface.ts'
 import type { WorkerThreadLink } from '#/worker-threads/worker-thread-cards.ts'
 import { createWorkerThreads } from '#/worker-threads/worker-threads.ts'
@@ -258,6 +259,12 @@ export function threadStatus(status: string, name = 'Alpha') {
   return `${name} ${ALPHA.iconUrl} status ${WORKER_THREAD} ${status}`
 }
 
+export function threadLine(line: string) {
+  return `Alpha ${ALPHA.iconUrl} line ${WORKER_THREAD}: ${line}`
+}
+
+export const CLEARED_LINE = `the app app picture line ${WORKER_THREAD}: `
+
 export function rootPost(line: string) {
   return threadPost(`Hi, Alpha here.\n${line}`, 'root')
 }
@@ -296,6 +303,11 @@ export function recordSurface() {
         `${identity?.name ?? 'the app'} ${identity?.iconUrl ?? 'app picture'} status ${threadId} ${status}`
       )
     },
+    setStatusLine: async (threadId, line, identity) => {
+      calls.push(
+        `${identity?.name ?? 'the app'} ${identity?.iconUrl ?? 'app picture'} line ${threadId}: ${line}`
+      )
+    },
     subscribe: async (threadId) => {
       calls.push(`subscribe ${threadId}`)
     },
@@ -308,6 +320,66 @@ export function recordSurface() {
   }
 
   return { calls, posts, edits, surface }
+}
+
+export function watchSurface(surface: ChatSurface) {
+  const lineShown = Promise.withResolvers<null>()
+  const processingShown = Promise.withResolvers<null>()
+  const watched: ChatSurface = {
+    ...surface,
+    setStatusLine: async (threadId, line, identity) => {
+      await surface.setStatusLine(threadId, line, identity)
+      lineShown.resolve(null)
+    },
+    setStatus: async (threadId, status, identity) => {
+      await surface.setStatus(threadId, status, identity)
+
+      if (status === 'processing') {
+        processingShown.resolve(null)
+      }
+    }
+  }
+
+  return {
+    surface: watched,
+    lineShown: lineShown.promise,
+    processingShown: processingShown.promise
+  }
+}
+
+export function delayStatus(surface: ChatSurface, delayed: SessionStatus) {
+  const reached = Promise.withResolvers<null>()
+  const released = Promise.withResolvers<null>()
+  const delay = { isArmed: false }
+  const delaying: ChatSurface = {
+    ...surface,
+    setStatus: async (threadId, status, identity) => {
+      if (delay.isArmed && status === delayed) {
+        delay.isArmed = false
+        reached.resolve(null)
+        await released.promise
+      }
+
+      await surface.setStatus(threadId, status, identity)
+    }
+  }
+
+  return {
+    surface: delaying,
+    arm: () => {
+      delay.isArmed = true
+    },
+    reached: reached.promise,
+    release: () => {
+      released.resolve(null)
+    }
+  }
+}
+
+export function statusCalls(calls: readonly string[]) {
+  return calls.filter((call) => {
+    return !call.includes(' post ') && !call.startsWith('edit ')
+  })
 }
 
 export function posted(calls: readonly string[]) {

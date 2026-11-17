@@ -118,6 +118,7 @@ export async function openWorkers(
   {
     idleSandboxMs,
     originUrl,
+    setup,
     secondOriginUrl,
     holdSecondTurnStart = Promise.resolve(null),
     limits = ROOMY_LIMITS,
@@ -137,6 +138,7 @@ export async function openWorkers(
     idleSandboxMs?: number
     maxRunningTurns?: number
     originUrl?: string
+    setup?: string[]
     secondOriginUrl?: string
     holdSecondTurnStart?: Promise<null>
     limits?: BudgetLimits
@@ -164,6 +166,7 @@ export async function openWorkers(
         originUrl === undefined
           ? { type: 'none' }
           : { type: 'git', url: originUrl, ref: 'dev', depth: 'full' },
+      setup,
       secrets: createSecrets({
         GH_TOKEN: SANDBOX_SECRETS.GITHUB_TOKEN,
         NPM_TOKEN: SANDBOX_SECRETS.NPM_TOKEN,

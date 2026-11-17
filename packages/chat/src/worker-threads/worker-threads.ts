@@ -9,6 +9,7 @@ import {
   joinCutOffAnswer,
   pausedInterrupts,
   todosOf,
+  WorkerSandboxSetup,
   workerMetadataSchema,
   type LiveWorker,
   type MessageWorkerParams,
@@ -27,8 +28,7 @@ import type { LogLine } from '#/connection/chat-logger.ts'
 import type {
   ChatIdentity,
   ChatMessage,
-  ChatSurface,
-  SessionStatus
+  ChatSurface
 } from '#/connection/chat-surface.ts'
 import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 import {
@@ -44,6 +44,10 @@ import {
   type ThreadPosts
 } from './worker-thread-posts.ts'
 import {
+  createThreadStatus,
+  type ThreadStatus
+} from './worker-thread-status.ts'
+import {
   stoppedWait,
   unaskedApprovals,
   waitIdOf,
@@ -56,12 +60,7 @@ const THREAD_PLUGIN = 'workcell/chat-worker-thread'
 
 const TODO_WRITE = 'todo_write'
 
-const SESSION_STATUS = {
-  queued: 'processing',
-  running: 'processing',
-  waiting: 'suspended',
-  idle: 'active'
-} as const satisfies Record<LiveWorker['liveStatus'], SessionStatus>
+const TURN_STATUSES = new Set<LiveWorker['liveStatus']>(['queued', 'running'])
 
 const threadSchema = z.object({ chatThreadId: z.string() })
 
@@ -196,12 +195,10 @@ async function answerClick(
   })
 }
 
-type ShowLiveStatus = (threadId: string, worker: LiveWorker) => Promise<void>
-
 function followChanges(
-  surface: ChatSurface,
   identityOf: (worker: string) => ChatIdentity,
-  showLiveStatus: ShowLiveStatus
+  surface: ChatSurface,
+  status: ThreadStatus
 ) {
   return async (change: WorkerChange) => {
     const threadId = threadOf(change.worker)
@@ -221,13 +218,21 @@ function followChanges(
         })
       }
 
-      await surface.setStatus(threadId, 'closed', identity)
+      await status.close(threadId, identity)
 
       return
     }
 
-    await showLiveStatus(threadId, change.worker)
+    await status.showLive(threadId, change.worker)
   }
+}
+
+function workerThreadOf(metadata: WorkerMetadata | undefined) {
+  const threadId = threadOf(metadata)
+
+  return metadata === undefined || threadId === undefined
+    ? undefined
+    : { threadId, worker: metadata.name }
 }
 
 function postLineOnce({
@@ -284,7 +289,7 @@ function postLineOnce({
 type RouteOfThreadParams = WorkerThreadRoutesOptions & {
   chatThreadId: string
   surface: ChatSurface
-  showLiveStatus: ShowLiveStatus
+  status: ThreadStatus
   allowedStarters: readonly string[]
   logger: { child: (bindings: Record<string, unknown>) => WorkerLog }
   lines: ChatLines
@@ -295,7 +300,7 @@ function routeOfThread({
   liveWorkers,
   workers,
   surface,
-  showLiveStatus,
+  status,
   allowedStarters,
   logger,
   lines
@@ -327,12 +332,21 @@ function routeOfThread({
         return
       }
 
-      await workers.messageWorker({
-        threadId,
-        sender: { id: user },
-        inputId,
-        message: text
-      })
+      if (!TURN_STATUSES.has(worker.liveStatus)) {
+        await status.showLine(chatThreadId, lines.readingStatus, name)
+      }
+
+      try {
+        await workers.messageWorker({
+          threadId,
+          sender: { id: user },
+          inputId,
+          message: text
+        })
+      } catch (error) {
+        await status.showLive(chatThreadId, worker)
+        throw error
+      }
     },
     approve: async (click) => {
       if (ignoresColleague(click.user)) {
@@ -362,7 +376,7 @@ function routeOfThread({
       })
 
       if (!stopped) {
-        await showLiveStatus(chatThreadId, worker)
+        await status.showLive(chatThreadId, worker)
       }
     }
   }
@@ -383,19 +397,7 @@ export function createWorkerThreads({
     return identityOfProfile(profileOf(worker))
   }
 
-  const showLiveStatus = async (
-    threadId: string,
-    { name, liveStatus }: LiveWorker
-  ) => {
-    const identity = identityOf(name)
-    await surface.setStatus(
-      threadId,
-      SESSION_STATUS[liveStatus],
-      liveStatus === 'queued'
-        ? { ...identity, name: lines.queuedName(name) }
-        : identity
-    )
-  }
+  const status = createThreadStatus({ surface, identityOf, lines, logger })
 
   const openingOf = (metadata: WorkerMetadata) => {
     const links = linksOf(metadata)
@@ -568,6 +570,18 @@ export function createWorkerThreads({
         await markAsked(posted, approvals.map(waitIdOf))
       }
 
+      status.followSetupEvents({
+        listen: (handler) => {
+          setupContext.on(WorkerSandboxSetup, handler)
+        },
+        readWorkerThread: async () => {
+          const entry = await setupContext.session.indexEntry()
+
+          return workerThreadOf(entry?.metadata)
+        },
+        safely
+      })
+
       const threadMessages: ChatMiddleware = {
         name: THREAD_PLUGIN,
         onStart: () => {
@@ -637,7 +651,7 @@ export function createWorkerThreads({
     }
   })
 
-  const follow = followChanges(surface, identityOf, showLiveStatus)
+  const follow = followChanges(identityOf, surface, status)
 
   const linePoster = (options: LinePosterOptions) => {
     return postLineOnce({ ...options, surface, identityOf })
@@ -650,7 +664,7 @@ export function createWorkerThreads({
         liveWorkers,
         workers,
         surface,
-        showLiveStatus,
+        status,
         allowedStarters,
         logger,
         lines

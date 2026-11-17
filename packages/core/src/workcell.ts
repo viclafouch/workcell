@@ -194,7 +194,7 @@ export async function openWorkcell({
     redactedSecretNames: Object.keys(secrets),
     pricing,
     defaultLimits,
-    plugins: [activity.plugin, ...plugins],
+    plugins: [activity.plugin, workerSandbox.plugin, ...plugins],
     observability
   })
   const repositories = Object.keys(sandboxes)

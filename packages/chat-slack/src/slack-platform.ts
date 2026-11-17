@@ -79,5 +79,26 @@ export function slackPlatform(adapter: SlackAdapter): PlatformExtras {
     })
   }
 
-  return { postAs, setStatus }
+  const setStatusLine = async (
+    threadId: string,
+    line: string,
+    identity?: ChatIdentity
+  ) => {
+    const { channel, threadTs } = adapter.decodeThreadId(threadId)
+    await adapter.webClient.apiCall(
+      'assistant.threads.setStatus',
+      line === ''
+        ? { channel_id: channel, thread_ts: threadTs, status: line }
+        : {
+            channel_id: channel,
+            thread_ts: threadTs,
+            status: line,
+            loading_messages: [line],
+            username: identity?.name,
+            icon_url: identity?.iconUrl
+          }
+    )
+  }
+
+  return { postAs, setStatus, setStatusLine }
 }

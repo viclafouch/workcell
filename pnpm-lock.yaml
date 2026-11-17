@@ -296,6 +296,7 @@ catalogs:
 
 patchedDependencies:
   '@tanstack/ai-harness@0.3.0': 0060449d1f27edba67c9db86b7ae4fdde8e0b7452b15196e538b37325763044c
+  '@tanstack/ai-sandbox@1.3.0': 464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b
   '@tanstack/ai@1.4.0': 1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e
 
 importers:
@@ -483,13 +484,13 @@ importers:
         version: 1.0.1(@tanstack/ai@1.4.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
       '@tanstack/ai-sandbox':
         specifier: 'catalog:'
-        version: 1.3.0(45d5396ace2a1c14508586dacad7c693)
+        version: 1.3.0(patch_hash=464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b)(45d5396ace2a1c14508586dacad7c693)
       '@tanstack/ai-sandbox-docker':
         specifier: 'catalog:'
-        version: 1.1.0(@tanstack/ai-sandbox@1.3.0(45d5396ace2a1c14508586dacad7c693))
+        version: 1.1.0(@tanstack/ai-sandbox@1.3.0(patch_hash=464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b)(45d5396ace2a1c14508586dacad7c693))
       '@tanstack/ai-sandbox-local-process':
         specifier: 'catalog:'
-        version: 1.0.0(@tanstack/ai-sandbox@1.3.0(45d5396ace2a1c14508586dacad7c693))
+        version: 1.0.0(@tanstack/ai-sandbox@1.3.0(patch_hash=464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b)(45d5396ace2a1c14508586dacad7c693))
       '@tanstack/ai-skills':
         specifier: 'catalog:'
         version: 1.0.2(a019db95087a58c692206015391dda22)
@@ -5075,19 +5076,19 @@ snapshots:
     optionalDependencies:
       vitest: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
 
-  '@tanstack/ai-sandbox-docker@1.1.0(@tanstack/ai-sandbox@1.3.0(45d5396ace2a1c14508586dacad7c693))':
+  '@tanstack/ai-sandbox-docker@1.1.0(@tanstack/ai-sandbox@1.3.0(patch_hash=464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b)(45d5396ace2a1c14508586dacad7c693))':
     dependencies:
-      '@tanstack/ai-sandbox': 1.3.0(45d5396ace2a1c14508586dacad7c693)
+      '@tanstack/ai-sandbox': 1.3.0(patch_hash=464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b)(45d5396ace2a1c14508586dacad7c693)
       dockerode: 4.0.12
     transitivePeerDependencies:
       - supports-color
 
-  '@tanstack/ai-sandbox-local-process@1.0.0(@tanstack/ai-sandbox@1.3.0(45d5396ace2a1c14508586dacad7c693))':
+  '@tanstack/ai-sandbox-local-process@1.0.0(@tanstack/ai-sandbox@1.3.0(patch_hash=464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b)(45d5396ace2a1c14508586dacad7c693))':
     dependencies:
-      '@tanstack/ai-sandbox': 1.3.0(45d5396ace2a1c14508586dacad7c693)
+      '@tanstack/ai-sandbox': 1.3.0(patch_hash=464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b)(45d5396ace2a1c14508586dacad7c693)
       '@tanstack/ai-utils': 1.1.0
 
-  '@tanstack/ai-sandbox@1.3.0(45d5396ace2a1c14508586dacad7c693)':
+  '@tanstack/ai-sandbox@1.3.0(patch_hash=464ce9198260586b34f6a948817f71eb829fff5eb33664da48364da4e86d902b)(45d5396ace2a1c14508586dacad7c693)':
     dependencies:
       '@modelcontextprotocol/server': 2.4.0
       '@tanstack/ai': 1.4.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)

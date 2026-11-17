@@ -40,21 +40,21 @@ function runGit(args: string[]) {
 
 export const loggedLines: string[] = []
 
-function recordLine(...line: unknown[]) {
-  loggedLines.push(JSON.stringify(line))
-}
+function recordingLogger(bindings: Record<string, unknown>) {
+  const recordLine = (details: Record<string, unknown>, message: string) => {
+    loggedLines.push(JSON.stringify([{ ...bindings, ...details }, message]))
+  }
 
-const RECORDING_LOGGER = {
-  debug: recordLine,
-  info: recordLine,
-  warn: recordLine,
-  error: recordLine
+  return {
+    debug: recordLine,
+    info: recordLine,
+    warn: recordLine,
+    error: recordLine
+  }
 }
 
 export const RECORDING_WORKER_LOGGER = {
-  child: () => {
-    return RECORDING_LOGGER
-  }
+  child: recordingLogger
 }
 
 export const SANDBOX_SECRETS = {

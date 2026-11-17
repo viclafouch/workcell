@@ -207,4 +207,29 @@ describe('slackPlatform', () => {
       }
     ])
   })
+
+  it('shows a status line under the identity of a thread, and clears it with no loading message', async () => {
+    const { setStatusLine } = openPlatform()
+
+    await setStatusLine?.('slack:C_WORKERS:1.0001', 'reads your message', ALPHA)
+    await setStatusLine?.('slack:C_WORKERS:1.0001', '')
+
+    expect(calls).toStrictEqual([
+      {
+        method: 'assistant.threads.setStatus',
+        body: {
+          channel_id: 'C_WORKERS',
+          thread_ts: '1.0001',
+          status: 'reads your message',
+          loading_messages: '["reads your message"]',
+          username: 'Alpha',
+          icon_url: ALPHA.iconUrl
+        }
+      },
+      {
+        method: 'assistant.threads.setStatus',
+        body: { channel_id: 'C_WORKERS', thread_ts: '1.0001', status: '' }
+      }
+    ])
+  })
 })

@@ -64,6 +64,11 @@ export {
   type WorkerReset
 } from './workers/worker-reset.ts'
 export { workerViewSchema, type WorkerView } from './workers/worker-view.ts'
+export {
+  WorkerSandboxSetup,
+  type WorkerSandboxSetupEvent,
+  type WorkerSandboxStep
+} from './workers/worker-sandbox.ts'
 export type {
   MessageWorkerParams,
   OnWorkerStart,

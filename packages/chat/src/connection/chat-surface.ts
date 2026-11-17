@@ -34,6 +34,11 @@ export type PlatformExtras = {
     status: SessionStatus,
     identity?: ChatIdentity
   ) => Promise<void>
+  setStatusLine?: (
+    threadId: string,
+    line: string,
+    identity?: ChatIdentity
+  ) => Promise<void>
 }
 
 type QueuedCall = () => Promise<void>
@@ -130,6 +135,14 @@ export function createChatSurface({
     await extras.setStatus?.(threadId, status, identity)
   }
 
+  const setStatusLine = async (
+    threadId: string,
+    line: string,
+    identity?: ChatIdentity
+  ) => {
+    await extras.setStatusLine?.(threadId, line, identity)
+  }
+
   const threadChannelOf = (threadId: string) => {
     return chat.thread(threadId).channelId
   }
@@ -138,6 +151,7 @@ export function createChatSurface({
     post,
     edit,
     setStatus,
+    setStatusLine,
     subscribe,
     mention,
     channelOf: threadChannelOf
