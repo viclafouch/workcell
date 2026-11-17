@@ -178,4 +178,33 @@ describe('slackPlatform', () => {
       }
     ])
   })
+
+  it('names the identity of a thread in the status of its agent session', async () => {
+    const { setStatus } = openPlatform()
+
+    await setStatus?.('slack:C_WORKERS:1.0001', 'processing', ALPHA)
+    await setStatus?.('slack:C_WORKERS:1.0001', 'active', { name: 'Bravo' })
+
+    expect(calls).toStrictEqual([
+      {
+        method: 'agents.sessions.setStatus',
+        body: {
+          channel_id: 'C_WORKERS',
+          thread_ts: '1.0001',
+          status: 'processing',
+          username: 'Alpha',
+          icon_url: ALPHA.iconUrl
+        }
+      },
+      {
+        method: 'agents.sessions.setStatus',
+        body: {
+          channel_id: 'C_WORKERS',
+          thread_ts: '1.0001',
+          status: 'active',
+          username: 'Bravo'
+        }
+      }
+    ])
+  })
 })

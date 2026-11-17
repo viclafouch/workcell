@@ -28,6 +28,7 @@ import {
   recordWorkers,
   rootPost,
   threadPost,
+  threadStatus,
   todoWrite,
   workerSessionOpener
 } from './worker-thread-fixtures.ts'
@@ -61,7 +62,7 @@ describe('the chat thread of a worker', () => {
     expect(calls).toStrictEqual([
       rootPost(STARTING_LINE),
       `subscribe ${WORKER_THREAD}`,
-      `status ${WORKER_THREAD} processing`,
+      threadStatus('processing'),
       threadPost('Steps: 0 of 2 done.'),
       'edit 2.0001: Steps: 1 of 2 done.',
       threadPost('Pull request opened as a draft.')
@@ -235,10 +236,14 @@ describe('the host side of a worker thread', () => {
     expect(calls).toStrictEqual([threadPost(queued.line)])
   })
 
-  it('follows the worker status, and closes with the report', async () => {
+  it('follows the worker status under its name, names a queued worker as queued, and closes with the report', async () => {
     const { calls, surface } = recordSurface()
     const threads = createTestThreads(surface)
 
+    await threads.follow({
+      type: 'status',
+      worker: { ...STARTED_WORKER, liveStatus: 'queued' }
+    })
     await threads.follow({ type: 'status', worker: STARTED_WORKER })
     await threads.follow({
       type: 'status',
@@ -261,11 +266,12 @@ describe('the host side of a worker thread', () => {
     })
 
     expect(calls).toStrictEqual([
-      `status ${WORKER_THREAD} processing`,
-      `status ${WORKER_THREAD} suspended`,
-      `status ${WORKER_THREAD} active`,
+      threadStatus('processing', 'Alpha (queued)'),
+      threadStatus('processing'),
+      threadStatus('suspended'),
+      threadStatus('active'),
       threadPost('Merged: the pull request and TASK-7.'),
-      `status ${WORKER_THREAD} closed`
+      threadStatus('closed')
     ])
   })
 
@@ -312,7 +318,7 @@ describe('the host side of a worker thread', () => {
       `${STARTER} worker-1`,
       `${STARTER} worker-1`
     ])
-    expect(calls).toStrictEqual([`status ${WORKER_THREAD} processing`])
+    expect(calls).toStrictEqual([threadStatus('processing')])
   })
 })
 
@@ -371,7 +377,7 @@ describe('the opening of a worker thread', () => {
     expect(calls).toStrictEqual([
       rootPost(STARTING_LINE),
       `subscribe ${WORKER_THREAD}`,
-      `status ${WORKER_THREAD} processing`
+      threadStatus('processing')
     ])
 
     calls.length = 0

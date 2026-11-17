@@ -10,12 +10,12 @@ import {
   type WorkerMetadata
 } from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
-import type { WorkerLogger } from './lifecycle.ts'
+import type { WorkerLifecycle, WorkerLogger } from './lifecycle.ts'
 
 export type ListedWorker = WorkerMetadata &
   Pick<SessionIndexEntry, 'threadId' | 'updatedAt' | 'usage'>
 
-export type LiveStatus = HostStatusEvent['status']
+export type LiveStatus = HostStatusEvent['status'] | 'queued'
 
 export type LiveWorker = ListedWorker & { liveStatus: LiveStatus }
 
@@ -29,6 +29,7 @@ type TrackWorkerChangesParams = {
   host: HarnessHost
   harness: WorkerHarness
   readWorkers: () => Promise<ListedWorker[]>
+  lifecycle: Pick<WorkerLifecycle, 'isQueued' | 'onQueueChange'>
   logger: WorkerLogger
   onChange: OnWorkerChange
 }
@@ -50,6 +51,7 @@ export async function trackWorkerChanges({
   host,
   harness,
   readWorkers,
+  lifecycle,
   logger,
   onChange
 }: TrackWorkerChangesParams) {
@@ -59,7 +61,11 @@ export async function trackWorkerChanges({
   const log = logger.child({ module: 'agents' })
 
   const liveWorkerOf = (worker: ListedWorker): LiveWorker => {
-    return { ...worker, liveStatus: statuses.get(worker.threadId) ?? 'idle' }
+    const liveStatus = lifecycle.isQueued(worker.threadId)
+      ? 'queued'
+      : (statuses.get(worker.threadId) ?? 'idle')
+
+    return { ...worker, liveStatus }
   }
 
   const changes = new AsyncQueuer(async (change: WorkerChange) => {
@@ -162,7 +168,17 @@ export async function trackWorkerChanges({
     await reading
   }
 
+  const tellQueueChange = (threadId: string) => {
+    const worker = live.get(threadId)
+
+    if (worker !== undefined) {
+      changes.addItem({ type: 'status', worker: liveWorkerOf(worker) })
+    }
+  }
+
   const keepReading = async (signal: AbortSignal) => {
+    const stopTelling = lifecycle.onQueueChange(tellQueueChange)
+
     try {
       while (!signal.aborted) {
         // oxlint-disable-next-line no-await-in-loop -- each read starts when the one before it ends
@@ -171,6 +187,8 @@ export async function trackWorkerChanges({
     } catch (error) {
       firstListing.reject(error)
       log.error({ error }, 'live workers no longer tracked')
+    } finally {
+      stopTelling()
     }
   }
 

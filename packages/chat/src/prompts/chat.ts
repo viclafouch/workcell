@@ -9,6 +9,7 @@ export type ChatLines = {
   noWorkerInThread: string
   greeting: (title: string) => string
   starting: (taskName: string) => string
+  queuedName: (name: string) => string
   planTitle: string
   planProgress: (progress: PlanProgress) => string
   approvalQuestion: string
@@ -28,6 +29,9 @@ export const CHAT_LINES: ChatLines = {
   },
   starting: (taskName) => {
     return `I take ${taskName}. My sandbox is getting ready.`
+  },
+  queuedName: (name) => {
+    return `${name} (queued)`
   },
   planTitle: 'Steps',
   planProgress: ({ done, total }) => {

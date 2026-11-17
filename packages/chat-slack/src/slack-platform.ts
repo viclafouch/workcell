@@ -4,6 +4,7 @@ import {
   type SlackAdapter
 } from '@chat-adapter/slack'
 import type {
+  ChatIdentity,
   ChatMessage,
   IdentityPost,
   PlatformExtras,
@@ -63,9 +64,19 @@ export function slackPlatform(adapter: SlackAdapter): PlatformExtras {
     }
   }
 
-  const setStatus = async (threadId: string, status: SessionStatus) => {
+  const setStatus = async (
+    threadId: string,
+    status: SessionStatus,
+    identity?: ChatIdentity
+  ) => {
     const { channel, threadTs } = adapter.decodeThreadId(threadId)
-    await adapter.setSessionStatus(channel, threadTs, status)
+    await adapter.webClient.apiCall('agents.sessions.setStatus', {
+      channel_id: channel,
+      thread_ts: threadTs,
+      status,
+      username: identity?.name,
+      icon_url: identity?.iconUrl
+    })
   }
 
   return { postAs, setStatus }

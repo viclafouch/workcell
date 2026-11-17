@@ -254,6 +254,10 @@ export function threadPost(text: string, thread = WORKER_THREAD) {
   return `Alpha ${ALPHA.iconUrl} post ${thread}: ${text}`
 }
 
+export function threadStatus(status: string, name = 'Alpha') {
+  return `${name} ${ALPHA.iconUrl} status ${WORKER_THREAD} ${status}`
+}
+
 export function rootPost(line: string) {
   return threadPost(`Hi, Alpha here.\n${line}`, 'root')
 }
@@ -287,8 +291,10 @@ export function recordSurface() {
       edits.push(edit)
       calls.push(`edit ${edit.messageId}: ${textOf(edit.message)}`)
     },
-    setStatus: async (threadId, status) => {
-      calls.push(`status ${threadId} ${status}`)
+    setStatus: async (threadId, status, identity) => {
+      calls.push(
+        `${identity?.name ?? 'the app'} ${identity?.iconUrl ?? 'app picture'} status ${threadId} ${status}`
+      )
     },
     subscribe: async (threadId) => {
       calls.push(`subscribe ${threadId}`)

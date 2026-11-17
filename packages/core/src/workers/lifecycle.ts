@@ -248,7 +248,11 @@ function restartToFillTheFreeSlots(turns: AsyncQueuer<TurnSlot>) {
   turns.start()
 }
 
+type QueueListener = (threadId: string) => void
+
 function createTurnQueue(maxRunningTurns: number) {
+  const listeners = new Set<QueueListener>()
+
   const turns = new AsyncQueuer<TurnSlot>(
     async (slot) => {
       if (slot.signal.aborted) {
@@ -261,15 +265,28 @@ function createTurnQueue(maxRunningTurns: number) {
     { concurrency: maxRunningTurns }
   )
 
+  const tell = (threadId: string) => {
+    for (const listener of listeners) {
+      listener(threadId)
+    }
+  }
+
   const waitForSlot = async (slot: TurnSlot, log: WorkerLog) => {
     turns.addItem(slot)
     restartToFillTheFreeSlots(turns)
 
-    if (turns.peekPendingItems().includes(slot)) {
+    const waitsInLine = turns.peekPendingItems().includes(slot)
+
+    if (waitsInLine) {
       log.info({}, 'worker queued')
+      tell(slot.threadId)
     }
 
     await Promise.race([slot.started.promise, once(slot.signal, 'abort')])
+
+    if (waitsInLine) {
+      tell(slot.threadId)
+    }
   }
 
   const isQueued = (threadId: string) => {
@@ -278,7 +295,15 @@ function createTurnQueue(maxRunningTurns: number) {
     })
   }
 
-  return { waitForSlot, isQueued }
+  const onQueueChange = (listener: QueueListener) => {
+    listeners.add(listener)
+
+    return () => {
+      listeners.delete(listener)
+    }
+  }
+
+  return { waitForSlot, isQueued, onQueueChange }
 }
 
 function createIdleTimers(
@@ -663,6 +688,7 @@ export function createWorkerLifecycle({
     plugin,
     finish,
     isQueued: turnQueue.isQueued,
+    onQueueChange: turnQueue.onQueueChange,
     sweep,
     stopIdleTimers: idleTimers.stopAll
   }

@@ -57,6 +57,7 @@ const THREAD_PLUGIN = 'workcell/chat-worker-thread'
 const TODO_WRITE = 'todo_write'
 
 const SESSION_STATUS = {
+  queued: 'processing',
   running: 'processing',
   waiting: 'suspended',
   idle: 'active'
@@ -195,9 +196,12 @@ async function answerClick(
   })
 }
 
+type ShowLiveStatus = (threadId: string, worker: LiveWorker) => Promise<void>
+
 function followChanges(
   surface: ChatSurface,
-  identityOf: (worker: string) => ChatIdentity
+  identityOf: (worker: string) => ChatIdentity,
+  showLiveStatus: ShowLiveStatus
 ) {
   return async (change: WorkerChange) => {
     const threadId = threadOf(change.worker)
@@ -207,20 +211,22 @@ function followChanges(
     }
 
     if (change.type === 'finished') {
+      const identity = identityOf(change.worker.name)
+
       if (change.worker.report !== undefined) {
         await surface.post({
           target: { threadId },
-          identity: identityOf(change.worker.name),
+          identity,
           message: { markdown: change.worker.report }
         })
       }
 
-      await surface.setStatus(threadId, 'closed')
+      await surface.setStatus(threadId, 'closed', identity)
 
       return
     }
 
-    await surface.setStatus(threadId, SESSION_STATUS[change.worker.liveStatus])
+    await showLiveStatus(threadId, change.worker)
   }
 }
 
@@ -278,6 +284,7 @@ function postLineOnce({
 type RouteOfThreadParams = WorkerThreadRoutesOptions & {
   chatThreadId: string
   surface: ChatSurface
+  showLiveStatus: ShowLiveStatus
   allowedStarters: readonly string[]
   logger: { child: (bindings: Record<string, unknown>) => WorkerLog }
   lines: ChatLines
@@ -288,6 +295,7 @@ function routeOfThread({
   liveWorkers,
   workers,
   surface,
+  showLiveStatus,
   allowedStarters,
   logger,
   lines
@@ -354,7 +362,7 @@ function routeOfThread({
       })
 
       if (!stopped) {
-        await surface.setStatus(chatThreadId, SESSION_STATUS[worker.liveStatus])
+        await showLiveStatus(chatThreadId, worker)
       }
     }
   }
@@ -375,6 +383,20 @@ export function createWorkerThreads({
     return identityOfProfile(profileOf(worker))
   }
 
+  const showLiveStatus = async (
+    threadId: string,
+    { name, liveStatus }: LiveWorker
+  ) => {
+    const identity = identityOf(name)
+    await surface.setStatus(
+      threadId,
+      SESSION_STATUS[liveStatus],
+      liveStatus === 'queued'
+        ? { ...identity, name: lines.queuedName(name) }
+        : identity
+    )
+  }
+
   const openingOf = (metadata: WorkerMetadata) => {
     const links = linksOf(metadata)
     const { title } = profileOf(metadata.name)
@@ -389,7 +411,7 @@ export function createWorkerThreads({
   const followOpenedThread = async (threadId: string, worker: string) => {
     try {
       await surface.subscribe(threadId)
-      await surface.setStatus(threadId, 'processing')
+      await surface.setStatus(threadId, 'processing', identityOf(worker))
     } catch (error) {
       logger
         .child({ module: 'chat', worker })
@@ -615,7 +637,7 @@ export function createWorkerThreads({
     }
   })
 
-  const follow = followChanges(surface, identityOf)
+  const follow = followChanges(surface, identityOf, showLiveStatus)
 
   const linePoster = (options: LinePosterOptions) => {
     return postLineOnce({ ...options, surface, identityOf })
@@ -628,6 +650,7 @@ export function createWorkerThreads({
         liveWorkers,
         workers,
         surface,
+        showLiveStatus,
         allowedStarters,
         logger,
         lines

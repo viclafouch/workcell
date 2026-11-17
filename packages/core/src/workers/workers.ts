@@ -230,6 +230,15 @@ async function submitInput(
   return true
 }
 
+function liveWorkerTracker(
+  options: Pick<WorkersOptions, 'host' | 'harness' | 'lifecycle' | 'logger'>,
+  readWorkers: () => Promise<ListedWorker[]>
+) {
+  return (onChange: OnWorkerChange = () => {}) => {
+    return trackWorkerChanges({ ...options, readWorkers, onChange })
+  }
+}
+
 async function finishIdleWorker(
   {
     host,
@@ -287,9 +296,10 @@ export function createWorkers({
     })
   }
 
-  const trackLiveWorkers = (onChange: OnWorkerChange = () => {}) => {
-    return trackWorkerChanges({ host, harness, readWorkers, logger, onChange })
-  }
+  const trackLiveWorkers = liveWorkerTracker(
+    { host, harness, lifecycle, logger },
+    readWorkers
+  )
 
   const findWorkerOfInput = async (inputId: string) => {
     const workers = await readWorkers(true)

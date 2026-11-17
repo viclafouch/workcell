@@ -11,11 +11,13 @@ import {
 } from 'vitest'
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import { TEST_STARTER } from '#/testing/test-doubles.ts'
+import type { WorkerChange } from '#/workers/live-workers.ts'
 import {
   bash,
   CHECK_THE_WORK,
   COMMIT_AND_SHOW_WHO,
   createOrigin,
+  describeChange,
   finishTask,
   FOUR_NAMES,
   holdTwoTurns,
@@ -95,6 +97,61 @@ async function expectOneQueuedTurn({
   )
 }
 
+async function expectQueuedThenRunning() {
+  const url = await createMigratedDatabase()
+  const released = Promise.withResolvers<null>()
+  await using agent = await openWorkers(
+    url,
+    [...holdTwoTurns(released.promise), { text: 'Done.' }],
+    { workerNames: FOUR_NAMES, maxRunningTurns: 1 }
+  )
+  const changes: WorkerChange[] = []
+  await using tracking = await agent.workers.trackLiveWorkers((change) => {
+    changes.push(change)
+  })
+  const startTask = (task: string) => {
+    return agent.workers.startWorker({
+      repository: REPOSITORY,
+      starter: TEST_STARTER,
+      task
+    })
+  }
+  const statusesOf = (threadId: string) => {
+    return changes
+      .filter(({ worker }) => {
+        return worker.threadId === threadId
+      })
+      .map(describeChange)
+      .filter((status, index, all) => {
+        return status !== all[index - 1]
+      })
+      .join(' ')
+  }
+
+  const running = await startTask('Task 0')
+  await expect
+    .poll(() => {
+      return statusesOf(running.threadId)
+    })
+    .toBe('running')
+  const queued = await startTask('Task 1')
+  await expect
+    .poll(() => {
+      return tracking.liveWorkers().find(({ threadId }) => {
+        return threadId === queued.threadId
+      })?.liveStatus
+    })
+    .toBe('queued')
+  released.resolve(null)
+  await Promise.all([running.firstTurn, queued.firstTurn])
+
+  await expect
+    .poll(() => {
+      return statusesOf(queued.threadId)
+    })
+    .toMatch(/queued running idle$/u)
+}
+
 describe('the worker lifecycle', () => {
   beforeAll(async () => {
     await openWorkerTestbed({ hasEntrySkill: true })
@@ -110,6 +167,11 @@ describe('the worker lifecycle', () => {
   ])(
     'runs $maxRunningTurns turn(s) at once, and queues the next one until a slot frees',
     expectOneQueuedTurn
+  )
+
+  it(
+    'tells a worker that waits for a turn slot as queued, then running once it gets the slot',
+    expectQueuedThenRunning
   )
 
   it('archives a finished worker, destroys its sandbox, and ends its turn', async () => {
