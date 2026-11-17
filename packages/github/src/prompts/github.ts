@@ -85,9 +85,16 @@ export type MergedPullRequest = {
   subject: string | undefined
 }
 
+type PersonCheck = {
+  pullRequestUrl: string
+  check: string
+  checkUrl: string | null
+}
+
 export type PullRequestLines = {
   merged: (merge: MergedPullRequest) => string
   greenCheck: (pullRequestUrl: string) => string
+  personCheck: (failure: PersonCheck) => string
   mergeQueueEntry: (pullRequestUrl: string) => string
 }
 
@@ -99,6 +106,9 @@ export const PULL_REQUEST_LINES: PullRequestLines = {
   },
   greenCheck: (pullRequestUrl) => {
     return `Checks green: ${pullRequestUrl}`
+  },
+  personCheck: ({ pullRequestUrl, check, checkUrl }) => {
+    return `${check} failed on ${pullRequestUrl}, a person clears it: ${checkUrl ?? 'no link'}`
   },
   mergeQueueEntry: (pullRequestUrl) => {
     return `In the merge queue: ${pullRequestUrl}`

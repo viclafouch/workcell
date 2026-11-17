@@ -41,7 +41,9 @@ describe('the pull request watch', () => {
       {
         repository: REPOSITORY,
         branch: WORKER.branch,
-        pullRequest: openPullRequest(checks('FAILURE'))
+        pullRequest: openPullRequest(
+          checks('FAILURE', status('code/scan', 'FAILURE'))
+        )
       }
     ]
     const before = openWatcher()
@@ -88,7 +90,9 @@ describe('the pull request watch', () => {
       {
         repository: REPOSITORY,
         branch: WORKER.branch,
-        pullRequest: openPullRequest(checks('FAILURE'))
+        pullRequest: openPullRequest(
+          checks('FAILURE', status('code/scan', 'FAILURE'))
+        )
       }
     ]
     const wakeWorker = vi
@@ -118,8 +122,8 @@ describe('the pull request watch', () => {
         return inputId
       })
     ).toStrictEqual([
-      'github:acme/app#42:red-check:head-1',
-      'github:acme/app#42:red-check:head-1'
+      'github:acme/app#42:red-check:head-1:code/scan',
+      'github:acme/app#42:red-check:head-1:code/scan'
     ])
   })
 
@@ -128,7 +132,9 @@ describe('the pull request watch', () => {
       {
         repository: REPOSITORY,
         branch: WORKER.branch,
-        pullRequest: openPullRequest(checks('FAILURE'))
+        pullRequest: openPullRequest(
+          checks('FAILURE', status('code/scan', 'FAILURE'))
+        )
       }
     ]
     githubFake.rateLimitedAnswers = 1

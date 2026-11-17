@@ -11,6 +11,8 @@ import {
   openPullRequest,
   status,
   checks,
+  rollup,
+  workflowRuns,
   openWatcher,
   serveGithubPerTest,
   pollTwice,
@@ -46,7 +48,9 @@ describe('the pull request of a worker', () => {
       {
         repository: REPOSITORY,
         branch: WORKER.branch,
-        pullRequest: openPullRequest(checks('FAILURE'))
+        pullRequest: openPullRequest(
+          checks('FAILURE', status('code/scan', 'FAILURE'))
+        )
       }
     ]
     const { watcher, updates, wakes, lines } = openWatcher({
@@ -68,7 +72,7 @@ describe('the pull request of a worker', () => {
       `pull request not recorded: the next poll records it again {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"} The store is down.`
     )
     expect(inputIdsAndDeliveries(wakes)).toStrictEqual([
-      ['github:acme/app#42:red-check:head-1', 'steer']
+      ['github:acme/app#42:red-check:head-1:code/scan', 'steer']
     ])
   })
 
@@ -109,43 +113,6 @@ describe('the events that wake a worker', () => {
     await pollTwice(watcher)
 
     expect(githubFake.requests).toBe(0)
-  })
-
-  it('wakes the worker once per head commit when its checks turn red, and names its red required statuses', async () => {
-    githubFake.pullRequests = [
-      {
-        repository: REPOSITORY,
-        branch: WORKER.branch,
-        pullRequest: openPullRequest(
-          checks(
-            'FAILURE',
-            status('code/scan', 'FAILURE'),
-            status('license/scan', 'FAILURE', { isRequired: false }),
-            status('Review gate', 'PENDING')
-          )
-        )
-      }
-    ]
-    const { watcher, wakes, lines } = openWatcher()
-
-    await pollTwice(watcher)
-    const requestsOfTwoPolls = githubFake.requests
-    await watcher.pollOnce()
-
-    expect(wakes).toStrictEqual([
-      {
-        threadId: WORKER.threadId,
-        inputId: 'github:acme/app#42:red-check:head-1',
-        delivery: 'steer',
-        message: `The checks of the pull request ${PULL_REQUEST_URL} are red on head-1. The required status "code/scan" failed: https://checks.example.com/code/scan. Read the failed GitHub Actions jobs with gh run list --commit head-1, then gh run view <run> --log-failed. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
-      }
-    ])
-    expect(lines).toStrictEqual([
-      `pull request recorded {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"}`,
-      `pull request event sent {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}","kind":"red-check","inputId":"github:acme/app#42:red-check:head-1","action":"wake"}`
-    ])
-    expect(requestsOfTwoPolls).toBe(2)
-    expect(githubFake.requests).toBe(requestsOfTwoPolls + 1)
   })
 
   it('sends nothing while the checks are pending', async () => {
@@ -329,5 +296,190 @@ describe('the events that wake a worker', () => {
         report: `Merged: ${PULL_REQUEST_URL}\nSubject: TASK-1`
       }
     ])
+  })
+})
+
+describe('the red checks of a pull request', () => {
+  serveGithubPerTest()
+
+  it('wakes the worker once per head commit with its failed statuses and the failed jobs of the latest run of each workflow, read once', async () => {
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: openPullRequest({
+          ...checks(
+            'FAILURE',
+            status('code/scan', 'FAILURE'),
+            status('license/scan', 'ERROR'),
+            status('Review gate', 'PENDING')
+          ),
+          statusCheckRollup: rollup('FAILURE', 2)
+        })
+      }
+    ]
+    githubFake.workflowRuns = workflowRuns(
+      {
+        workflow: 'tests',
+        event: 'push',
+        conclusion: 'failure',
+        jobs: [{ name: 'e2e', conclusion: 'failure' }]
+      },
+      {
+        workflow: 'tests',
+        conclusion: 'failure',
+        jobs: [{ name: 'unit tests', conclusion: 'failure' }]
+      },
+      { workflow: 'tests', conclusion: 'success' },
+      {
+        workflow: 'code',
+        conclusion: 'cancelled',
+        jobs: [
+          { name: 'lint', conclusion: 'failure' },
+          { name: 'build', conclusion: 'cancelled' }
+        ]
+      },
+      { workflow: 'docs', conclusion: 'success' }
+    )
+    const { watcher, wakes, lines } = openWatcher()
+
+    await pollTwice(watcher)
+    const requestsOfTwoPolls = githubFake.requests
+    await watcher.pollOnce()
+
+    expect(wakes).toStrictEqual([
+      {
+        threadId: WORKER.threadId,
+        inputId:
+          'github:acme/app#42:red-check:head-1:code/scan,license/scan,lint,e2e',
+        delivery: 'steer',
+        message: `The pull request watcher sends this, not a person. The checks of the pull request ${PULL_REQUEST_URL} failed on head-1. The status "code/scan" failed: https://checks.example.com/code/scan. The status "license/scan" failed: https://checks.example.com/license/scan. The job "lint" failed: https://github.com/acme/app/actions/runs/4/job/lint. The job "e2e" failed: https://github.com/acme/app/actions/runs/1/job/e2e. Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
+      }
+    ])
+    expect(lines).toStrictEqual([
+      `pull request recorded {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"}`,
+      `pull request event sent {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}","kind":"red-check","inputId":"github:acme/app#42:red-check:head-1:code/scan,license/scan,lint,e2e","action":"wake"}`
+    ])
+    expect(githubFake.actionsReads).toStrictEqual([
+      '/repos/acme/app/actions/runs?head_sha=head-1&exclude_pull_requests=true&per_page=100',
+      '/repos/acme/app/actions/runs/4/jobs?filter=latest&per_page=100',
+      '/repos/acme/app/actions/runs/1/jobs?filter=latest&per_page=100'
+    ])
+    expect(requestsOfTwoPolls).toBe(2)
+    expect(githubFake.requests).toBe(requestsOfTwoPolls + 1)
+  })
+
+  it('wakes the worker again on the same head commit when another check fails', async () => {
+    const redStatus = openPullRequest(
+      checks('FAILURE', status('code/scan', 'FAILURE'))
+    )
+    githubFake.pullRequests = [
+      { repository: REPOSITORY, branch: WORKER.branch, pullRequest: redStatus }
+    ]
+    const { watcher, wakes } = openWatcher()
+
+    await pollTwice(watcher)
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: { ...redStatus, statusCheckRollup: rollup('FAILURE', 1) }
+      }
+    ]
+    githubFake.workflowRuns = workflowRuns({
+      workflow: 'tests',
+      conclusion: 'failure',
+      jobs: [{ name: 'unit tests', conclusion: 'failure' }]
+    })
+    await pollTwice(watcher)
+
+    expect(inputIdsAndDeliveries(wakes)).toStrictEqual([
+      ['github:acme/app#42:red-check:head-1:code/scan', 'steer'],
+      ['github:acme/app#42:red-check:head-1:code/scan,unit tests', 'steer']
+    ])
+  })
+
+  it('wakes no one and reads no job when the checks are red from cancelled runs only', async () => {
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: openPullRequest(checks('FAILURE'))
+      }
+    ]
+    githubFake.workflowRuns = workflowRuns({
+      workflow: 'tests',
+      conclusion: 'cancelled',
+      jobs: [{ name: 'unit tests', conclusion: 'cancelled' }]
+    })
+    const { watcher, wakes, posts } = openWatcher()
+
+    await pollTwice(watcher)
+
+    expect(wakes).toStrictEqual([])
+    expect(posts).toStrictEqual([])
+    expect(githubFake.actionsReads).toStrictEqual([])
+  })
+
+  it('posts a line for a failed check that a person clears, and wakes no worker', async () => {
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: openPullRequest({
+          ...checks('FAILURE'),
+          statusCheckRollup: rollup('FAILURE', 1)
+        })
+      }
+    ]
+    githubFake.workflowRuns = workflowRuns({
+      workflow: 'risk',
+      conclusion: 'failure',
+      jobs: [{ name: 'Validate risk', conclusion: 'failure' }]
+    })
+    const { watcher, wakes, posts } = openWatcher()
+
+    await pollTwice(watcher)
+
+    expect(wakes).toStrictEqual([])
+    expect(posts).toStrictEqual([
+      {
+        threadId: WORKER.threadId,
+        inputId: 'github:acme/app#42:person-check:head-1:Validate risk',
+        line: `Validate risk failed on ${PULL_REQUEST_URL}, a person clears it: https://github.com/acme/app/actions/runs/1/job/Validate%20risk`
+      }
+    ])
+  })
+
+  it('names the failed statuses when GitHub refuses the jobs, and reads the jobs again at the next poll', async () => {
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: openPullRequest({
+          ...checks('FAILURE', status('code/scan', 'FAILURE')),
+          statusCheckRollup: rollup('FAILURE', 1)
+        })
+      }
+    ]
+    githubFake.actionsRefused = true
+    const { watcher, wakes, lines } = openWatcher()
+
+    await pollTwice(watcher)
+    const actionsReadsOfTwoPolls = [...githubFake.actionsReads]
+    await watcher.pollOnce()
+
+    expect(
+      wakes.map(({ message }) => {
+        return message
+      })
+    ).toStrictEqual([
+      `The pull request watcher sends this, not a person. The checks of the pull request ${PULL_REQUEST_URL} failed on head-1. The status "code/scan" failed: https://checks.example.com/code/scan. Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
+    ])
+    expect(lines[1]).toBe(
+      `failed jobs not read: the next poll reads them again {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"} GitHub answered 403 to /repos/acme/app/actions/runs?head_sha=head-1&exclude_pull_requests=true&per_page=100.`
+    )
+    expect(actionsReadsOfTwoPolls).toHaveLength(1)
+    expect(githubFake.actionsReads).toHaveLength(2)
   })
 })

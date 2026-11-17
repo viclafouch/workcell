@@ -1,6 +1,7 @@
 import type { WakeWorkerParams } from '@workcell/core'
 import type {
   Author,
+  FailedJob,
   StatusContext,
   WatchedPullRequest
 } from '#/api/github-api.ts'
@@ -14,12 +15,15 @@ import {
 
 const RED_STATES = new Set(['FAILURE', 'ERROR'])
 
+const FAILED_CHECK_RUN_STATES = new Set(['FAILURE', 'TIMED_OUT'])
+
 const REVIEW_STATES_THAT_WAKE = new Set(['CHANGES_REQUESTED', 'COMMENTED'])
 
 const END_TURN = 'Then end your turn.'
 
 type PullRequestEventKind =
   | 'red-check'
+  | 'person-check'
   | 'green-check'
   | 'review-comment'
   | 'comment'
@@ -50,6 +54,8 @@ export type ReviewGate = {
   waitingDescriptions: readonly string[]
 }
 
+type RedCheck = { kind: 'status' | 'job'; name: string; url: string | null }
+
 type PullRequestEventsParams = {
   repository: string
   pullRequest: WatchedPullRequest
@@ -57,6 +63,15 @@ type PullRequestEventsParams = {
   subject?: string
   lines?: PullRequestLines
   reviewGate?: ReviewGate
+  failedJobs?: readonly FailedJob[]
+  personChecks?: readonly string[]
+}
+
+type RedCheckParams = {
+  reviewGate: ReviewGate | undefined
+  failedJobs: readonly FailedJob[]
+  personChecks: readonly string[]
+  lines: PullRequestLines
 }
 
 function wake(
@@ -84,25 +99,40 @@ function statusesOf({ commits }: WatchedPullRequest): StatusContext[] {
   })
 }
 
-function redStatusesText(
+export function failedCheckRunCount({ statusCheckRollup }: WatchedPullRequest) {
+  if (!RED_STATES.has(statusCheckRollup?.state ?? '')) {
+    return 0
+  }
+
+  return (statusCheckRollup?.contexts.checkRunCountsByState ?? [])
+    .filter(({ state }) => {
+      return FAILED_CHECK_RUN_STATES.has(state)
+    })
+    .reduce((total, { count }) => {
+      return total + count
+    }, 0)
+}
+
+function redStatuses(
   statuses: readonly StatusContext[],
   reviewGate: ReviewGate | undefined
-) {
+): RedCheck[] {
   return statuses
-    .filter(({ context, state, isRequired }) => {
-      return (
-        isRequired && RED_STATES.has(state) && context !== reviewGate?.context
-      )
+    .filter(({ context, state }) => {
+      return RED_STATES.has(state) && context !== reviewGate?.context
     })
     .map(({ context, targetUrl }) => {
-      return ` The required status "${context}" failed: ${targetUrl ?? 'no link'}.`
+      return { kind: 'status', name: context, url: targetUrl }
     })
-    .join('')
+}
+
+function redCheckText({ kind, name, url }: RedCheck) {
+  return ` The ${kind} "${name}" failed: ${url ?? 'no link'}.`
 }
 
 function redCheckEvents(
   pullRequest: WatchedPullRequest,
-  reviewGate: ReviewGate | undefined,
+  { reviewGate, failedJobs, personChecks, lines }: RedCheckParams,
   eventOf: EventOf
 ) {
   const { statusCheckRollup, headRefOid, url } = pullRequest
@@ -111,16 +141,48 @@ function redCheckEvents(
     return []
   }
 
-  return [
-    eventOf({
-      kind: 'red-check',
-      id: headRefOid,
-      action: wake(
-        'steer',
-        `The checks of the pull request ${url} are red on ${headRefOid}.${redStatusesText(statusesOf(pullRequest), reviewGate)} Read the failed GitHub Actions jobs with gh run list --commit ${headRefOid}, then gh run view <run> --log-failed. Push a fix, or ask with the question tool when you cannot fix it. ${END_TURN}`
-      )
+  const redChecks = [
+    ...redStatuses(statusesOf(pullRequest), reviewGate),
+    ...failedJobs.map(({ name, url: jobUrl }): RedCheck => {
+      return { kind: 'job', name, url: jobUrl }
     })
   ]
+  const clearedByAPerson = ({ name }: RedCheck) => {
+    return personChecks.includes(name)
+  }
+  const workerChecks = redChecks.filter((check) => {
+    return !clearedByAPerson(check)
+  })
+  const wakeEvents =
+    workerChecks.length === 0
+      ? []
+      : [
+          eventOf({
+            kind: 'red-check',
+            id: `${headRefOid}:${workerChecks
+              .map(({ name }) => {
+                return name
+              })
+              .join(',')}`,
+            action: wake(
+              'steer',
+              `The pull request watcher sends this, not a person. The checks of the pull request ${url} failed on ${headRefOid}.${workerChecks.map(redCheckText).join('')} Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. ${END_TURN}`
+            )
+          })
+        ]
+  const personEvents = redChecks
+    .filter(clearedByAPerson)
+    .map(({ name, url: checkUrl }) => {
+      return eventOf({
+        kind: 'person-check',
+        id: `${headRefOid}:${name}`,
+        action: post(
+          lines.personCheck({ pullRequestUrl: url, check: name, checkUrl })
+        )
+      })
+    })
+
+  return [...wakeEvents, ...personEvents]
 }
 
 function greenCheckEvents(
@@ -266,7 +328,9 @@ export function pullRequestEvents({
   viewerLogin,
   subject,
   lines = PULL_REQUEST_LINES,
-  reviewGate
+  reviewGate,
+  failedJobs = [],
+  personChecks = []
 }: PullRequestEventsParams): PullRequestEvent[] {
   const { number, url, merged, mergeCommit, mergeable, headRefOid } =
     pullRequest
@@ -306,7 +370,11 @@ export function pullRequestEvents({
       : []
 
   return [
-    ...redCheckEvents(pullRequest, reviewGate, eventOf),
+    ...redCheckEvents(
+      pullRequest,
+      { reviewGate, failedJobs, personChecks, lines },
+      eventOf
+    ),
     ...greenCheckEvents(pullRequest, lines, eventOf),
     ...commentEvents(pullRequest, viewerLogin, eventOf),
     ...conflictEvents,

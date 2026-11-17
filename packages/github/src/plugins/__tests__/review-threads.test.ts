@@ -309,7 +309,10 @@ describe('the review threads tool of a worker', () => {
         mergeable: 'MERGEABLE',
         headRefOid: 'head-1',
         mergeCommit: null,
-        statusCheckRollup: { state: 'SUCCESS' },
+        statusCheckRollup: {
+          state: 'SUCCESS',
+          contexts: { checkRunCountsByState: [] }
+        },
         commits: { nodes: [] },
         reviewThreads: {
           nodes: [

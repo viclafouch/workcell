@@ -6,9 +6,15 @@ import {
   type WakeWorkerParams,
   type WorkerFinish
 } from '@workcell/core'
-import type { GithubApi, PullRequestHead } from '#/api/github-api.ts'
+import type {
+  FailedJob,
+  GithubApi,
+  PullRequestHead,
+  WatchedPullRequest
+} from '#/api/github-api.ts'
 import type { PullRequestLines } from '#/prompts/github.ts'
 import {
+  failedCheckRunCount,
   pullRequestEvents,
   type PullRequestEvent,
   type ReviewGate
@@ -35,6 +41,7 @@ type PullRequestWatcherParams = {
   logger: { info: LogLine; error: LogLine }
   lines?: PullRequestLines
   reviewGate?: ReviewGate
+  personChecks?: readonly string[]
 }
 
 type WorkerOnABranch = WatchedWorker & { branch: string }
@@ -53,10 +60,12 @@ export function createPullRequestWatcher({
   pollIntervalMs,
   logger,
   lines,
-  reviewGate
+  reviewGate,
+  personChecks
 }: PullRequestWatcherParams) {
   const pullRequestNumbers = new Map<string, number>()
   let sentInputIds = new Set<string>()
+  let failedJobsByRedHead = new Map<string, readonly FailedJob[]>()
 
   const handle = async (
     threadId: string,
@@ -127,6 +136,37 @@ export function createPullRequestWatcher({
     }
   }
 
+  const failedJobsOf = async (
+    { threadId, repository }: WatchedWorker,
+    pullRequest: WatchedPullRequest,
+    redHeadsRead: Map<string, readonly FailedJob[]>
+  ) => {
+    const failedCheckRuns = failedCheckRunCount(pullRequest)
+
+    if (failedCheckRuns === 0) {
+      return []
+    }
+
+    const { headRefOid, url } = pullRequest
+    const redHead = `${repository}:${headRefOid}:${failedCheckRuns}`
+
+    try {
+      const failedJobs =
+        failedJobsByRedHead.get(redHead) ??
+        (await github.readFailedJobs({ repository, headSha: headRefOid }))
+      redHeadsRead.set(redHead, failedJobs)
+
+      return failedJobs
+    } catch (error) {
+      logger.error(
+        { threadId, pullRequest: url, error },
+        'failed jobs not read: the next poll reads them again'
+      )
+
+      return []
+    }
+  }
+
   const headOf = ({
     threadId,
     repository,
@@ -146,6 +186,7 @@ export function createPullRequestWatcher({
       workers.map(headOf)
     )
     const sentAndStillVisible = new Set<string>()
+    const redHeadsRead = new Map<string, readonly FailedJob[]>()
 
     for (const [index, read] of reads.entries()) {
       const worker = workers[index]
@@ -169,7 +210,10 @@ export function createPullRequestWatcher({
         viewerLogin,
         subject: worker.subject,
         lines,
-        reviewGate
+        reviewGate,
+        // oxlint-disable-next-line no-await-in-loop -- the failed jobs read shares the paced budget of the poll
+        failedJobs: await failedJobsOf(worker, pullRequest, redHeadsRead),
+        personChecks
       })
 
       for (const event of events) {
@@ -197,6 +241,7 @@ export function createPullRequestWatcher({
     }
 
     sentInputIds = sentAndStillVisible
+    failedJobsByRedHead = redHeadsRead
   }
 
   const run = async (signal: AbortSignal) => {

@@ -19,6 +19,16 @@ const TOO_MANY_REQUESTS_STATUS = 429
 
 const MS_PER_SECOND = 1000
 
+const ACTIONS_PAGE_SIZE = 100
+
+const RUN_CONCLUSIONS_WITHOUT_FAILURE = new Set([
+  'success',
+  'neutral',
+  'skipped'
+])
+
+const FAILED_JOB_CONCLUSIONS = new Set(['failure', 'timed_out'])
+
 const authorSchema = z
   .object({ __typename: z.string(), login: z.string() })
   .nullable()
@@ -28,9 +38,10 @@ const statusContextSchema = z.object({
   context: z.string(),
   state: z.string(),
   description: z.string().nullable(),
-  targetUrl: z.string().nullable(),
-  isRequired: z.boolean()
+  targetUrl: z.string().nullable()
 })
+
+const checkRunCountSchema = z.object({ state: z.string(), count: z.number() })
 
 const commentSchema = z.object({
   id: z.string(),
@@ -54,7 +65,14 @@ const watchedPullRequestSchema = z.object({
   mergeable: z.string(),
   headRefOid: z.string(),
   mergeCommit: z.object({ oid: z.string() }).nullable(),
-  statusCheckRollup: z.object({ state: z.string() }).nullable(),
+  statusCheckRollup: z
+    .object({
+      state: z.string(),
+      contexts: z.object({
+        checkRunCountsByState: z.array(checkRunCountSchema).nullable()
+      })
+    })
+    .nullable(),
   commits: z.object({
     nodes: z.array(
       z.object({
@@ -81,6 +99,27 @@ const watchedPullRequestSchema = z.object({
     )
   }),
   timelineItems: z.object({ nodes: z.array(timelineItemSchema) })
+})
+
+const workflowRunsSchema = z.object({
+  workflow_runs: z.array(
+    z.object({
+      id: z.number(),
+      workflow_id: z.number(),
+      event: z.string(),
+      conclusion: z.string().nullable()
+    })
+  )
+})
+
+const jobsSchema = z.object({
+  jobs: z.array(
+    z.object({
+      name: z.string(),
+      conclusion: z.string().nullable(),
+      html_url: z.string()
+    })
+  )
 })
 
 const foundPullRequestSchema = z.object({
@@ -114,6 +153,10 @@ export type Author = z.infer<typeof authorSchema>
 
 export type PullRequestHeadRef = { repository: string; branch: string }
 
+type ReadFailedJobsParams = { repository: string; headSha: string }
+
+export type FailedJob = { name: string; url: string }
+
 type GraphqlAnswer = { status: number; text: string; subject: string }
 
 export type PullRequestHead = {
@@ -131,12 +174,11 @@ export type PullRequestRead =
       pullRequest: WatchedPullRequest | undefined
     }
 
-const watchedPullRequestFields = (numberVariable: string) => {
-  return `number url merged mergeable headRefOid
+const WATCHED_PULL_REQUEST_FIELDS = `number url merged mergeable headRefOid
       mergeCommit { oid }
-      statusCheckRollup { state }
+      statusCheckRollup { state contexts { checkRunCountsByState { state count } } }
       commits(last: 1) {
-        nodes { commit { status { contexts { id context state description targetUrl isRequired(pullRequestNumber: ${numberVariable}) } } } }
+        nodes { commit { status { contexts { id context state description targetUrl } } } }
       }
       reviewThreads(last: 50) {
         nodes { isResolved comments(last: 20) { nodes { id url author { __typename login } } } }
@@ -150,7 +192,6 @@ const watchedPullRequestFields = (numberVariable: string) => {
           ... on RemovedFromMergeQueueEvent { id reason }
         }
       }`
-}
 
 export function splitRepository(repository: string) {
   const [owner, name] = repository.split('/')
@@ -183,7 +224,7 @@ function watchQuery(heads: readonly PullRequestHead[]) {
       variables[`number${index}`] = number
       declarations.push(`$number${index}: Int!`)
       selections.push(`pr${index}: repository(owner: $owner${index}, name: $name${index}) {
-    pullRequest(number: $number${index}) { ${watchedPullRequestFields(`$number${index}`)} }
+    pullRequest(number: $number${index}) { ${WATCHED_PULL_REQUEST_FIELDS} }
   }`)
     }
   }
@@ -310,8 +351,77 @@ export function createGithubApi(token: string) {
     }
   }
 
+  const readActions = async <Schema extends z.ZodType>(
+    path: string,
+    schema: Schema
+  ): Promise<z.infer<Schema>> => {
+    const { status, text } = await pacedFetch(`${GITHUB_REST_URL}${path}`, {
+      headers: { accept: GITHUB_JSON_MEDIA_TYPE }
+    })
+
+    if (status !== OK_STATUS) {
+      throw new Error(`GitHub answered ${status} to ${path}.`)
+    }
+
+    return schema.parse(JSON.parse(text))
+  }
+
+  const readFailedJobs = async ({
+    repository,
+    headSha
+  }: ReadFailedJobsParams): Promise<FailedJob[]> => {
+    const { owner, name } = splitRepository(repository)
+    const actionsPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions`
+    const runsQuery = new URLSearchParams({
+      head_sha: headSha,
+      exclude_pull_requests: 'true',
+      per_page: String(ACTIONS_PAGE_SIZE)
+    })
+    const { workflow_runs: runs } = await readActions(
+      `${actionsPath}/runs?${runsQuery.toString()}`,
+      workflowRunsSchema
+    )
+    const newestFirst = runs.toSorted((first, second) => {
+      return second.id - first.id
+    })
+    const latestRuns = newestFirst.filter((run, index) => {
+      return (
+        newestFirst.findIndex(({ workflow_id, event }) => {
+          return workflow_id === run.workflow_id && event === run.event
+        }) === index
+      )
+    })
+    const runsToRead = latestRuns.filter(({ conclusion }) => {
+      return !RUN_CONCLUSIONS_WITHOUT_FAILURE.has(conclusion ?? '')
+    })
+    const jobsOfRuns = await Promise.all(
+      runsToRead.map(async ({ id }) => {
+        const jobsQuery = new URLSearchParams({
+          filter: 'latest',
+          per_page: String(ACTIONS_PAGE_SIZE)
+        })
+        const { jobs } = await readActions(
+          `${actionsPath}/runs/${id}/jobs?${jobsQuery.toString()}`,
+          jobsSchema
+        )
+
+        return jobs
+      })
+    )
+
+    return jobsOfRuns
+      .flat()
+      .filter(({ conclusion }) => {
+        return FAILED_JOB_CONCLUSIONS.has(conclusion ?? '')
+      })
+      .map(({ name: jobName, html_url }) => {
+        return { name: jobName, url: html_url }
+      })
+  }
+
   return {
     readPullRequests,
+    readFailedJobs,
     [Symbol.dispose]: dispose
   }
 }

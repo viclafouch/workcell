@@ -22,6 +22,9 @@ const PROJECT_LINES: PullRequestLines = {
   greenCheck: (pullRequestUrl) => {
     return `green ${pullRequestUrl}`
   },
+  personCheck: ({ check }) => {
+    return `cleared by a person: ${check}`
+  },
   mergeQueueEntry: (pullRequestUrl) => {
     return `queued ${pullRequestUrl}`
   }
@@ -37,7 +40,10 @@ function pullRequestWith(
     mergeable: 'MERGEABLE',
     headRefOid: 'head-1',
     mergeCommit: null,
-    statusCheckRollup: { state: 'SUCCESS' },
+    statusCheckRollup: {
+      state: 'SUCCESS',
+      contexts: { checkRunCountsByState: [] }
+    },
     commits: { nodes: [] },
     reviewThreads: { nodes: [] },
     comments: { nodes: [] },
@@ -59,7 +65,10 @@ const QUEUED = pullRequestWith({
 })
 
 const WAITING_ON_AN_OWNER = pullRequestWith({
-  statusCheckRollup: { state: 'PENDING' },
+  statusCheckRollup: {
+    state: 'PENDING',
+    contexts: { checkRunCountsByState: [] }
+  },
   commits: {
     nodes: [
       {
@@ -71,8 +80,7 @@ const WAITING_ON_AN_OWNER = pullRequestWith({
                 context: 'Owner review',
                 state: 'PENDING',
                 description: 'Waiting for an owner of @acme/devops.',
-                targetUrl: null,
-                isRequired: true
+                targetUrl: null
               }
             ]
           }
@@ -105,7 +113,134 @@ function reviewGateEventsOf(reviewGate?: ReviewGate) {
   })
 }
 
+function redStatus(context: string) {
+  return {
+    id: `status-${context}`,
+    context,
+    state: 'FAILURE',
+    description: null,
+    targetUrl: `https://checks.example.com/${context}`
+  }
+}
+
+const RED_CHECKS = pullRequestWith({
+  statusCheckRollup: {
+    state: 'FAILURE',
+    contexts: { checkRunCountsByState: [{ state: 'FAILURE', count: 2 }] }
+  },
+  commits: {
+    nodes: [
+      {
+        commit: {
+          status: {
+            contexts: [redStatus('code/scan'), redStatus('Risk score')]
+          }
+        }
+      }
+    ]
+  }
+})
+
+const FAILED_JOBS = [
+  {
+    name: 'unit tests',
+    url: 'https://github.com/acme/app/actions/runs/7/job/70'
+  },
+  {
+    name: 'Validate risk',
+    url: 'https://github.com/acme/app/actions/runs/8/job/80'
+  }
+]
+
+function redCheckEventsOf(personChecks?: readonly string[]) {
+  return pullRequestEvents({
+    repository: REPOSITORY,
+    pullRequest: RED_CHECKS,
+    viewerLogin: 'host-developer',
+    failedJobs: FAILED_JOBS,
+    personChecks
+  }).map(({ kind, inputId, action }) => {
+    return { kind, inputId, action }
+  })
+}
+
+const RISK_LINES = [
+  {
+    kind: 'person-check',
+    inputId: 'github:acme/app#42:person-check:head-1:Risk score',
+    action: {
+      type: 'post',
+      line: `Risk score failed on ${PULL_REQUEST_URL}, a person clears it: https://checks.example.com/Risk score`
+    }
+  },
+  {
+    kind: 'person-check',
+    inputId: 'github:acme/app#42:person-check:head-1:Validate risk',
+    action: {
+      type: 'post',
+      line: `Validate risk failed on ${PULL_REQUEST_URL}, a person clears it: https://github.com/acme/app/actions/runs/8/job/80`
+    }
+  }
+]
+
 describe('the events of a pull request', () => {
+  it('posts a line for each failed check that a person clears, and wakes the worker on the others only', () => {
+    expect(redCheckEventsOf(['Risk score', 'Validate risk'])).toStrictEqual([
+      {
+        kind: 'red-check',
+        inputId: 'github:acme/app#42:red-check:head-1:code/scan,unit tests',
+        action: {
+          type: 'wake',
+          delivery: 'steer',
+          message: `The pull request watcher sends this, not a person. The checks of the pull request ${PULL_REQUEST_URL} failed on head-1. The status "code/scan" failed: https://checks.example.com/code/scan. The job "unit tests" failed: https://github.com/acme/app/actions/runs/7/job/70. Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
+        }
+      },
+      ...RISK_LINES
+    ])
+    expect(
+      redCheckEventsOf([
+        'code/scan',
+        'Risk score',
+        'unit tests',
+        'Validate risk'
+      ])
+    ).toStrictEqual([
+      {
+        kind: 'person-check',
+        inputId: 'github:acme/app#42:person-check:head-1:code/scan',
+        action: {
+          type: 'post',
+          line: `code/scan failed on ${PULL_REQUEST_URL}, a person clears it: https://checks.example.com/code/scan`
+        }
+      },
+      RISK_LINES[0],
+      {
+        kind: 'person-check',
+        inputId: 'github:acme/app#42:person-check:head-1:unit tests',
+        action: {
+          type: 'post',
+          line: `unit tests failed on ${PULL_REQUEST_URL}, a person clears it: https://github.com/acme/app/actions/runs/7/job/70`
+        }
+      },
+      RISK_LINES[1]
+    ])
+  })
+
+  it('wakes the worker with each failed status and each failed job of its checks, with their links', () => {
+    expect(redCheckEventsOf()).toStrictEqual([
+      {
+        kind: 'red-check',
+        inputId:
+          'github:acme/app#42:red-check:head-1:code/scan,Risk score,unit tests,Validate risk',
+        action: {
+          type: 'wake',
+          delivery: 'steer',
+          message: `The pull request watcher sends this, not a person. The checks of the pull request ${PULL_REQUEST_URL} failed on head-1. The status "code/scan" failed: https://checks.example.com/code/scan. The status "Risk score" failed: https://checks.example.com/Risk score. The job "unit tests" failed: https://github.com/acme/app/actions/runs/7/job/70. The job "Validate risk" failed: https://github.com/acme/app/actions/runs/8/job/80. Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
+        }
+      }
+    ])
+  })
+
   it('names only the pull request in the merged report of a task with no subject', () => {
     const events = pullRequestEvents({
       repository: REPOSITORY,

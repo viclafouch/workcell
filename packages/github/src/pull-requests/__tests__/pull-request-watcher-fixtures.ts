@@ -11,6 +11,7 @@ import type {
 import {
   createGithubApi,
   GITHUB_GRAPHQL_URL,
+  GITHUB_REST_URL,
   type StatusContext,
   type WatchedPullRequest
 } from '#/api/github-api.ts'
@@ -55,15 +56,32 @@ type FakePullRequest = {
   pullRequest: WatchedPullRequest
 }
 
+type FakeJob = { name: string; conclusion: string | null; html_url: string }
+
+type FakeWorkflowRun = {
+  id: number
+  workflow_id: number
+  event: string
+  head_sha: string
+  conclusion: string | null
+  jobs: FakeJob[]
+}
+
 type GithubFake = {
   pullRequests: FakePullRequest[]
+  workflowRuns: FakeWorkflowRun[]
   requests: number
+  actionsReads: string[]
+  actionsRefused: boolean
   rateLimitedAnswers: number
 }
 
 export const githubFake: GithubFake = {
   pullRequests: [],
+  workflowRuns: [],
   requests: 0,
+  actionsReads: [],
+  actionsRefused: false,
   rateLimitedAnswers: 0
 }
 
@@ -85,7 +103,7 @@ export function openPullRequest(
     mergeable: 'MERGEABLE',
     headRefOid: 'head-1',
     mergeCommit: null,
-    statusCheckRollup: { state: 'SUCCESS' },
+    statusCheckRollup: rollup('SUCCESS'),
     commits: { nodes: [] },
     reviewThreads: { nodes: [] },
     comments: { nodes: [] },
@@ -106,16 +124,78 @@ export function status(
     state,
     description: null,
     targetUrl: `https://checks.example.com/${context}`,
-    isRequired: true,
     ...changes
+  }
+}
+
+export function rollup(state: string, failedCheckRuns = 0) {
+  return {
+    state,
+    contexts: {
+      checkRunCountsByState: [
+        { state: 'CANCELLED', count: 2 },
+        { state: 'FAILURE', count: failedCheckRuns },
+        { state: 'SUCCESS', count: 5 }
+      ]
+    }
   }
 }
 
 export function checks(state: string, ...contexts: StatusContext[]) {
   return {
-    statusCheckRollup: { state },
+    statusCheckRollup: rollup(state),
     commits: { nodes: [{ commit: { status: { contexts } } }] }
   }
+}
+
+type FakeRun = {
+  workflow: string
+  event?: string
+  conclusion: string | null
+  jobs?: { name: string; conclusion: string | null }[]
+}
+
+export function workflowRuns(...runs: FakeRun[]): FakeWorkflowRun[] {
+  const workflows = [
+    ...new Set(
+      runs.map(({ workflow }) => {
+        return workflow
+      })
+    )
+  ]
+
+  return runs.map(
+    ({ workflow, event = 'pull_request', conclusion, jobs = [] }, index) => {
+      const id = index + 1
+
+      return {
+        id,
+        workflow_id: workflows.indexOf(workflow) + 1,
+        event,
+        head_sha: 'head-1',
+        conclusion,
+        jobs: jobs.map((job) => {
+          return {
+            ...job,
+            html_url: `https://github.com/acme/app/actions/runs/${id}/job/${encodeURIComponent(job.name)}`
+          }
+        })
+      }
+    }
+  )
+}
+
+function actionsRead(request: Request) {
+  const { pathname, search } = new URL(request.url)
+  githubFake.actionsReads.push(`${pathname}${search}`)
+
+  return request.headers.get('authorization') === `Bearer ${GITHUB_TOKEN}` &&
+    !githubFake.actionsRefused
+    ? undefined
+    : HttpResponse.json(
+        { message: 'Resource not accessible by personal access token' },
+        { status: 403 }
+      )
 }
 
 function selectionOf(
@@ -149,6 +229,34 @@ function selectionOf(
 }
 
 const network = setupServer(
+  http.get(`${GITHUB_REST_URL}/repos/acme/app/actions/runs`, ({ request }) => {
+    const headSha = new URL(request.url).searchParams.get('head_sha')
+
+    return (
+      actionsRead(request) ??
+      HttpResponse.json({
+        workflow_runs: githubFake.workflowRuns
+          .filter(({ head_sha }) => {
+            return head_sha === headSha
+          })
+          .map(({ jobs, ...run }) => {
+            return run
+          })
+      })
+    )
+  }),
+  http.get(
+    `${GITHUB_REST_URL}/repos/acme/app/actions/runs/:runId/jobs`,
+    ({ request, params }) => {
+      const run = githubFake.workflowRuns.find(({ id }) => {
+        return String(id) === params.runId
+      })
+
+      return (
+        actionsRead(request) ?? HttpResponse.json({ jobs: run?.jobs ?? [] })
+      )
+    }
+  ),
   http.post(GITHUB_GRAPHQL_URL, async ({ request }) => {
     githubFake.requests += 1
 
@@ -252,6 +360,7 @@ export function openWatcher({
       return finishWorker(finish)
     },
     reviewGate: REVIEW_GATE,
+    personChecks: ['Validate risk'],
     pollIntervalMs: 60_000,
     logger: { info: record, error: record }
   })
@@ -266,6 +375,9 @@ export function serveGithubPerTest() {
 
   beforeEach(() => {
     githubFake.pullRequests = []
+    githubFake.workflowRuns = []
+    githubFake.actionsReads = []
+    githubFake.actionsRefused = false
     githubFake.requests = 0
     githubFake.rateLimitedAnswers = 0
   })
