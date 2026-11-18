@@ -13,7 +13,11 @@ import {
 } from '@tanstack/ai-sandbox'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { followCurrent, type SandboxBackend } from '#/sandbox/follow-current.ts'
-import { WORKSPACE_ROOT, readSandboxFacts } from '#/sandbox/sandbox-facts.ts'
+import {
+  pathInside,
+  readSandboxFacts,
+  WORKSPACE_ROOT
+} from '#/sandbox/sandbox-facts.ts'
 import type { ListSandboxes } from '#/sandbox/sandboxes-under-keys.ts'
 import {
   captureChanges,
@@ -372,7 +376,17 @@ export function createWorkerSandbox({
     }
   })
 
-  return { workspace, plugin, rebind, save, inspect, forget }
+  const readFile = async (threadId: string, path: string) => {
+    const current = opened.get(threadId)
+
+    if (current === undefined) {
+      throw new Error(`The worker of the thread ${threadId} has no open sandbox.`)
+    }
+
+    return current.backend.readFile(pathInside(WORKSPACE_ROOT, path))
+  }
+
+  return { workspace, plugin, rebind, save, inspect, forget, readFile }
 }
 
 export type WorkerSandbox = ReturnType<typeof createWorkerSandbox>

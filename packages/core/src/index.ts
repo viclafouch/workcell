@@ -22,6 +22,16 @@ export {
 } from './workcell.ts'
 export { joinCutOffAnswer, WORKER_DURABILITY } from './host/agent-durability.ts'
 export { startLoop } from './host/loop.ts'
+export {
+  SEND_FILE_TOOL,
+  SENT_FILE_EVENT,
+  sentFileOfEvent,
+  type SentFile
+} from './files/send-files.ts'
+export {
+  createSentFileStore,
+  type SentFileStore
+} from './store/sent-file-store.ts'
 export type {
   MessageFile,
   MessageFileInfo,

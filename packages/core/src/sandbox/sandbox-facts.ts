@@ -1,6 +1,17 @@
+import { posix } from 'node:path'
 import type { SandboxHandle } from '@tanstack/ai-sandbox'
 
 export const WORKSPACE_ROOT = '/workspace'
+
+export function pathInside(root: string, path: string) {
+  const full = posix.resolve(root, path)
+
+  if (full !== root && !full.startsWith(`${root}/`)) {
+    throw new Error(`The path ${path} is outside the workspace ${root}.`)
+  }
+
+  return full
+}
 
 const FACTS_SCRIPT = `branch=$(git symbolic-ref --short --quiet HEAD || true)
 base=$(git merge-base HEAD "origin/$WORKCELL_BASE_REF" 2>/dev/null || git rev-parse HEAD)

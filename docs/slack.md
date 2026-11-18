@@ -35,7 +35,9 @@ Your team can narrow the files it reads, down to one type or to none.
 
 Ask for a file in your own words, such as a slide deck of a topic, or the notes a review page changed. The robot writes it and drops it in the thread, under its answer. Click it to download it.
 
-It writes the files that are text: a web page or a slide deck, a note, a data table, code.
+It writes the files that are text: a web page or a slide deck, a note, a data table, code. It also sends a file it finds or makes in its closed box, such as a picture of the code or a chart a robot drew.
+
+A file that holds a secret of your team never leaves the robot: it tells you so instead.
 
 ## Who the robot answers
 

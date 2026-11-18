@@ -5,6 +5,7 @@ import { EventType, type StreamChunk } from '@tanstack/ai'
 import {
   BUDGET_END_EVENT,
   type AskOrchestratorParams,
+  SENT_FILE_EVENT,
   type Orchestrator
 } from '@workcell/core'
 import {
@@ -18,7 +19,6 @@ import {
   type SlackCall
 } from '#/__tests__/test-doubles.ts'
 import { CARD_EVENT, cardEventValue } from '#/cards/card-event.ts'
-import { FILE_EVENT, fileEventValue } from '#/files/file-event.ts'
 import { openChatConnection } from '#/connection/chat-connection.ts'
 import { createChatSurface } from '#/connection/chat-surface.ts'
 import type { TextLink } from '#/connection/text-links.ts'
@@ -43,6 +43,14 @@ const LAST_TWO_CALLS = 2
 const LAST_THREE_CALLS = 3
 
 const CARDS_AND_FILE_CALLS = 6
+
+const SENT_DECK = { key: 'sent-files/thread/deck', name: 'deck.html' }
+
+const SENT_FILES = {
+  take: async (key: string) => {
+    return key === SENT_DECK.key ? new TextEncoder().encode('<h1>Q4</h1>') : null
+  }
+}
 
 const slackApi = useSlackApi()
 
@@ -231,7 +239,8 @@ async function openOrchestratorChat(
     allowedStarters: [STARTER],
     allowedChannels: [`slack:${TEAM_CHANNEL}`],
     logger: SILENT_CHAT_LOGGER,
-    lines
+    lines,
+    sentFiles: SENT_FILES
   })
   const connection = await openChatConnection({
     chat: slackChat.chat,
@@ -445,8 +454,8 @@ describe('an orchestrator thread', () => {
         },
         {
           type: EventType.CUSTOM,
-          name: FILE_EVENT,
-          value: fileEventValue({ name: 'deck.html', content: '<h1>Q4</h1>' })
+          name: SENT_FILE_EVENT,
+          value: SENT_DECK
         }
       ]
     })

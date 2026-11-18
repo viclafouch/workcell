@@ -1,7 +1,5 @@
 export { CARD_EVENT, cardEventValue, cardOfEvent } from './cards/card-event.ts'
 export { chatCards, SHOW_CARD_TOOL } from './cards/card-tool.ts'
-export { FILE_EVENT, fileEventValue, fileOfEvent } from './files/file-event.ts'
-export { chatFiles, SEND_FILE_TOOL } from './files/file-tool.ts'
 export {
   APPROVAL_ACTIONS,
   openChatConnection,

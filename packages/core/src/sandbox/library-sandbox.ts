@@ -9,7 +9,7 @@ import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { startLoop } from '#/host/loop.ts'
 import type { LogLine } from '#/host/mcp-server-log.ts'
 import { followCurrent } from './follow-current.ts'
-import { WORKSPACE_ROOT } from './sandbox-facts.ts'
+import { pathInside, WORKSPACE_ROOT } from './sandbox-facts.ts'
 import type { ListSandboxes } from './sandboxes-under-keys.ts'
 
 const LIBRARY_THREAD = 'workcell/library'
@@ -274,6 +274,13 @@ export function createLibrarySandbox({
       return map
     },
     pullOnce,
+    readFile: async (path: string) => {
+      const library = await libraryForQuestions()
+
+      return sandboxWorkspaceBackend(library).readFile(
+        pathInside(LIBRARY_ROOT, path)
+      )
+    },
     start: () => {
       return startLoop(run)
     }

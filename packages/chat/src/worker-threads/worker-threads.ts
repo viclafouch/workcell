@@ -29,6 +29,7 @@ import type {
   ChatMessage,
   ChatSurface
 } from '#/connection/chat-surface.ts'
+import type { SentFileSource } from '#/files/sent-file-uploads.ts'
 import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 import {
   approvalCard,
@@ -98,6 +99,7 @@ type CreateWorkerThreadsParams = {
   logger: { child: (bindings: Record<string, unknown>) => WorkerLog }
   links?: (worker: WorkerMetadata) => readonly WorkerThreadLink[]
   lines?: ChatLines
+  sentFiles?: SentFileSource
 }
 
 type WorkerThreadRoutesOptions = {
@@ -390,7 +392,8 @@ export function createWorkerThreads({
   allowedStarters,
   logger,
   links: linksOf = noLinks,
-  lines = CHAT_LINES
+  lines = CHAT_LINES,
+  sentFiles
 }: CreateWorkerThreadsParams) {
   const profileOf = workerProfiles(profiles)
 
@@ -591,7 +594,7 @@ export function createWorkerThreads({
         onChunk: async ({ messages }, chunk) => {
           const eventPost =
             chunk.type === 'CUSTOM'
-              ? postOfEvent(chunk.name, chunk.value)
+              ? await postOfEvent(chunk.name, chunk.value, sentFiles)
               : undefined
 
           if (eventPost !== undefined) {

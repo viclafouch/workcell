@@ -8,7 +8,13 @@ import type {
 } from 'chat'
 import { z } from 'zod'
 import { EventType, type StreamChunk as TurnEvent } from '@tanstack/ai'
-import { BUDGET_END_EVENT, type Orchestrator } from '@workcell/core'
+import {
+  BUDGET_END_EVENT,
+  SENT_FILE_EVENT,
+  sentFileOfEvent,
+  type Orchestrator,
+  type SentFile
+} from '@workcell/core'
 import { CARD_EVENT, cardOfEvent } from '#/cards/card-event.ts'
 import type {
   ChatPrompt,
@@ -17,12 +23,7 @@ import type {
 import type { LogLine } from '#/connection/chat-logger.ts'
 import type { ChatSurface, SessionStatus } from '#/connection/chat-surface.ts'
 import { splitAtSafeSpace } from '#/connection/text-links.ts'
-import {
-  FILE_EVENT,
-  fileOfEvent,
-  toFileUpload,
-  type SentFile
-} from '#/files/file-event.ts'
+import { takeUploads, type SentFileSource } from '#/files/sent-file-uploads.ts'
 import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 
 const TASK_DETAILS_MAX_LENGTH = 300
@@ -46,6 +47,7 @@ type CreateOrchestratorThreadsParams = {
   allowedChannels: readonly string[]
   logger: { child: (bindings: Record<string, unknown>) => ThreadLog }
   lines?: ChatLines
+  sentFiles?: SentFileSource
 }
 
 type Outcome = Awaited<ReturnType<Orchestrator['ask']>>['outcome']
@@ -195,7 +197,8 @@ export function createOrchestratorThreads({
   allowedStarters,
   allowedChannels,
   logger,
-  lines = CHAT_LINES
+  lines = CHAT_LINES,
+  sentFiles: sentFileSource
 }: CreateOrchestratorThreadsParams): OrchestratorRoute {
   const log = logger.child({ module: 'chat' })
   const heldThreads = new Set<string>()
@@ -229,7 +232,7 @@ export function createOrchestratorThreads({
     const reply = createReplyStream(thread, turnLog, surface.linked)
     const tasks = new Map<string, TaskUpdateChunk>()
     const cards: CardElement[] = []
-    const sentFiles: SentFile[] = []
+    const sentFilesOfTurn: SentFile[] = []
     const ending: TurnEnding = {}
     let textMessageId = ''
 
@@ -291,11 +294,11 @@ export function createOrchestratorThreads({
         }
       }
 
-      if (event.type === EventType.CUSTOM && event.name === FILE_EVENT) {
-        const sentFile = fileOfEvent(event.value)
+      if (event.type === EventType.CUSTOM && event.name === SENT_FILE_EVENT) {
+        const sentFile = sentFileOfEvent(event.value)
 
         if (sentFile !== undefined) {
-          sentFiles.push(sentFile)
+          sentFilesOfTurn.push(sentFile)
         }
       }
     }
@@ -345,8 +348,10 @@ export function createOrchestratorThreads({
       await thread.post({ card })
     }
 
-    if (sentFiles.length > 0) {
-      await thread.post({ markdown: '', files: sentFiles.map(toFileUpload) })
+    const uploads = await takeUploads(sentFileSource, sentFilesOfTurn)
+
+    if (uploads.length > 0) {
+      await thread.post({ markdown: '', files: uploads })
     }
 
     if (!isStreamed || outcome === 'interrupted') {

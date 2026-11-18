@@ -1,11 +1,12 @@
 import type { PluginState } from '@tanstack/ai-harness'
+import { SENT_FILE_EVENT, sentFileOfEvent } from '@workcell/core'
 import { CARD_EVENT, cardOfEvent } from '#/cards/card-event.ts'
 import type {
   ChatIdentity,
   ChatMessage,
   ChatSurface
 } from '#/connection/chat-surface.ts'
-import { FILE_EVENT, fileOfEvent, toFileUpload } from '#/files/file-event.ts'
+import { takeUploads, type SentFileSource } from '#/files/sent-file-uploads.ts'
 import type { PostedWait } from './worker-waits.ts'
 
 export type ThreadPosts = {
@@ -52,19 +53,22 @@ export async function postQuestions(
 
 export type EventPost = { message: ChatMessage; asBot: boolean }
 
-export function postOfEvent(name: string, value: unknown): EventPost | undefined {
+export async function postOfEvent(
+  name: string,
+  value: unknown,
+  sentFiles?: SentFileSource
+): Promise<EventPost | undefined> {
   const card = name === CARD_EVENT ? cardOfEvent(value) : undefined
 
   if (card !== undefined) {
     return { message: { card }, asBot: false }
   }
 
-  const sentFile = name === FILE_EVENT ? fileOfEvent(value) : undefined
+  const sentFile = name === SENT_FILE_EVENT ? sentFileOfEvent(value) : undefined
+  const files =
+    sentFile === undefined ? [] : await takeUploads(sentFiles, [sentFile])
 
-  return sentFile === undefined
+  return files.length === 0
     ? undefined
-    : {
-        message: { markdown: '', files: [toFileUpload(sentFile)] },
-        asBot: true
-      }
+    : { message: { markdown: '', files }, asBot: true }
 }

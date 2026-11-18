@@ -17,10 +17,12 @@ import { readOnlyCredentials } from './host/read-only-credentials.ts'
 import { toTanStackLogger, type LeveledLog } from './host/tanstack-logger.ts'
 import { waitUntilReady } from './host/wait-until-ready.ts'
 import { defineOrchestratorHarness } from './orchestrator/orchestrator-harness.ts'
+import type { SentFileStore } from './store/sent-file-store.ts'
 import {
   createMessageReader,
   type MessageFileOptions
 } from './inputs/message-files.ts'
+import { sendFiles, type ReadAgentFile } from './files/send-files.ts'
 import { createOrchestrator } from './orchestrator/orchestrator.ts'
 import {
   createLibrarySandbox,
@@ -87,6 +89,7 @@ type OpenWorkcellParams = {
   observability?: WorkerObservability
   onWorkerStart?: OnWorkerStart
   files?: MessageFileOptions
+  sentFiles?: SentFileStore
 }
 
 export abstract class StartRefusalError extends Error {
@@ -194,7 +197,8 @@ export async function openWorkcell({
   idleSandboxMs,
   observability,
   onWorkerStart,
-  files
+  files,
+  sentFiles
 }: OpenWorkcellParams) {
   requireOneSandboxPackage([
     ...Object.values(sandboxes),
@@ -210,6 +214,11 @@ export async function openWorkcell({
   const isStarter = isStarterIn(senders.starterIds)
   const filesLog = logger.child({ module: 'files' })
   const secretValues = Object.values(secrets)
+  const sendFilesFrom = (readFile: ReadAgentFile) => {
+    return sentFiles === undefined
+      ? []
+      : [sendFiles({ sentFiles, readFile, secretValues })]
+  }
   const activity = createWorkerActivity({ pricing, secretValues })
   const host = createAgentHost({
     acceptInput: acceptAllowedSenders(senders),
@@ -262,7 +271,12 @@ export async function openWorkcell({
     redactedSecretNames: Object.keys(secrets),
     pricing,
     defaultLimits,
-    plugins: [activity.plugin, workerSandbox.plugin, ...plugins],
+    plugins: [
+      activity.plugin,
+      workerSandbox.plugin,
+      ...sendFilesFrom(workerSandbox.readFile),
+      ...plugins
+    ],
     observability
   })
   const repositories = Object.keys(sandboxes)
@@ -284,6 +298,12 @@ export async function openWorkcell({
   })
   const orchestratorHarness = defineOrchestratorHarness({
     ...orchestratorOptions,
+    plugins: [
+      ...orchestratorOptions.plugins,
+      ...sendFilesFrom(async (_threadId, path) => {
+        return library.readFile(path)
+      })
+    ],
     adapter: models.orchestrator,
     compactionAdapter: models.compaction,
     library,
