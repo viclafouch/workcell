@@ -96,7 +96,12 @@ function contentOf(message: ChatMessage) {
 
 function imageBlocksOf(images: readonly UploadedFile[]) {
   return images.map(({ id, title }) => {
-    return { type: 'image', slack_file: { id }, alt_text: title }
+    return {
+      type: 'image',
+      slack_file: { id },
+      alt_text: title,
+      title: { type: 'plain_text', text: title }
+    }
   })
 }
 

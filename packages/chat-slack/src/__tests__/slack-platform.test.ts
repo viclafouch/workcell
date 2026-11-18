@@ -111,7 +111,12 @@ describe('slackPlatform', () => {
         thread_ts: '1.0001',
         text: 'chart.png',
         blocks: JSON.stringify([
-          { type: 'image', slack_file: { id: 'F_FILE' }, alt_text: 'chart.png' }
+          {
+            type: 'image',
+            slack_file: { id: 'F_FILE' },
+            alt_text: 'chart.png',
+            title: { type: 'plain_text', text: 'chart.png' }
+          }
         ]),
         username: ALPHA.name,
         icon_url: ALPHA.iconUrl
