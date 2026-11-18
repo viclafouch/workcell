@@ -17,6 +17,12 @@ import type {
 import type { LogLine } from '#/connection/chat-logger.ts'
 import type { ChatSurface, SessionStatus } from '#/connection/chat-surface.ts'
 import { splitAtSafeSpace } from '#/connection/text-links.ts'
+import {
+  FILE_EVENT,
+  fileOfEvent,
+  toFileUpload,
+  type SentFile
+} from '#/files/file-event.ts'
 import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 
 const TASK_DETAILS_MAX_LENGTH = 300
@@ -223,6 +229,7 @@ export function createOrchestratorThreads({
     const reply = createReplyStream(thread, turnLog, surface.linked)
     const tasks = new Map<string, TaskUpdateChunk>()
     const cards: CardElement[] = []
+    const sentFiles: SentFile[] = []
     const ending: TurnEnding = {}
     let textMessageId = ''
 
@@ -283,6 +290,14 @@ export function createOrchestratorThreads({
           cards.push(card)
         }
       }
+
+      if (event.type === EventType.CUSTOM && event.name === FILE_EVENT) {
+        const sentFile = fileOfEvent(event.value)
+
+        if (sentFile !== undefined) {
+          sentFiles.push(sentFile)
+        }
+      }
     }
 
     heldThreads.add(thread.id)
@@ -328,6 +343,10 @@ export function createOrchestratorThreads({
     for (const card of cards) {
       // oxlint-disable-next-line no-await-in-loop -- the cards post in the order the turn showed them
       await thread.post({ card })
+    }
+
+    if (sentFiles.length > 0) {
+      await thread.post({ markdown: '', files: sentFiles.map(toFileUpload) })
     }
 
     if (!isStreamed || outcome === 'interrupted') {

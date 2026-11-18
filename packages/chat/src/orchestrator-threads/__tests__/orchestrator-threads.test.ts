@@ -9,6 +9,7 @@ import {
 } from '@workcell/core'
 import {
   BOT_USER,
+  FILE_UPLOAD_ORIGIN,
   openSlackChat,
   SILENT_CHAT_LOGGER,
   slackSessionStatus,
@@ -17,6 +18,7 @@ import {
   type SlackCall
 } from '#/__tests__/test-doubles.ts'
 import { CARD_EVENT, cardEventValue } from '#/cards/card-event.ts'
+import { FILE_EVENT, fileEventValue } from '#/files/file-event.ts'
 import { openChatConnection } from '#/connection/chat-connection.ts'
 import { createChatSurface } from '#/connection/chat-surface.ts'
 import type { TextLink } from '#/connection/text-links.ts'
@@ -39,6 +41,8 @@ const TEST_THREAD = `slack:${TEST_CHANNEL}:100.0001`
 const LAST_TWO_CALLS = 2
 
 const LAST_THREE_CALLS = 3
+
+const CARDS_AND_FILE_CALLS = 6
 
 const slackApi = useSlackApi()
 
@@ -409,7 +413,12 @@ describe('an orchestrator thread', () => {
     expect(sent()).toStrictEqual(['status 100.0001 processing'])
   })
 
-  it('posts the cards of a turn after its answer, in order', async () => {
+  it('posts the cards of a turn after its answer, in order, then its files', async () => {
+    slackApi.answer('files.getUploadURLExternal', {
+      ok: true,
+      upload_url: `${FILE_UPLOAD_ORIGIN}/upload/F_DECK`,
+      file_id: 'F_DECK'
+    })
     const tableCard: CardElement = {
       type: 'card',
       title: 'Workers',
@@ -433,6 +442,11 @@ describe('an orchestrator thread', () => {
           type: EventType.CUSTOM,
           name: CARD_EVENT,
           value: cardEventValue(chartCard)
+        },
+        {
+          type: EventType.CUSTOM,
+          name: FILE_EVENT,
+          value: fileEventValue({ name: 'deck.html', content: '<h1>Q4</h1>' })
         }
       ]
     })
@@ -441,10 +455,13 @@ describe('an orchestrator thread', () => {
     await chat.ask('Who works on what?')
     const cardPosts = slackApi.writes('chat.postMessage')
 
-    expect(sent().slice(-LAST_THREE_CALLS)).toStrictEqual([
+    expect(sent().slice(-CARDS_AND_FILE_CALLS)).toStrictEqual([
       'stop active',
       expect.stringContaining('post 100.0001: '),
-      expect.stringContaining('post 100.0001: ')
+      expect.stringContaining('post 100.0001: '),
+      'files.getUploadURLExternal undefined',
+      'files.upload undefined',
+      'files.completeUploadExternal 100.0001'
     ])
     expect(
       cardPosts.map(({ body }) => {
@@ -453,6 +470,14 @@ describe('an orchestrator thread', () => {
     ).toStrictEqual([
       expect.stringContaining('Alpha on TASK-7'),
       expect.stringContaining('$5.00')
+    ])
+    expect(
+      slackApi.writes('files.upload').map(({ body }) => {
+        return body.content
+      })
+    ).toStrictEqual([expect.stringContaining('<h1>Q4</h1>')])
+    expect(slackApi.writes('files.completeUploadExternal')).toMatchObject([
+      { body: { channel_id: TEST_CHANNEL, thread_ts: '100.0001' } }
     ])
   })
 })

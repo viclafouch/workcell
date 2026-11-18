@@ -31,6 +31,8 @@ const SIGNING_SECRET = 'test-signing-secret'
 
 const WEBHOOK_URL = 'https://workcell.example.com/slack/events'
 
+export const FILE_UPLOAD_ORIGIN = 'https://files.slack.com'
+
 const MILLISECONDS_PER_SECOND = 1_000
 
 const SIGNED_AT = new Date('2026-11-16T09:00:00Z')
@@ -105,6 +107,14 @@ export function useSlackApi() {
         message_ts: ts,
         channel: body.channel
       })
+    }),
+    http.post(`${FILE_UPLOAD_ORIGIN}/upload/:fileId`, async ({ request }) => {
+      calls.push({
+        method: 'files.upload',
+        body: { content: await request.text() }
+      })
+
+      return new HttpResponse('OK')
     })
   )
 

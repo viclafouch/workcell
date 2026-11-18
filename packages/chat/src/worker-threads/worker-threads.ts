@@ -19,7 +19,6 @@ import {
   type WorkerChange,
   type WorkerMetadata
 } from '@workcell/core'
-import { CARD_EVENT, cardOfEvent } from '#/cards/card-event.ts'
 import type {
   ApprovalClick,
   ThreadRoute
@@ -40,6 +39,7 @@ import {
 } from './worker-thread-cards.ts'
 import {
   markAsked,
+  postOfEvent,
   postQuestions,
   type ThreadPosts
 } from './worker-thread-posts.ts'
@@ -512,13 +512,13 @@ export function createWorkerThreads({
         workerThread.opened = { threadId: opened.chatThreadId, identity }
       }
 
-      const postInThread = async (message: ChatMessage) => {
-        if (workerThread.opened === undefined) {
-          return
-        }
+      const postInThread = async (message: ChatMessage, asBot = false) => {
+        const { opened } = workerThread
 
-        const { threadId, identity } = workerThread.opened
-        await surface.post({ target: { threadId }, identity, message })
+        if (opened !== undefined) {
+          const { threadId, identity } = opened
+          await surface.post({ target: { threadId }, message, identity: asBot ? undefined : identity })
+        }
       }
 
       const showPlan = async () => {
@@ -589,14 +589,15 @@ export function createWorkerThreads({
           stoppedWaits.splice(0)
         },
         onChunk: async ({ messages }, chunk) => {
-          if (chunk.type === 'CUSTOM' && chunk.name === CARD_EVENT) {
-            const card = cardOfEvent(chunk.value)
+          const eventPost =
+            chunk.type === 'CUSTOM'
+              ? postOfEvent(chunk.name, chunk.value)
+              : undefined
 
-            if (card !== undefined) {
-              await safely('card post', () => {
-                return postInThread({ card })
-              })
-            }
+          if (eventPost !== undefined) {
+            await safely(`${chunk.type} post`, () => {
+              return postInThread(eventPost.message, eventPost.asBot)
+            })
           }
 
           const waits = (pausedInterrupts(chunk) ?? []).map((interrupt) => {

@@ -31,6 +31,12 @@ Drop a screenshot, a PDF or a text file in your message, and the robot reads it 
 
 Your team can narrow the files it reads, down to one type or to none.
 
+## Ask it for a file
+
+Ask for a file in your own words, such as a slide deck of a topic, or the notes a review page changed. The robot writes it and drops it in the thread, under its answer. Click it to download it.
+
+It writes the files that are text: a web page or a slide deck, a note, a data table, code.
+
 ## Who the robot answers
 
 - **The people on the allowed list** talk to it in any channel where it is a member. They start, steer and stop work.
