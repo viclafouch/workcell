@@ -37,6 +37,8 @@ type LogLine = (details: Record<string, unknown>, message: string) => void
 
 type ListedSandbox = { id: string; key: string }
 
+type CacheVolume = { name: string; mountPath: string }
+
 export type ProxiedDockerSandboxParams = {
   image: string
   egressImage: string
@@ -44,6 +46,65 @@ export type ProxiedDockerSandboxParams = {
   keepAliveCommand?: string[]
   sandboxEnv?: Readonly<Record<string, string>>
   labels?: Readonly<Record<string, string>>
+  cacheVolumes?: readonly CacheVolume[]
+}
+
+type SandboxContainerDefinitionParams = Required<
+  Pick<
+    ProxiedDockerSandboxParams,
+    'image' | 'keepAliveCommand' | 'sandboxEnv' | 'labels' | 'cacheVolumes'
+  >
+> & { key: string }
+
+function toMounts(
+  cacheVolumes: readonly CacheVolume[]
+): Dockerode.MountSettings[] {
+  return cacheVolumes.map(({ name, mountPath }) => {
+    return { Type: 'volume', Source: name, Target: mountPath }
+  })
+}
+
+export function sandboxContainerDefinition({
+  key,
+  image,
+  keepAliveCommand,
+  sandboxEnv,
+  labels,
+  cacheVolumes
+}: SandboxContainerDefinitionParams): Dockerode.ContainerCreateOptions {
+  return {
+    Image: image,
+    Cmd: keepAliveCommand,
+    WorkingDir: WORKDIR,
+    Env: Object.entries(sandboxEnv).map(([name, value]) => {
+      return `${name}=${value}`
+    }),
+    Labels: { ...labels, [SANDBOX_LABEL]: key },
+    HostConfig: {
+      NetworkMode: SANDBOX_NETWORK,
+      Dns: [EGRESS_ADDRESS],
+      Memory: SANDBOX_MEMORY_BYTES,
+      MemorySwap: SANDBOX_MEMORY_BYTES,
+      Mounts: toMounts(cacheVolumes)
+    }
+  }
+}
+
+async function seedCacheVolumes(
+  docker: Dockerode,
+  image: string,
+  cacheVolumes: readonly CacheVolume[]
+) {
+  if (cacheVolumes.length === 0) {
+    return
+  }
+
+  const seed = await docker.createContainer({
+    Image: image,
+    NetworkDisabled: true,
+    HostConfig: { Mounts: toMounts(cacheVolumes) }
+  })
+  await seed.remove({ force: true })
 }
 
 export function hasStatus(error: unknown, status: number) {
@@ -183,11 +244,28 @@ export function proxiedDockerSandbox({
   logger,
   keepAliveCommand = DEFAULT_KEEP_ALIVE_COMMAND,
   sandboxEnv = {},
-  labels = {}
+  labels = {},
+  cacheVolumes = []
 }: ProxiedDockerSandboxParams): SandboxProvider & {
   list: () => Promise<ListedSandbox[]>
 } {
   const docker = new Dockerode()
+  let seeding: Promise<void> | null = null
+
+  async function seedOnce() {
+    seeding ??= seedCacheVolumes(docker, image, cacheVolumes)
+    const attempt = seeding
+
+    try {
+      await attempt
+    } catch (error) {
+      if (seeding === attempt) {
+        seeding = null
+      }
+
+      throw error
+    }
+  }
   const teardownLogger = {
     warn: (message: string, meta: Record<string, unknown> = {}) => {
       logger.warn(meta, message)
@@ -226,21 +304,17 @@ export function proxiedDockerSandbox({
       await findImage(docker, image)
       await ensureNetworks(docker)
       await ensureEgressProxy(docker, egressImage)
-      const container = await docker.createContainer({
-        Image: image,
-        Cmd: keepAliveCommand,
-        WorkingDir: WORKDIR,
-        Env: Object.entries(sandboxEnv).map(([name, value]) => {
-          return `${name}=${value}`
-        }),
-        Labels: { ...labels, [SANDBOX_LABEL]: id ?? UNNAMED_SANDBOX },
-        HostConfig: {
-          NetworkMode: SANDBOX_NETWORK,
-          Dns: [EGRESS_ADDRESS],
-          Memory: SANDBOX_MEMORY_BYTES,
-          MemorySwap: SANDBOX_MEMORY_BYTES
-        }
-      })
+      await seedOnce()
+      const container = await docker.createContainer(
+        sandboxContainerDefinition({
+          key: id ?? UNNAMED_SANDBOX,
+          image,
+          keepAliveCommand,
+          sandboxEnv,
+          labels,
+          cacheVolumes
+        })
+      )
       try {
         await container.start()
       } catch (error) {
