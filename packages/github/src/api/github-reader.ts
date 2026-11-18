@@ -1,21 +1,13 @@
-import { z } from 'zod'
-import { createPacedFetch, type PacedRequest } from '@workcell/core'
+import type { PageInfoForward } from '@octokit/plugin-paginate-graphql'
 import { REVIEW_THREADS_TEXT } from '#/prompts/github.ts'
+import type { PullRequestHeadRef } from './github-api.ts'
 import {
-  GITHUB_GRAPHQL_URL,
-  GITHUB_JSON_MEDIA_TYPE,
-  GITHUB_REST_URL,
-  githubPacing,
-  graphqlDataOf,
   splitRepository,
-  type PullRequestHeadRef
-} from './github-api.ts'
-
-const REQUESTS_PER_MINUTE = 30
+  undefinedOnStatus,
+  type GithubOctokit
+} from './github-octokit.ts'
 
 const FILES_PER_PAGE = 100
-
-const MAX_FILE_PAGES = 30
 
 const MAX_BODY_CHARS = 4_000
 
@@ -31,23 +23,17 @@ const MAX_PAGE_KIB = 48
 
 const MAX_PAGE_BYTES = MAX_PAGE_KIB * BYTES_PER_KIB
 
-const OK_STATUS = 200
-
 const NOT_FOUND_STATUS = 404
 
 const DEFAULT_HISTORY_LIMIT = 10
 
 const REVIEW_THREADS_PER_PAGE = 100
 
-const MAX_REVIEW_THREAD_PAGES = 10
-
 const MAX_THREAD_COMMENTS = 50
 
 const MAX_COMMENT_CHARS = 20_000
 
 const DELETED_GITHUB_USER = 'ghost'
-
-const RAW_MEDIA_TYPE = 'application/vnd.github.raw+json'
 
 const FILE_HISTORY_QUERY = `query FileHistory($owner: String!, $name: String!, $expression: String!, $path: String!, $first: Int!) {
   repository(owner: $owner, name: $name) {
@@ -68,25 +54,22 @@ const FILE_HISTORY_QUERY = `query FileHistory($owner: String!, $name: String!, $
   }
 }`
 
-const REVIEW_THREADS_QUERY = `query ReviewThreads($owner: String!, $name: String!, $branch: String!, $cursor: String) {
+const REVIEW_THREADS_QUERY = `query ReviewThreads($owner: String!, $name: String!, $number: Int!, $cursor: String) {
   repository(owner: $owner, name: $name) {
-    pullRequests(headRefName: $branch, first: 1, states: [OPEN], orderBy: { field: CREATED_AT, direction: DESC }) {
-      nodes {
-        url
-        reviewThreads(first: ${REVIEW_THREADS_PER_PAGE}, after: $cursor) {
-          totalCount
-          pageInfo { hasNextPage endCursor }
-          nodes {
-            id
-            isResolved
-            isOutdated
-            path
-            line
-            originalLine
-            comments(first: ${MAX_THREAD_COMMENTS}) {
-              totalCount
-              nodes { author { login } body url }
-            }
+    pullRequest(number: $number) {
+      reviewThreads(first: ${REVIEW_THREADS_PER_PAGE}, after: $cursor) {
+        totalCount
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          isResolved
+          isOutdated
+          path
+          line
+          originalLine
+          comments(first: ${MAX_THREAD_COMMENTS}) {
+            totalCount
+            nodes { author { login } body url }
           }
         }
       }
@@ -94,118 +77,51 @@ const REVIEW_THREADS_QUERY = `query ReviewThreads($owner: String!, $name: String
   }
 }`
 
-const pullRequestSchema = z.object({
-  number: z.number(),
-  title: z.string(),
-  body: z.string().nullable(),
-  state: z.string(),
-  draft: z.boolean(),
-  merged: z.boolean(),
-  html_url: z.string(),
-  user: z.object({ login: z.string() }).nullable(),
-  base: z.object({ ref: z.string() }),
-  head: z.object({ ref: z.string() }),
-  additions: z.number(),
-  deletions: z.number(),
-  changed_files: z.number()
-})
+type FileHistoryData = {
+  repository: {
+    object: {
+      history: {
+        nodes: {
+          oid: string
+          committedDate: string
+          messageHeadline: string
+          messageBody: string
+          author: { name: string | null; user: { login: string } | null } | null
+          associatedPullRequests: {
+            nodes: { number: number; title: string; url: string }[]
+          }
+        }[]
+      }
+    } | null
+  } | null
+}
 
-const pullRequestFilesSchema = z.array(
-  z.object({
-    filename: z.string(),
-    previous_filename: z.string().optional(),
-    status: z.string(),
-    additions: z.number(),
-    deletions: z.number(),
-    patch: z.string().optional()
-  })
-)
+type ReviewComment = {
+  author: { login: string } | null
+  body: string
+  url: string
+}
 
-const fileHistorySchema = z.object({
-  repository: z
-    .object({
-      object: z
-        .object({
-          history: z.object({
-            nodes: z.array(
-              z.object({
-                oid: z.string(),
-                committedDate: z.string(),
-                messageHeadline: z.string(),
-                messageBody: z.string(),
-                author: z
-                  .object({
-                    name: z.string().nullable(),
-                    user: z.object({ login: z.string() }).nullable()
-                  })
-                  .nullable(),
-                associatedPullRequests: z.object({
-                  nodes: z.array(
-                    z.object({
-                      number: z.number(),
-                      title: z.string(),
-                      url: z.string()
-                    })
-                  )
-                })
-              })
-            )
-          })
-        })
-        .nullable()
-    })
-    .nullable()
-})
+type ReviewThread = {
+  id: string
+  isResolved: boolean
+  isOutdated: boolean
+  path: string
+  line: number | null
+  originalLine: number | null
+  comments: { totalCount: number; nodes: ReviewComment[] }
+}
 
-const reviewCommentSchema = z.object({
-  author: z.object({ login: z.string() }).nullable(),
-  body: z.string(),
-  url: z.string()
-})
-
-const reviewThreadSchema = z.object({
-  id: z.string(),
-  isResolved: z.boolean(),
-  isOutdated: z.boolean(),
-  path: z.string(),
-  line: z.number().nullable(),
-  originalLine: z.number().nullable(),
-  comments: z.object({
-    totalCount: z.number(),
-    nodes: z.array(reviewCommentSchema)
-  })
-})
-
-const reviewThreadsPageSchema = z.object({
-  url: z.string(),
-  reviewThreads: z.object({
-    totalCount: z.number(),
-    pageInfo: z.object({
-      hasNextPage: z.boolean(),
-      endCursor: z.string().nullable()
-    }),
-    nodes: z.array(reviewThreadSchema)
-  })
-})
-
-const reviewThreadsSchema = z.object({
-  repository: z
-    .object({
-      pullRequests: z.object({ nodes: z.array(reviewThreadsPageSchema) })
-    })
-    .nullable()
-})
-
-const openPullRequestsSchema = z.array(z.object({ html_url: z.string() }))
-
-type GithubRead =
-  | { kind: 'rest'; path: string; mediaType: string }
-  | { kind: 'graphql'; query: string; variables: Record<string, unknown> }
-
-type GraphqlRead = {
-  query: string
-  variables: Record<string, unknown>
-  subject: string
+type ReviewThreadsData = {
+  repository: {
+    pullRequest: {
+      reviewThreads: {
+        totalCount: number
+        pageInfo: PageInfoForward
+        nodes: ReviewThread[]
+      }
+    }
+  }
 }
 
 type PullRequestRef = { repository: string; number: number }
@@ -213,12 +129,6 @@ type PullRequestRef = { repository: string; number: number }
 type FileRef = { repository: string; path: string }
 
 type LineRange = { offset?: number; limit?: number }
-
-type ReviewCommentParams = z.infer<typeof reviewCommentSchema>
-
-type ReviewThread = z.infer<typeof reviewThreadSchema>
-
-type ReviewThreadsPage = z.infer<typeof reviewThreadsPageSchema>
 
 type ReadPullRequestPatchParams = PullRequestRef & { path: string }
 
@@ -232,7 +142,7 @@ function capped(text: string, maxChars: number) {
     : { text, truncated: false }
 }
 
-function reviewCommentOf({ author, body, url }: ReviewCommentParams) {
+function reviewCommentOf({ author, body, url }: ReviewComment) {
   return {
     author: author?.login ?? DELETED_GITHUB_USER,
     body: capped(body, MAX_COMMENT_CHARS),
@@ -259,42 +169,6 @@ function reviewThreadOf({
     replies,
     repliesListed: `${replies.length} of ${Math.max(comments.totalCount - 1, 0)}`
   }
-}
-
-function reviewThreadsAnswer(
-  { url, reviewThreads }: ReviewThreadsPage,
-  threads: readonly ReviewThread[]
-) {
-  const unresolvedThreads = threads.filter(({ isResolved }) => {
-    return !isResolved
-  })
-
-  return {
-    pullRequest: url,
-    threadsRead: `${threads.length} of ${reviewThreads.totalCount}`,
-    resolvedThreads: threads.length - unresolvedThreads.length,
-    unresolvedThreads: unresolvedThreads.map(reviewThreadOf)
-  }
-}
-
-function encodedPath(path: string) {
-  return path.split('/').map(encodeURIComponent).join('/')
-}
-
-function requestOf(read: GithubRead): { url: string; init: PacedRequest } {
-  return read.kind === 'rest'
-    ? {
-        url: `${GITHUB_REST_URL}${read.path}`,
-        init: { headers: { accept: read.mediaType } }
-      }
-    : {
-        url: GITHUB_GRAPHQL_URL,
-        init: {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ query: read.query, variables: read.variables })
-        }
-      }
 }
 
 function pageOf(
@@ -343,75 +217,33 @@ function noPullRequest({ repository, number }: PullRequestRef) {
   return `GitHub has no pull request #${number} in ${repository}.`
 }
 
-export function createGithubReader(token: string) {
-  const { pacedFetch, [Symbol.dispose]: dispose } = createPacedFetch({
-    ...githubPacing(token),
-    subject: 'the GitHub reads',
-    requestsPerMinute: REQUESTS_PER_MINUTE
-  })
-
-  const read = async (githubRead: GithubRead) => {
-    const { url, init } = requestOf(githubRead)
-
-    return pacedFetch(url, init)
-  }
-
-  const readRest = async (path: string, mediaType = GITHUB_JSON_MEDIA_TYPE) => {
-    const { status, text } = await read({ kind: 'rest', path, mediaType })
-
-    if (status === NOT_FOUND_STATUS) {
-      return
-    }
-
-    if (status !== OK_STATUS) {
-      throw new Error(`GitHub answered ${status} to ${path}.`)
-    }
-
-    return text
-  }
-
-  const readGraphql = async <Schema extends z.ZodType>(
-    { query, variables, subject }: GraphqlRead,
-    dataSchema: Schema
-  ): Promise<z.infer<Schema>> => {
-    const answer = await read({ kind: 'graphql', query, variables })
-
-    return graphqlDataOf({ ...answer, subject }, dataSchema)
-  }
-
-  const readFilesPage = async (
-    { repository, number }: PullRequestRef,
-    page: number
-  ) => {
-    const query = new URLSearchParams({
-      per_page: String(FILES_PER_PAGE),
-      page: String(page)
-    })
-    const text = await readRest(
-      `/repos/${repository}/pulls/${number}/files?${query.toString()}`
+export function createGithubReader(octokit: GithubOctokit) {
+  const readPullRequest = async (ref: PullRequestRef) => {
+    const { owner, repo } = splitRepository(ref.repository)
+    const found = await undefinedOnStatus(
+      NOT_FOUND_STATUS,
+      octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+        owner,
+        repo,
+        pull_number: ref.number
+      })
     )
 
-    return text === undefined
-      ? undefined
-      : pullRequestFilesSchema.parse(JSON.parse(text))
-  }
-
-  const readPullRequest = async (ref: PullRequestRef) => {
-    const text = await readRest(`/repos/${ref.repository}/pulls/${ref.number}`)
-
-    if (text === undefined) {
+    if (found === undefined) {
       return noPullRequest(ref)
     }
 
-    const files = (await readFilesPage(ref, 1)) ?? []
-
-    const pullRequest = pullRequestSchema.parse(JSON.parse(text))
+    const { data: pullRequest } = found
+    const { data: files } = await octokit.request(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}/files',
+      { owner, repo, pull_number: ref.number, per_page: FILES_PER_PAGE }
+    )
 
     return {
       number: pullRequest.number,
       url: pullRequest.html_url,
       title: pullRequest.title,
-      author: pullRequest.user?.login,
+      author: pullRequest.user.login,
       state: pullRequest.merged ? 'merged' : pullRequest.state,
       draft: pullRequest.draft,
       base: pullRequest.base.ref,
@@ -439,30 +271,41 @@ export function createGithubReader(token: string) {
     path,
     ...ref
   }: ReadPullRequestPatchParams) => {
-    for (let page = 1; page <= MAX_FILE_PAGES; page += 1) {
-      // oxlint-disable-next-line no-await-in-loop -- the next page loads only when this one misses the file
-      const files = await readFilesPage(ref, page)
+    const { owner, repo } = splitRepository(ref.repository)
+    const matches = await undefinedOnStatus(
+      NOT_FOUND_STATUS,
+      octokit.paginate(
+        'GET /repos/{owner}/{repo}/pulls/{pull_number}/files',
+        { owner, repo, pull_number: ref.number, per_page: FILES_PER_PAGE },
+        ({ data: files }, done) => {
+          const file = files.find(({ filename, previous_filename }) => {
+            return filename === path || previous_filename === path
+          })
 
-      if (files === undefined) {
-        return noPullRequest(ref)
-      }
+          if (file === undefined) {
+            return []
+          }
 
-      const file = files.find(({ filename, previous_filename }) => {
-        return filename === path || previous_filename === path
-      })
+          done()
 
-      if (file !== undefined) {
-        return file.patch === undefined
-          ? `GitHub gives no patch for ${path}: the file is binary or its diff is too large.`
-          : { path: file.filename, patch: capped(file.patch, MAX_PATCH_CHARS) }
-      }
+          return [file]
+        }
+      )
+    )
 
-      if (files.length < FILES_PER_PAGE) {
-        break
-      }
+    if (matches === undefined) {
+      return noPullRequest(ref)
     }
 
-    return `Pull request #${ref.number} of ${ref.repository} changes no file ${path}.`
+    const [file] = matches
+
+    if (file === undefined) {
+      return `Pull request #${ref.number} of ${ref.repository} changes no file ${path}.`
+    }
+
+    return file.patch === undefined
+      ? `GitHub gives no patch for ${path}: the file is binary or its diff is too large.`
+      : { path: file.filename, patch: capped(file.patch, MAX_PATCH_CHARS) }
   }
 
   const readFile = async ({
@@ -475,15 +318,28 @@ export function createGithubReader(token: string) {
       return `${path} is not a file path of ${repository}: each part of the path names a folder or the file.`
     }
 
-    const query = new URLSearchParams({ ref })
-    const text = await readRest(
-      `/repos/${repository}/contents/${encodedPath(path)}?${query.toString()}`,
-      RAW_MEDIA_TYPE
+    const { owner, repo } = splitRepository(repository)
+    const found = await undefinedOnStatus(
+      NOT_FOUND_STATUS,
+      octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+        owner,
+        repo,
+        path,
+        ref,
+        mediaType: { format: 'raw' }
+      })
     )
 
-    return text === undefined
-      ? `GitHub has no file ${path} on ${ref} in ${repository}.`
-      : pageOf(text, { path, ...range })
+    if (found === undefined) {
+      return `GitHub has no file ${path} on ${ref} in ${repository}.`
+    }
+
+    const { data } = found
+
+    return pageOf(typeof data === 'string' ? data : JSON.stringify(data), {
+      path,
+      ...range
+    })
   }
 
   const readFileHistory = async ({
@@ -492,14 +348,10 @@ export function createGithubReader(token: string) {
     ref = 'HEAD',
     limit = DEFAULT_HISTORY_LIMIT
   }: FileRef & { ref?: string; limit?: number }) => {
-    const { owner, name } = splitRepository(repository)
-    const { repository: found } = await readGraphql(
-      {
-        query: FILE_HISTORY_QUERY,
-        variables: { owner, name, expression: ref, path, first: limit },
-        subject: `the history of ${path}`
-      },
-      fileHistorySchema
+    const { owner, repo } = splitRepository(repository)
+    const { repository: found } = await octokit.graphql<FileHistoryData>(
+      FILE_HISTORY_QUERY,
+      { owner, name: repo, expression: ref, path, first: limit }
     )
     const commits = found?.object?.history.nodes
 
@@ -532,82 +384,51 @@ export function createGithubReader(token: string) {
     )
   }
 
-  const readReviewThreadsPage = async (
-    { repository, branch }: PullRequestHeadRef,
-    cursor: string | null
-  ) => {
-    const { owner, name } = splitRepository(repository)
-    const { repository: found } = await readGraphql(
-      {
-        query: REVIEW_THREADS_QUERY,
-        variables: { owner, name, branch, cursor },
-        subject: `the review threads of ${branch}`
-      },
-      reviewThreadsSchema
-    )
-
-    return found?.pullRequests.nodes[0]
-  }
-
-  const readReviewThreadPages = async (head: PullRequestHeadRef) => {
-    const pages: ReviewThreadsPage[] = []
-    let cursor: string | null = null
-
-    for (let page = 1; page <= MAX_REVIEW_THREAD_PAGES; page += 1) {
-      // oxlint-disable-next-line no-await-in-loop -- each page reads from the cursor of the page before it
-      const found = await readReviewThreadsPage(head, cursor)
-
-      if (found === undefined) {
-        break
-      }
-
-      pages.push(found)
-      const { hasNextPage, endCursor } = found.reviewThreads.pageInfo
-
-      if (!hasNextPage) {
-        break
-      }
-
-      cursor = endCursor
-    }
-
-    return pages
-  }
-
-  const readReviewThreads = async (head: PullRequestHeadRef) => {
-    const pages = await readReviewThreadPages(head)
-    const [firstPage] = pages
-
-    return firstPage === undefined
-      ? REVIEW_THREADS_TEXT.noPullRequest(head)
-      : reviewThreadsAnswer(
-          firstPage,
-          pages.flatMap(({ reviewThreads }) => {
-            return reviewThreads.nodes
-          })
-        )
-  }
-
-  const openPullRequestUrl = async ({
+  const openPullRequestOf = async ({
     repository,
     branch
   }: PullRequestHeadRef) => {
-    const { owner } = splitRepository(repository)
-    const query = new URLSearchParams({
+    const { owner, repo } = splitRepository(repository)
+    const { data } = await octokit.request('GET /repos/{owner}/{repo}/pulls', {
+      owner,
+      repo,
       state: 'open',
       head: `${owner}:${branch}`,
-      per_page: '1'
+      per_page: 1
     })
-    const path = `/repos/${repository}/pulls?${query.toString()}`
-    const text = await readRest(path)
 
-    if (text === undefined) {
-      throw new Error(`GitHub answered 404 to ${path}.`)
-    }
+    return data[0]
+  }
 
-    const [open] = openPullRequestsSchema.parse(JSON.parse(text))
+  const openPullRequestUrl = async (head: PullRequestHeadRef) => {
+    const open = await openPullRequestOf(head)
 
     return open?.html_url
+  }
+
+  const readReviewThreads = async (head: PullRequestHeadRef) => {
+    const open = await openPullRequestOf(head)
+
+    if (open === undefined) {
+      return REVIEW_THREADS_TEXT.noPullRequest(head)
+    }
+
+    const { owner, repo } = splitRepository(head.repository)
+    const { repository } = await octokit.graphql.paginate<ReviewThreadsData>(
+      REVIEW_THREADS_QUERY,
+      { owner, name: repo, number: open.number }
+    )
+    const { totalCount, nodes: threads } = repository.pullRequest.reviewThreads
+    const unresolvedThreads = threads.filter(({ isResolved }) => {
+      return !isResolved
+    })
+
+    return {
+      pullRequest: open.html_url,
+      threadsRead: `${threads.length} of ${totalCount}`,
+      resolvedThreads: threads.length - unresolvedThreads.length,
+      unresolvedThreads: unresolvedThreads.map(reviewThreadOf)
+    }
   }
 
   return {
@@ -616,8 +437,7 @@ export function createGithubReader(token: string) {
     openPullRequestUrl,
     readFile,
     readFileHistory,
-    readReviewThreads,
-    [Symbol.dispose]: dispose
+    readReviewThreads
   }
 }
 

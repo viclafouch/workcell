@@ -1,26 +1,11 @@
-import { z } from 'zod'
-import { createPacedFetch, type PacedRequest } from '@workcell/core'
+import type { PullRequestHeadRef } from '#/api/github-api.ts'
 import {
-  GITHUB_JSON_MEDIA_TYPE,
-  GITHUB_REST_URL,
-  githubPacing,
   splitRepository,
-  type PullRequestHeadRef
-} from '#/api/github-api.ts'
-
-const REQUESTS_PER_MINUTE = 20
+  undefinedOnStatus,
+  type GithubOctokit
+} from '#/api/github-octokit.ts'
 
 const MISSING_BRANCH_STATUS = 422
-
-const FIRST_ERROR_STATUS = 400
-
-const pullRequestsSchema = z.array(
-  z.object({
-    number: z.number(),
-    html_url: z.string(),
-    state: z.enum(['open', 'closed'])
-  })
-)
 
 export type BranchPullRequest = {
   number: number
@@ -28,82 +13,43 @@ export type BranchPullRequest = {
   isOpen: boolean
 }
 
-function refPath(branch: string) {
-  return branch.split('/').map(encodeURIComponent).join('/')
-}
-
-export function createPullRequestCloser(token: string) {
-  const { pacedFetch, [Symbol.dispose]: dispose } = createPacedFetch({
-    ...githubPacing(token),
-    subject: 'the ticket reset',
-    requestsPerMinute: REQUESTS_PER_MINUTE
-  })
-
-  const call = async (
-    path: string,
-    init: PacedRequest = {},
-    acceptedStatuses: readonly number[] = []
-  ) => {
-    const answer = await pacedFetch(`${GITHUB_REST_URL}${path}`, {
-      ...init,
-      headers: { accept: GITHUB_JSON_MEDIA_TYPE }
-    })
-
-    if (
-      answer.status >= FIRST_ERROR_STATUS &&
-      !acceptedStatuses.includes(answer.status)
-    ) {
-      throw new Error(
-        `GitHub answered ${answer.status} to ${init.method ?? 'GET'} ${path}.`
-      )
-    }
-
-    return answer
-  }
-
+export function createPullRequestCloser(octokit: GithubOctokit) {
   const pullRequestsOf = async ({
     repository,
     branch
   }: PullRequestHeadRef): Promise<BranchPullRequest[]> => {
-    const { owner, name } = splitRepository(repository)
-    const query = new URLSearchParams({
+    const { owner, repo } = splitRepository(repository)
+    const { data } = await octokit.request('GET /repos/{owner}/{repo}/pulls', {
+      owner,
+      repo,
       head: `${owner}:${branch}`,
       state: 'all'
     })
-    const { text } = await call(
-      `/repos/${owner}/${name}/pulls?${query.toString()}`
-    )
 
-    return pullRequestsSchema
-      .parse(JSON.parse(text))
-      .map(({ number, html_url, state }) => {
-        return { number, url: html_url, isOpen: state === 'open' }
-      })
+    return data.map(({ number, html_url, state }) => {
+      return { number, url: html_url, isOpen: state === 'open' }
+    })
   }
 
   const closePullRequest = async (repository: string, number: number) => {
-    const { owner, name } = splitRepository(repository)
-    await call(`/repos/${owner}/${name}/pulls/${number}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ state: 'closed' })
+    await octokit.request('PATCH /repos/{owner}/{repo}/pulls/{pull_number}', {
+      ...splitRepository(repository),
+      pull_number: number,
+      state: 'closed'
     })
   }
 
   const deleteBranch = async ({ repository, branch }: PullRequestHeadRef) => {
-    const { owner, name } = splitRepository(repository)
-    await call(
-      `/repos/${owner}/${name}/git/refs/heads/${refPath(branch)}`,
-      { method: 'DELETE' },
-      [MISSING_BRANCH_STATUS]
+    await undefinedOnStatus(
+      MISSING_BRANCH_STATUS,
+      octokit.request('DELETE /repos/{owner}/{repo}/git/refs/{ref}', {
+        ...splitRepository(repository),
+        ref: `heads/${branch}`
+      })
     )
   }
 
-  return {
-    pullRequestsOf,
-    closePullRequest,
-    deleteBranch,
-    [Symbol.dispose]: dispose
-  }
+  return { pullRequestsOf, closePullRequest, deleteBranch }
 }
 
 export type PullRequestCloser = ReturnType<typeof createPullRequestCloser>

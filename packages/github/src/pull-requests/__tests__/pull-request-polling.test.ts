@@ -1,6 +1,6 @@
-import { describe, expect, it, onTestFinished, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { WakeWorkerParams, WorkerFinish } from '@workcell/core'
-import { timersKeepingTheProcessAlive } from '@workcell/core/testing'
+import { testOctokit } from '#/api/__tests__/test-octokit.ts'
 import { createGithubApi } from '#/api/github-api.ts'
 import { createPullRequestWatcher } from '#/pull-requests/pull-request-watcher.ts'
 import {
@@ -9,7 +9,6 @@ import {
   WORKER,
   PULL_REQUEST_URL,
   githubFake,
-  PAST_THE_RATE_LIMIT,
   openPullRequest,
   status,
   checks,
@@ -21,20 +20,6 @@ import {
 
 describe('the pull request watch', () => {
   serveGithubPerTest()
-
-  it('leaves no timer behind once its GitHub API is disposed', async () => {
-    const timersBefore = timersKeepingTheProcessAlive()
-    const github = createGithubApi(GITHUB_TOKEN)
-
-    await github.readPullRequests([
-      { repository: REPOSITORY, branch: WORKER.branch, number: undefined }
-    ])
-    const timersAfterTheCall = timersKeepingTheProcessAlive()
-    github[Symbol.dispose]()
-
-    expect(timersAfterTheCall).toBeGreaterThan(timersBefore)
-    expect(timersKeepingTheProcessAlive()).toBeLessThanOrEqual(timersBefore)
-  })
 
   it('sends again after a host restart the same input ids, so the worker store drops the duplicates', async () => {
     githubFake.pullRequests = [
@@ -100,7 +85,7 @@ describe('the pull request watch', () => {
       .mockRejectedValueOnce(new Error('The store is down.'))
       .mockResolvedValue()
     const watcher = createPullRequestWatcher({
-      github: createGithubApi(GITHUB_TOKEN),
+      github: createGithubApi(testOctokit(GITHUB_TOKEN)),
       liveWorkers: () => {
         return [WORKER]
       },
@@ -125,39 +110,6 @@ describe('the pull request watch', () => {
       'github:acme/app#42:red-check:head-1:code/scan',
       'github:acme/app#42:red-check:head-1:code/scan'
     ])
-  })
-
-  it('waits for the end of the GitHub rate limit window, then reads again', async () => {
-    githubFake.pullRequests = [
-      {
-        repository: REPOSITORY,
-        branch: WORKER.branch,
-        pullRequest: openPullRequest(
-          checks('FAILURE', status('code/scan', 'FAILURE'))
-        )
-      }
-    ]
-    githubFake.rateLimitedAnswers = 1
-    vi.useFakeTimers({ toFake: ['Date', 'Temporal'] })
-    onTestFinished(() => {
-      vi.useRealTimers()
-    })
-    const { watcher, wakes } = openWatcher()
-
-    await expect(watcher.pollOnce()).rejects.toThrow(
-      'GitHub rate limits the pull request watch until'
-    )
-    await expect(watcher.pollOnce()).rejects.toThrow(
-      'GitHub rate limits the pull request watch until'
-    )
-
-    expect(githubFake.requests).toBe(1)
-
-    vi.setSystemTime(Temporal.Now.instant().add(PAST_THE_RATE_LIMIT))
-    await pollTwice(watcher)
-
-    expect(githubFake.requests - 1).toBe(2)
-    expect(wakes).toHaveLength(1)
   })
 })
 

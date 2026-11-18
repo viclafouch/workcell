@@ -20,6 +20,14 @@ export default defineConfig({
       UNUSED_VARS_LEVEL,
       { ...UNUSED_VARS_OPTIONS, ignoreUsingDeclarations: true }
     ],
+    'no-restricted-globals': [
+      'error',
+      {
+        name: 'fetch',
+        message:
+          'Call GitHub through GithubOctokit: it carries the auth, the retries and the rate limits.'
+      }
+    ],
     'import/extensions': [
       'error',
       'always',

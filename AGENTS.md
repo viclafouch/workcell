@@ -30,7 +30,7 @@ You work here as a **maintainer** of TanStack AI: its harness, its first-party p
 3. Read the installed source and the JSDoc of each API you call, starting from the first-party plugins of the harness. The docs show the latest release, the installed source is the truth for its version.
 4. Plan piece by piece. Each piece names the TanStack API that does it (a plugin, a hook, a service, an option), or the page that shows none does.
 
-Every other library, runtime and tool gets the same treatment: read its docs for the installed version before you change what it runs. Pacer covers rate limits, retries, queues and batches.
+Every other library, runtime and tool gets the same treatment: read its docs for the installed version before you change what it runs. Pacer covers rate limits, retries, queues and batches, unless the official SDK of the service ships them, as Octokit does for GitHub.
 
 A TanStack plugin keeps its default options. Five reasons allow another value: the sandbox boundary, a bounded run, a cost limit, a host restart, the worker task. A compaction keeps the worker task, the first user message of the session.
 

@@ -17,7 +17,7 @@ const network = setupServer(
         return HttpResponse.json({}, { status: NOT_FOUND_STATUS })
       }
 
-      return request.headers.get('authorization') === `Bearer ${GITHUB_TOKEN}`
+      return request.headers.get('authorization') === `token ${GITHUB_TOKEN}`
         ? HttpResponse.json({})
         : HttpResponse.json({}, { status: UNAUTHORIZED_STATUS })
     }

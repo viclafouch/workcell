@@ -23,6 +23,14 @@
     "test": "vitest run",
     "test:changed": "vitest run --changed"
   },
+  "dependencies": {
+    "@octokit/core": "catalog:",
+    "@octokit/plugin-paginate-graphql": "catalog:",
+    "@octokit/plugin-paginate-rest": "catalog:",
+    "@octokit/plugin-retry": "catalog:",
+    "@octokit/plugin-throttling": "catalog:",
+    "@octokit/request-error": "catalog:"
+  },
   "devDependencies": {
     "@tanstack/ai": "catalog:",
     "@tanstack/ai-harness": "catalog:",

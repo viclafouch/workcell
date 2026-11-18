@@ -1,19 +1,6 @@
-import { z } from 'zod'
-import { createPacedFetch } from '@workcell/core'
 import { REVIEW_THREADS_TEXT } from '#/prompts/github.ts'
-import {
-  GITHUB_GRAPHQL_URL,
-  GITHUB_JSON_MEDIA_TYPE,
-  GITHUB_REST_URL,
-  githubPacing,
-  graphqlDataOf,
-  splitRepository,
-  type PullRequestHeadRef
-} from './github-api.ts'
-
-const REQUESTS_PER_MINUTE = 20
-
-const CREATED_STATUS = 201
+import type { PullRequestHeadRef } from './github-api.ts'
+import { splitRepository, type GithubOctokit } from './github-octokit.ts'
 
 const REVIEW_THREAD_TARGET_QUERY = `query ReviewThreadTarget($owner: String!, $name: String!, $branch: String!, $threadId: ID!) {
   repository(owner: $owner, name: $name) {
@@ -34,87 +21,25 @@ const RESOLVE_MUTATION = `mutation ResolveReviewThread($threadId: ID!) {
   resolveReviewThread(input: { threadId: $threadId }) { thread { isResolved } }
 }`
 
-const reviewThreadNodeSchema = z.object({
-  isResolved: z.boolean(),
-  pullRequest: z.object({ id: z.string() }),
-  comments: z.object({
-    nodes: z.array(z.object({ fullDatabaseId: z.string() }))
-  })
-})
-
-const reviewThreadTargetSchema = z.object({
-  repository: z
-    .object({
-      pullRequests: z.object({
-        nodes: z.array(z.object({ id: z.string(), number: z.number() }))
-      })
-    })
-    .nullable(),
-  node: reviewThreadNodeSchema.nullable().or(
-    z.object({}).transform(() => {
-      return null
-    })
-  )
-})
-
-const resolvedThreadSchema = z.object({
-  resolveReviewThread: z.object({
-    thread: z.object({ isResolved: z.literal(true) })
-  })
-})
-
-const replySchema = z.object({ html_url: z.string() })
+type ReviewThreadTargetData = {
+  repository: {
+    pullRequests: { nodes: { id: string; number: number }[] }
+  } | null
+  node: Partial<{
+    isResolved: boolean
+    pullRequest: { id: string }
+    comments: { nodes: { fullDatabaseId: string }[] }
+  }> | null
+}
 
 export type ReviewThreadRef = PullRequestHeadRef & { threadId: string }
 
-type GithubPostParams = { url: string; body: unknown }
-
-type GraphqlPost = {
-  query: string
-  variables: Record<string, unknown>
-  subject: string
-}
-
-export function createReviewThreadWriter(token: string) {
-  const { pacedFetch, [Symbol.dispose]: dispose } = createPacedFetch({
-    ...githubPacing(token),
-    subject: 'the review thread tools',
-    requestsPerMinute: REQUESTS_PER_MINUTE,
-    maxAttempts: 1
-  })
-
-  const post = async ({ url, body }: GithubPostParams) => {
-    return pacedFetch(url, {
-      method: 'POST',
-      headers: {
-        accept: GITHUB_JSON_MEDIA_TYPE,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    })
-  }
-
-  const postGraphql = async <Schema extends z.ZodType>(
-    { query, variables, subject }: GraphqlPost,
-    dataSchema: Schema
-  ): Promise<z.infer<Schema>> => {
-    const answer = await post({
-      url: GITHUB_GRAPHQL_URL,
-      body: { query, variables }
-    })
-
-    return graphqlDataOf({ ...answer, subject }, dataSchema)
-  }
-
+export function createReviewThreadWriter(octokit: GithubOctokit) {
   const readTarget = async ({ threadId, ...head }: ReviewThreadRef) => {
-    const { owner, name } = splitRepository(head.repository)
-    const { repository, node } = await postGraphql(
-      {
-        query: REVIEW_THREAD_TARGET_QUERY,
-        variables: { owner, name, branch: head.branch, threadId },
-        subject: `the read of the review thread ${threadId}`
-      },
-      reviewThreadTargetSchema
+    const { owner, repo } = splitRepository(head.repository)
+    const { repository, node } = await octokit.graphql<ReviewThreadTargetData>(
+      REVIEW_THREAD_TARGET_QUERY,
+      { owner, name: repo, branch: head.branch, threadId }
     )
     const [pullRequest] = repository?.pullRequests.nodes ?? []
 
@@ -122,8 +47,8 @@ export function createReviewThreadWriter(token: string) {
       return { refusal: REVIEW_THREADS_TEXT.noPullRequest(head) }
     }
 
-    const thread = node?.pullRequest.id === pullRequest.id ? node : undefined
-    const [opening] = thread?.comments.nodes ?? []
+    const thread = node?.pullRequest?.id === pullRequest.id ? node : undefined
+    const [opening] = thread?.comments?.nodes ?? []
 
     return thread === undefined || opening === undefined
       ? {
@@ -133,9 +58,11 @@ export function createReviewThreadWriter(token: string) {
           )
         }
       : {
+          owner,
+          repo,
           pullRequestNumber: pullRequest.number,
-          commentId: opening.fullDatabaseId,
-          isResolved: thread.isResolved
+          commentId: Number(opening.fullDatabaseId),
+          isResolved: thread.isResolved === true
         }
   }
 
@@ -149,20 +76,19 @@ export function createReviewThreadWriter(token: string) {
       return target.refusal
     }
 
-    const { status, text } = await post({
-      url: `${GITHUB_REST_URL}/repos/${ref.repository}/pulls/${target.pullRequestNumber}/comments/${target.commentId}/replies`,
-      body: { body }
-    })
-
-    if (status !== CREATED_STATUS) {
-      throw new Error(
-        `GitHub answered ${status} to the reply on ${ref.threadId}: ${text}`
-      )
-    }
-
-    return REVIEW_THREADS_TEXT.replied(
-      replySchema.parse(JSON.parse(text)).html_url
+    const { data } = await octokit.request(
+      'POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies',
+      {
+        owner: target.owner,
+        repo: target.repo,
+        pull_number: target.pullRequestNumber,
+        comment_id: target.commentId,
+        body,
+        request: { retries: 0 }
+      }
     )
+
+    return REVIEW_THREADS_TEXT.replied(data.html_url)
   }
 
   const resolve = async (ref: ReviewThreadRef) => {
@@ -176,23 +102,12 @@ export function createReviewThreadWriter(token: string) {
       return REVIEW_THREADS_TEXT.alreadyResolved(ref.threadId)
     }
 
-    await postGraphql(
-      {
-        query: RESOLVE_MUTATION,
-        variables: { threadId: ref.threadId },
-        subject: `the resolve of the review thread ${ref.threadId}`
-      },
-      resolvedThreadSchema
-    )
+    await octokit.graphql(RESOLVE_MUTATION, { threadId: ref.threadId })
 
     return REVIEW_THREADS_TEXT.resolved(ref.threadId)
   }
 
-  return {
-    reply,
-    resolve,
-    [Symbol.dispose]: dispose
-  }
+  return { reply, resolve }
 }
 
 export type ReviewThreadWriter = ReturnType<typeof createReviewThreadWriter>

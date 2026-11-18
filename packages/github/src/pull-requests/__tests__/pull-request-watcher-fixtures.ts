@@ -8,10 +8,9 @@ import type {
   WakeWorkerParams,
   WorkerFinish
 } from '@workcell/core'
+import { testOctokit } from '#/api/__tests__/test-octokit.ts'
 import {
   createGithubApi,
-  GITHUB_GRAPHQL_URL,
-  GITHUB_REST_URL,
   type StatusContext,
   type WatchedPullRequest
 } from '#/api/github-api.ts'
@@ -22,6 +21,8 @@ import {
 } from '#/pull-requests/pull-request-watcher.ts'
 
 export const GITHUB_TOKEN = 'github_pat_watch_test_token'
+
+const GITHUB_API = 'https://api.github.com'
 
 export const VIEWER = 'host-developer'
 
@@ -73,7 +74,6 @@ type GithubFake = {
   requests: number
   actionsReads: string[]
   actionsRefused: boolean
-  rateLimitedAnswers: number
 }
 
 export const githubFake: GithubFake = {
@@ -81,15 +81,8 @@ export const githubFake: GithubFake = {
   workflowRuns: [],
   requests: 0,
   actionsReads: [],
-  actionsRefused: false,
-  rateLimitedAnswers: 0
+  actionsRefused: false
 }
-
-const RATE_LIMIT_WINDOW = Temporal.Duration.from({ minutes: 10 })
-
-export const PAST_THE_RATE_LIMIT = RATE_LIMIT_WINDOW.add({ seconds: 1 })
-
-const MS_PER_SECOND = 1000
 
 const variablesSchema = z.record(z.string(), z.union([z.string(), z.number()]))
 
@@ -189,7 +182,7 @@ function actionsRead(request: Request) {
   const { pathname, search } = new URL(request.url)
   githubFake.actionsReads.push(`${pathname}${search}`)
 
-  return request.headers.get('authorization') === `Bearer ${GITHUB_TOKEN}` &&
+  return request.headers.get('authorization') === `token ${GITHUB_TOKEN}` &&
     !githubFake.actionsRefused
     ? undefined
     : HttpResponse.json(
@@ -229,7 +222,7 @@ function selectionOf(
 }
 
 const network = setupServer(
-  http.get(`${GITHUB_REST_URL}/repos/acme/app/actions/runs`, ({ request }) => {
+  http.get(`${GITHUB_API}/repos/acme/app/actions/runs`, ({ request }) => {
     const headSha = new URL(request.url).searchParams.get('head_sha')
 
     return (
@@ -246,7 +239,7 @@ const network = setupServer(
     )
   }),
   http.get(
-    `${GITHUB_REST_URL}/repos/acme/app/actions/runs/:runId/jobs`,
+    `${GITHUB_API}/repos/acme/app/actions/runs/:runId/jobs`,
     ({ request, params }) => {
       const run = githubFake.workflowRuns.find(({ id }) => {
         return String(id) === params.runId
@@ -257,30 +250,11 @@ const network = setupServer(
       )
     }
   ),
-  http.post(GITHUB_GRAPHQL_URL, async ({ request }) => {
+  http.post(`${GITHUB_API}/graphql`, async ({ request }) => {
     githubFake.requests += 1
 
-    if (request.headers.get('authorization') !== `Bearer ${GITHUB_TOKEN}`) {
+    if (request.headers.get('authorization') !== `token ${GITHUB_TOKEN}`) {
       return HttpResponse.json({ message: 'Bad credentials' }, { status: 401 })
-    }
-
-    if (githubFake.rateLimitedAnswers > 0) {
-      githubFake.rateLimitedAnswers -= 1
-
-      const resetAt = Temporal.Now.instant().add(RATE_LIMIT_WINDOW)
-
-      return HttpResponse.json(
-        { message: 'API rate limit exceeded' },
-        {
-          status: 403,
-          headers: {
-            'x-ratelimit-remaining': '0',
-            'x-ratelimit-reset': String(
-              Math.ceil(resetAt.epochMilliseconds / MS_PER_SECOND)
-            )
-          }
-        }
-      )
     }
 
     const { variables } = z
@@ -327,7 +301,7 @@ export function openWatcher({
     lines.push(`${message} ${JSON.stringify(details)}${reason}`)
   }
   const watcher = createPullRequestWatcher({
-    github: createGithubApi(GITHUB_TOKEN),
+    github: createGithubApi(testOctokit(GITHUB_TOKEN)),
     liveWorkers: () => {
       return workers
     },
@@ -379,7 +353,6 @@ export function serveGithubPerTest() {
     githubFake.actionsReads = []
     githubFake.actionsRefused = false
     githubFake.requests = 0
-    githubFake.rateLimitedAnswers = 0
   })
 
   afterAll(() => {

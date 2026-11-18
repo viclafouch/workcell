@@ -360,10 +360,10 @@ describe('the red checks of a pull request', () => {
       `pull request recorded {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"}`,
       `pull request event sent {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}","kind":"red-check","inputId":"github:acme/app#42:red-check:head-1:code/scan,license/scan,lint,e2e","action":"wake"}`
     ])
-    expect(githubFake.actionsReads).toStrictEqual([
-      '/repos/acme/app/actions/runs?head_sha=head-1&exclude_pull_requests=true&per_page=100',
+    expect(githubFake.actionsReads.toSorted()).toStrictEqual([
+      '/repos/acme/app/actions/runs/1/jobs?filter=latest&per_page=100',
       '/repos/acme/app/actions/runs/4/jobs?filter=latest&per_page=100',
-      '/repos/acme/app/actions/runs/1/jobs?filter=latest&per_page=100'
+      '/repos/acme/app/actions/runs?head_sha=head-1&exclude_pull_requests=true&per_page=100'
     ])
     expect(requestsOfTwoPolls).toBe(2)
     expect(githubFake.requests).toBe(requestsOfTwoPolls + 1)
@@ -477,7 +477,7 @@ describe('the red checks of a pull request', () => {
       `The pull request watcher sends this, not a person. The checks of the pull request ${PULL_REQUEST_URL} failed on head-1. The status "code/scan" failed: https://checks.example.com/code/scan. Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
     ])
     expect(lines[1]).toBe(
-      `failed jobs not read: the next poll reads them again {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"} GitHub answered 403 to /repos/acme/app/actions/runs?head_sha=head-1&exclude_pull_requests=true&per_page=100.`
+      `failed jobs not read: the next poll reads them again {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"} Resource not accessible by personal access token`
     )
     expect(actionsReadsOfTwoPolls).toHaveLength(1)
     expect(githubFake.actionsReads).toHaveLength(2)

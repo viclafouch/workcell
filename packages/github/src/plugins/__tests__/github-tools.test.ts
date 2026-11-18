@@ -11,14 +11,17 @@ import {
   runWorkerToolCall,
   SILENT_HOST_LOGGER,
   TEST_STARTER,
-  timersKeepingTheProcessAlive,
   type ToolCall
 } from '@workcell/core/testing'
-import { GITHUB_GRAPHQL_URL, GITHUB_REST_URL } from '#/api/github-api.ts'
+import { testOctokit } from '#/api/__tests__/test-octokit.ts'
 import { createGithubReader } from '#/api/github-reader.ts'
 import { GITHUB_TOOL_NAMES, githubTools } from '#/plugins/github-tools.ts'
 
 const GITHUB_TOKEN = 'github_pat_reader_test_token'
+
+const GITHUB_API = 'https://api.github.com'
+
+const PULL_REQUEST_FILES_URL = `${GITHUB_API}/repos/acme/app/pulls/42/files`
 
 const REPOSITORIES = ['acme/app', 'acme/api']
 
@@ -64,8 +67,6 @@ type GraphqlBody = z.infer<typeof graphqlBodySchema>
 let githubRequests: GithubRequest[]
 
 let graphqlBodies: GraphqlBody[]
-
-let rateLimited: boolean
 
 let restartFileReads: number
 
@@ -145,26 +146,15 @@ const FILE_HISTORY = {
 }
 
 function isAuthorized(request: Request) {
-  return request.headers.get('authorization') === `Bearer ${GITHUB_TOKEN}`
-}
-
-function rateLimitAnswer() {
-  return new HttpResponse(null, {
-    status: 403,
-    headers: { 'x-ratelimit-remaining': '0', 'retry-after': '600' }
-  })
+  return request.headers.get('authorization') === `token ${GITHUB_TOKEN}`
 }
 
 const network = setupServer(
   http.get(
-    `${GITHUB_REST_URL}/repos/acme/app/pulls/:number`,
+    `${GITHUB_API}/repos/acme/app/pulls/:number`,
     ({ request, params }) => {
       if (!isAuthorized(request)) {
         return new HttpResponse(null, { status: 401 })
-      }
-
-      if (rateLimited) {
-        return rateLimitAnswer()
       }
 
       return params.number === '42'
@@ -172,19 +162,24 @@ const network = setupServer(
         : HttpResponse.json({ message: 'Not Found' }, { status: 404 })
     }
   ),
-  http.get(
-    `${GITHUB_REST_URL}/repos/acme/app/pulls/42/files`,
-    ({ request }) => {
-      const page = Number(new URL(request.url).searchParams.get('page'))
+  http.get(PULL_REQUEST_FILES_URL, ({ request }) => {
+    const page = Number(new URL(request.url).searchParams.get('page') ?? 1)
+    const isLastPage = page === PULL_REQUEST_FILES.length
 
-      return HttpResponse.json(PULL_REQUEST_FILES[page - 1] ?? [])
-    }
-  ),
+    return HttpResponse.json(PULL_REQUEST_FILES[page - 1] ?? [], {
+      headers: isLastPage
+        ? {}
+        : {
+            link: `<${PULL_REQUEST_FILES_URL}?per_page=100&page=${page + 1}>; rel="next"`
+          }
+    })
+  }),
   http.get(
-    `${GITHUB_REST_URL}/repos/acme/api/contents/*`,
+    `${GITHUB_API}/repos/acme/api/contents/*`,
     async ({ request }) => {
-      const { pathname, searchParams } = new URL(request.url)
-      const ref = searchParams.get('ref')
+      const url = new URL(request.url)
+      const pathname = decodeURIComponent(url.pathname)
+      const ref = url.searchParams.get('ref')
 
       if (pathname.endsWith('/apps/web/src/restart.ts') && ref === 'main') {
         restartFileReads += 1
@@ -204,7 +199,7 @@ const network = setupServer(
         : HttpResponse.json({ message: 'Not Found' }, { status: 404 })
     }
   ),
-  http.post(GITHUB_GRAPHQL_URL, async ({ request }) => {
+  http.post(`${GITHUB_API}/graphql`, async ({ request }) => {
     graphqlBodies.push(graphqlBodySchema.parse(await request.json()))
 
     return HttpResponse.json(FILE_HISTORY)
@@ -214,7 +209,7 @@ const network = setupServer(
 function readerPlugins() {
   return [
     githubTools({
-      reader: createGithubReader(GITHUB_TOKEN),
+      reader: createGithubReader(testOctokit(GITHUB_TOKEN)),
       repositories: REPOSITORIES
     })
   ]
@@ -281,7 +276,6 @@ describe('the GitHub read tools', () => {
   beforeEach(() => {
     githubRequests = []
     graphqlBodies = []
-    rateLimited = false
     restartFileReads = 0
     restartReadStarted = Promise.withResolvers()
     restartReadAnswer = Promise.resolve(null)
@@ -326,7 +320,7 @@ describe('the GitHub read tools', () => {
       githubRequests.map(({ url }) => {
         return url.searchParams.get('page')
       })
-    ).toStrictEqual(['1', '2'])
+    ).toStrictEqual([null, '2'])
   })
 
   it('reads a file on a branch other than the default branch', async () => {
@@ -344,7 +338,7 @@ describe('the GitHub read tools', () => {
       githubRequests.map(({ accept }) => {
         return accept
       })
-    ).toStrictEqual(['application/vnd.github.raw+json'])
+    ).toStrictEqual(['application/vnd.github.v3.raw'])
   })
 
   it('reads a long file a page at a time, and every line reaches the model', async () => {
@@ -461,10 +455,10 @@ describe('the GitHub read tools', () => {
         return `${method} ${url.origin}${url.pathname}`
       })
     ).toStrictEqual([
-      `GET ${GITHUB_REST_URL}/repos/acme/app/pulls/42`,
-      `GET ${GITHUB_REST_URL}/repos/acme/app/pulls/42/files`,
-      `GET ${GITHUB_REST_URL}/repos/acme/api/contents/apps/web/package.json`,
-      `POST ${GITHUB_GRAPHQL_URL}`
+      `GET ${GITHUB_API}/repos/acme/app/pulls/42`,
+      `GET ${PULL_REQUEST_FILES_URL}`,
+      `GET ${GITHUB_API}/repos/acme/api/contents/apps%2Fweb%2Fpackage.json`,
+      `POST ${GITHUB_API}/graphql`
     ])
     expect(
       graphqlBodies.map(({ query }) => {
@@ -509,37 +503,5 @@ describe('the GitHub read tools', () => {
       'is not a file path of acme/api: each part of the path names a folder or the file.'
     )
     expect(githubRequests).toStrictEqual([])
-  })
-
-  it('says when GitHub rate limits it, and calls GitHub no more until the limit ends', async () => {
-    rateLimited = true
-    const plugins = readerPlugins()
-    const toolCall = {
-      name: 'github_read_pull_request',
-      input: { repository: REPOSITORY, number: 42 }
-    }
-
-    const first = await runGithubTool(toolCall, plugins)
-    const second = await runGithubTool(toolCall, plugins)
-
-    expect(first.result).toContain('GitHub rate limits the GitHub reads until')
-    expect(second.result).toContain('GitHub rate limits the GitHub reads until')
-    expect(githubRequests).toHaveLength(1)
-  })
-
-  it('leaves no timer behind once its reader is disposed', async () => {
-    const timersBefore = timersKeepingTheProcessAlive()
-    const reader = createGithubReader(GITHUB_TOKEN)
-
-    await reader.readFile({
-      repository: 'acme/api',
-      path: 'apps/web/package.json',
-      ref: 'feature/login'
-    })
-    const timersAfterTheCall = timersKeepingTheProcessAlive()
-    reader[Symbol.dispose]()
-
-    expect(timersAfterTheCall).toBeGreaterThan(timersBefore)
-    expect(timersKeepingTheProcessAlive()).toBeLessThanOrEqual(timersBefore)
   })
 })

@@ -1,23 +1,4 @@
-import { z } from 'zod'
-import { createPacedFetch, type RateLimitCheck } from '@workcell/core'
-
-export const GITHUB_GRAPHQL_URL = 'https://api.github.com/graphql'
-
-export const GITHUB_REST_URL = 'https://api.github.com'
-
-const REQUESTS_PER_MINUTE = 20
-
-export const GITHUB_JSON_MEDIA_TYPE = 'application/vnd.github+json'
-
-const OPERATION_NAME = 'WatchedPullRequests'
-
-const OK_STATUS = 200
-
-const FORBIDDEN_STATUS = 403
-
-const TOO_MANY_REQUESTS_STATUS = 429
-
-const MS_PER_SECOND = 1000
+import { splitRepository, type GithubOctokit } from './github-octokit.ts'
 
 const ACTIONS_PAGE_SIZE = 100
 
@@ -29,135 +10,64 @@ const RUN_CONCLUSIONS_WITHOUT_FAILURE = new Set([
 
 const FAILED_JOB_CONCLUSIONS = new Set(['failure', 'timed_out'])
 
-const authorSchema = z
-  .object({ __typename: z.string(), login: z.string() })
-  .nullable()
+export type Author = { __typename: string; login: string } | null
 
-const statusContextSchema = z.object({
-  id: z.string(),
-  context: z.string(),
-  state: z.string(),
-  description: z.string().nullable(),
-  targetUrl: z.string().nullable()
-})
+export type StatusContext = {
+  id: string
+  context: string
+  state: string
+  description: string | null
+  targetUrl: string | null
+}
 
-const checkRunCountSchema = z.object({ state: z.string(), count: z.number() })
+type Comment = { id: string; url: string; author: Author }
 
-const commentSchema = z.object({
-  id: z.string(),
-  url: z.string(),
-  author: authorSchema
-})
+type TimelineItem =
+  | { __typename: 'AddedToMergeQueueEvent'; id: string }
+  | {
+      __typename: 'RemovedFromMergeQueueEvent'
+      id: string
+      reason: string | null
+    }
 
-const timelineItemSchema = z.discriminatedUnion('__typename', [
-  z.object({ __typename: z.literal('AddedToMergeQueueEvent'), id: z.string() }),
-  z.object({
-    __typename: z.literal('RemovedFromMergeQueueEvent'),
-    id: z.string(),
-    reason: z.string().nullable()
-  })
-])
+export type WatchedPullRequest = {
+  number: number
+  url: string
+  merged: boolean
+  mergeable: string
+  headRefOid: string
+  mergeCommit: { oid: string } | null
+  statusCheckRollup: {
+    state: string
+    contexts: {
+      checkRunCountsByState: { state: string; count: number }[] | null
+    }
+  } | null
+  commits: {
+    nodes: { commit: { status: { contexts: StatusContext[] } | null } }[]
+  }
+  reviewThreads: {
+    nodes: { isResolved: boolean; comments: { nodes: Comment[] } }[]
+  }
+  comments: { nodes: Comment[] }
+  reviews: { nodes: (Comment & { state: string; body: string })[] }
+  timelineItems: { nodes: TimelineItem[] }
+}
 
-const watchedPullRequestSchema = z.object({
-  number: z.number(),
-  url: z.string(),
-  merged: z.boolean(),
-  mergeable: z.string(),
-  headRefOid: z.string(),
-  mergeCommit: z.object({ oid: z.string() }).nullable(),
-  statusCheckRollup: z
-    .object({
-      state: z.string(),
-      contexts: z.object({
-        checkRunCountsByState: z.array(checkRunCountSchema).nullable()
-      })
-    })
-    .nullable(),
-  commits: z.object({
-    nodes: z.array(
-      z.object({
-        commit: z.object({
-          status: z
-            .object({ contexts: z.array(statusContextSchema) })
-            .nullable()
-        })
-      })
-    )
-  }),
-  reviewThreads: z.object({
-    nodes: z.array(
-      z.object({
-        isResolved: z.boolean(),
-        comments: z.object({ nodes: z.array(commentSchema) })
-      })
-    )
-  }),
-  comments: z.object({ nodes: z.array(commentSchema) }),
-  reviews: z.object({
-    nodes: z.array(
-      commentSchema.extend({ state: z.string(), body: z.string() })
-    )
-  }),
-  timelineItems: z.object({ nodes: z.array(timelineItemSchema) })
-})
+type PullRequestSelection =
+  | { pullRequests: { nodes: { number: number; url: string }[] } }
+  | { pullRequest: WatchedPullRequest | null }
 
-const workflowRunsSchema = z.object({
-  workflow_runs: z.array(
-    z.object({
-      id: z.number(),
-      workflow_id: z.number(),
-      event: z.string(),
-      conclusion: z.string().nullable()
-    })
-  )
-})
-
-const jobsSchema = z.object({
-  jobs: z.array(
-    z.object({
-      name: z.string(),
-      conclusion: z.string().nullable(),
-      html_url: z.string()
-    })
-  )
-})
-
-const foundPullRequestSchema = z.object({
-  pullRequests: z.object({
-    nodes: z.array(z.object({ number: z.number(), url: z.string() }))
-  })
-})
-
-const readPullRequestSchema = z.object({
-  pullRequest: watchedPullRequestSchema.nullable()
-})
-
-const viewerSchema = z.object({ viewer: z.object({ login: z.string() }) })
-
-const graphqlResultSchema = z.object({
-  data: z.unknown(),
-  errors: z
-    .array(z.object({ message: z.string(), type: z.string().optional() }))
-    .optional()
-})
-
-const graphqlErrorsSchema = z.looseObject({
-  errors: z.array(z.looseObject({ type: z.string().optional() })).optional()
-})
-
-export type WatchedPullRequest = z.infer<typeof watchedPullRequestSchema>
-
-export type StatusContext = z.infer<typeof statusContextSchema>
-
-export type Author = z.infer<typeof authorSchema>
+type WatchData = { viewer: { login: string } } & Record<
+  `pr${number}`,
+  PullRequestSelection
+>
 
 export type PullRequestHeadRef = { repository: string; branch: string }
 
 type ReadFailedJobsParams = { repository: string; headSha: string }
 
 export type FailedJob = { name: string; url: string }
-
-type GraphqlAnswer = { status: number; text: string; subject: string }
 
 export type PullRequestHead = {
   repository: string
@@ -193,25 +103,15 @@ const WATCHED_PULL_REQUEST_FIELDS = `number url merged mergeable headRefOid
         }
       }`
 
-export function splitRepository(repository: string) {
-  const [owner, name] = repository.split('/')
-
-  if (owner === undefined || name === undefined) {
-    throw new Error(`The repository ${repository} is not owner/name.`)
-  }
-
-  return { owner, name }
-}
-
 function watchQuery(heads: readonly PullRequestHead[]) {
   const declarations: string[] = []
   const selections: string[] = []
   const variables: Record<string, unknown> = {}
 
   for (const [index, { repository, branch, number }] of heads.entries()) {
-    const { owner, name } = splitRepository(repository)
+    const { owner, repo } = splitRepository(repository)
     variables[`owner${index}`] = owner
-    variables[`name${index}`] = name
+    variables[`name${index}`] = repo
     declarations.push(`$owner${index}: String!`, `$name${index}: String!`)
 
     if (number === undefined) {
@@ -230,7 +130,7 @@ function watchQuery(heads: readonly PullRequestHead[]) {
   }
 
   return {
-    query: `query ${OPERATION_NAME}(${declarations.join(', ')}) {
+    query: `query WatchedPullRequests(${declarations.join(', ')}) {
   viewer { login }
   ${selections.join('\n  ')}
 }`,
@@ -238,151 +138,59 @@ function watchQuery(heads: readonly PullRequestHead[]) {
   }
 }
 
-function readOf(head: PullRequestHead, selection: unknown): PullRequestRead {
-  if (head.number === undefined) {
-    const [found] = foundPullRequestSchema.parse(selection).pullRequests.nodes
+function readOf(
+  selection: PullRequestSelection | undefined
+): PullRequestRead {
+  if (selection !== undefined && 'pullRequests' in selection) {
+    const [found] = selection.pullRequests.nodes
 
     return found === undefined
       ? { found: false }
       : { found: true, ...found, pullRequest: undefined }
   }
 
-  const { pullRequest } = readPullRequestSchema.parse(selection)
+  const pullRequest = selection?.pullRequest ?? null
 
   return pullRequest === null
     ? { found: false }
     : {
         found: true,
-        number: head.number,
+        number: pullRequest.number,
         url: pullRequest.url,
         pullRequest
       }
 }
 
-const watchDataSchema = z.record(z.string(), z.unknown())
-
-function isGraphqlRateLimited(text: string) {
-  const { errors = [] } = graphqlErrorsSchema.parse(JSON.parse(text))
-
-  return errors.some(({ type }) => {
-    return type === 'RATE_LIMITED'
-  })
-}
-
-export function graphqlDataOf<Schema extends z.ZodType>(
-  { status, text, subject }: GraphqlAnswer,
-  dataSchema: Schema
-): z.infer<Schema> {
-  const { data, errors = [] } = graphqlResultSchema.parse(JSON.parse(text))
-
-  if (status !== OK_STATUS || errors.length > 0) {
-    const reasons = errors.map(({ message }) => {
-      return message
-    })
-
-    throw new Error(
-      `GitHub refused ${subject} with ${status}: ${reasons.join(' ')}`
-    )
-  }
-
-  return dataSchema.parse(data)
-}
-
-function isRateLimitedResponse(response: Response) {
-  return (
-    response.status === TOO_MANY_REQUESTS_STATUS ||
-    (response.status === FORBIDDEN_STATUS &&
-      (response.headers.get('x-ratelimit-remaining') === '0' ||
-        response.headers.has('retry-after')))
-  )
-}
-
-function isGithubRateLimited({ url, response, text }: RateLimitCheck) {
-  return (
-    isRateLimitedResponse(response) ||
-    (url === GITHUB_GRAPHQL_URL && isGraphqlRateLimited(text))
-  )
-}
-
-function githubRateLimitResetAt(headers: Headers) {
-  const resetSeconds = Number(headers.get('x-ratelimit-reset') ?? Number.NaN)
-
-  return Number.isFinite(resetSeconds)
-    ? resetSeconds * MS_PER_SECOND
-    : undefined
-}
-
-export function githubPacing(token: string) {
-  return {
-    apiName: 'GitHub',
-    headers: { authorization: `Bearer ${token}` },
-    isRateLimited: isGithubRateLimited,
-    rateLimitResetAt: githubRateLimitResetAt
-  }
-}
-
-export function createGithubApi(token: string) {
-  const { pacedFetch, [Symbol.dispose]: dispose } = createPacedFetch({
-    ...githubPacing(token),
-    subject: 'the pull request watch',
-    requestsPerMinute: REQUESTS_PER_MINUTE
-  })
-
+export function createGithubApi(octokit: GithubOctokit) {
   const readPullRequests = async (heads: readonly PullRequestHead[]) => {
-    const answer = await pacedFetch(GITHUB_GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        operationName: OPERATION_NAME,
-        ...watchQuery(heads)
-      })
-    })
-    const data = graphqlDataOf(
-      { ...answer, subject: OPERATION_NAME },
-      watchDataSchema
-    )
-    const { viewer } = viewerSchema.parse(data)
+    const { query, variables } = watchQuery(heads)
+    const data = await octokit.graphql<WatchData>(query, variables)
 
     return {
-      viewerLogin: viewer.login,
-      reads: heads.map((head, index) => {
-        return readOf(head, data[`pr${index}`])
+      viewerLogin: data.viewer.login,
+      reads: heads.map((_, index) => {
+        return readOf(data[`pr${index}`])
       })
     }
-  }
-
-  const readActions = async <Schema extends z.ZodType>(
-    path: string,
-    schema: Schema
-  ): Promise<z.infer<Schema>> => {
-    const { status, text } = await pacedFetch(`${GITHUB_REST_URL}${path}`, {
-      headers: { accept: GITHUB_JSON_MEDIA_TYPE }
-    })
-
-    if (status !== OK_STATUS) {
-      throw new Error(`GitHub answered ${status} to ${path}.`)
-    }
-
-    return schema.parse(JSON.parse(text))
   }
 
   const readFailedJobs = async ({
     repository,
     headSha
   }: ReadFailedJobsParams): Promise<FailedJob[]> => {
-    const { owner, name } = splitRepository(repository)
-    const actionsPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions`
-    const runsQuery = new URLSearchParams({
-      head_sha: headSha,
-      exclude_pull_requests: 'true',
-      per_page: String(ACTIONS_PAGE_SIZE)
-    })
-    const { workflow_runs: runs } = await readActions(
-      `${actionsPath}/runs?${runsQuery.toString()}`,
-      workflowRunsSchema
+    const { owner, repo } = splitRepository(repository)
+    const { data } = await octokit.request(
+      'GET /repos/{owner}/{repo}/actions/runs',
+      {
+        owner,
+        repo,
+        head_sha: headSha,
+        exclude_pull_requests: true,
+        per_page: ACTIONS_PAGE_SIZE
+      }
     )
-    const newestFirst = runs.toSorted((first, second) => {
-      return second.id - first.id
+    const newestFirst = data.workflow_runs.toSorted((first, second) => {
+      return Number(second.id) - Number(first.id)
     })
     const latestRuns = newestFirst.filter((run, index) => {
       return (
@@ -396,16 +204,18 @@ export function createGithubApi(token: string) {
     })
     const jobsOfRuns = await Promise.all(
       runsToRead.map(async ({ id }) => {
-        const jobsQuery = new URLSearchParams({
-          filter: 'latest',
-          per_page: String(ACTIONS_PAGE_SIZE)
-        })
-        const { jobs } = await readActions(
-          `${actionsPath}/runs/${id}/jobs?${jobsQuery.toString()}`,
-          jobsSchema
+        const { data: jobsOfRun } = await octokit.request(
+          'GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs',
+          {
+            owner,
+            repo,
+            run_id: Number(id),
+            filter: 'latest',
+            per_page: ACTIONS_PAGE_SIZE
+          }
         )
 
-        return jobs
+        return jobsOfRun.jobs
       })
     )
 
@@ -414,16 +224,12 @@ export function createGithubApi(token: string) {
       .filter(({ conclusion }) => {
         return FAILED_JOB_CONCLUSIONS.has(conclusion ?? '')
       })
-      .map(({ name: jobName, html_url }) => {
-        return { name: jobName, url: html_url }
+      .flatMap(({ name: jobName, html_url }) => {
+        return html_url === null ? [] : [{ name: jobName, url: html_url }]
       })
   }
 
-  return {
-    readPullRequests,
-    readFailedJobs,
-    [Symbol.dispose]: dispose
-  }
+  return { readPullRequests, readFailedJobs }
 }
 
 export type GithubApi = ReturnType<typeof createGithubApi>

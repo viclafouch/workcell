@@ -15,7 +15,7 @@ import {
   TEST_STARTER,
   type ToolCall
 } from '@workcell/core/testing'
-import { GITHUB_GRAPHQL_URL, GITHUB_REST_URL } from '#/api/github-api.ts'
+import { testOctokit } from '#/api/__tests__/test-octokit.ts'
 import { createGithubReader } from '#/api/github-reader.ts'
 import { createReviewThreadWriter } from '#/api/review-thread-writer.ts'
 import { reviewThreadTools } from '#/plugins/review-threads.ts'
@@ -27,6 +27,10 @@ import {
 import { pullRequestEvents } from '#/pull-requests/pull-request-events.ts'
 
 const GITHUB_TOKEN = 'github_pat_review_threads_test_token'
+
+const GITHUB_API = 'https://api.github.com'
+
+const GITHUB_GRAPHQL_URL = `${GITHUB_API}/graphql`
 
 const REPOSITORY = 'acme/app'
 
@@ -128,7 +132,6 @@ function reviewThreadsPage(cursor: unknown) {
   const isFirstPage = cursor === null
 
   return {
-    url: PULL_REQUEST_URL,
     reviewThreads: {
       totalCount: 2,
       pageInfo: {
@@ -185,16 +188,12 @@ function graphqlData(body: GraphqlBody) {
   }
 
   return {
-    repository: {
-      pullRequests: {
-        nodes: hasOpenPullRequest ? [reviewThreadsPage(variables.cursor)] : []
-      }
-    }
+    repository: { pullRequest: reviewThreadsPage(variables.cursor ?? null) }
   }
 }
 
 function isHostToken(request: Request) {
-  return request.headers.get('authorization') === `Bearer ${GITHUB_TOKEN}`
+  return request.headers.get('authorization') === `token ${GITHUB_TOKEN}`
 }
 
 const network = setupServer(
@@ -208,8 +207,23 @@ const network = setupServer(
 
     return HttpResponse.json({ data: graphqlData(body) })
   }),
+  http.get(`${GITHUB_API}/repos/acme/app/pulls`, ({ request }) => {
+    const { searchParams } = new URL(request.url)
+    const isOpenBranch =
+      hasOpenPullRequest &&
+      searchParams.get('state') === 'open' &&
+      searchParams.get('head') === `acme:${BRANCH}`
+
+    return isHostToken(request)
+      ? HttpResponse.json(
+          isOpenBranch
+            ? [{ number: PULL_REQUEST_NUMBER, html_url: PULL_REQUEST_URL }]
+            : []
+        )
+      : new HttpResponse(null, { status: 401 })
+  }),
   http.post(
-    `${GITHUB_REST_URL}/repos/:owner/:name/pulls/:number/comments/:commentId/replies`,
+    `${GITHUB_API}/repos/:owner/:name/pulls/:number/comments/:commentId/replies`,
     async ({ request }) => {
       if (!isHostToken(request)) {
         return new HttpResponse(null, { status: 401 })
@@ -248,8 +262,8 @@ function callTool(
 function reviewThreadPlugins() {
   return [
     reviewThreadTools({
-      reader: createGithubReader(GITHUB_TOKEN),
-      writer: createReviewThreadWriter(GITHUB_TOKEN)
+      reader: createGithubReader(testOctokit(GITHUB_TOKEN)),
+      writer: createReviewThreadWriter(testOctokit(GITHUB_TOKEN))
     })
   ]
 }
@@ -380,9 +394,10 @@ describe('the review threads tool of a worker', () => {
   it('reads every page of threads for the branch of the worker, and writes nothing on GitHub', async () => {
     await readReviewThreads()
 
-    const variables = { owner: 'acme', name: 'app', branch: BRANCH }
+    const variables = { owner: 'acme', name: 'app', number: PULL_REQUEST_NUMBER }
 
     expect(githubRequests).toStrictEqual([
+      `GET ${GITHUB_API}/repos/acme/app/pulls?state=open&head=acme%3A${BRANCH}&per_page=1`,
       `POST ${GITHUB_GRAPHQL_URL}`,
       `POST ${GITHUB_GRAPHQL_URL}`
     ])
@@ -393,7 +408,7 @@ describe('the review threads tool of a worker', () => {
     ).toStrictEqual([
       {
         operation: 'query ReviewThreads',
-        variables: { ...variables, cursor: null }
+        variables
       },
       {
         operation: 'query ReviewThreads',
