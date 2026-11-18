@@ -7,6 +7,7 @@ import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText, type FakeResponseStep } from '@tanstack/ai/testing'
 import { createAgentHost, SILENT_HOST_LOGGER } from '@workcell/core/testing'
 import { chatVoice } from '#/plugins/voice.ts'
+import { CHAT_PRESENCE_RULE } from '#/prompts/voice.ts'
 
 const FIRST_VOICE = 'Answer with ok.'
 
@@ -24,7 +25,7 @@ async function voiceFile() {
 }
 
 describe('the voice of the chat agents', () => {
-  it('reads the voice file again on each turn, so an edit applies from the next turn with no restart', async () => {
+  it('reads the voice file again on each turn, after the rule of what the chat sees, so an edit applies from the next turn with no restart', async () => {
     const file = await voiceFile()
     const systemPrompts: unknown[] = []
     const answer: FakeResponseStep = ({ request }) => {
@@ -55,6 +56,9 @@ describe('the voice of the chat agents', () => {
     await session.send('And the CI?')
     await session.close()
 
-    expect(systemPrompts).toStrictEqual([[FIRST_VOICE], [EDITED_VOICE]])
+    expect(systemPrompts).toStrictEqual([
+      [`${CHAT_PRESENCE_RULE}\n\n${FIRST_VOICE}`],
+      [`${CHAT_PRESENCE_RULE}\n\n${EDITED_VOICE}`]
+    ])
   })
 })

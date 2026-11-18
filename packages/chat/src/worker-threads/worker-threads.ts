@@ -34,7 +34,7 @@ import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 import {
   approvalCard,
   decidedCard,
-  openingCard,
+  workerOpening,
   planCard,
   type WorkerThreadLink
 } from './worker-thread-cards.ts'
@@ -155,10 +155,6 @@ export function threadOf(metadata: unknown): string | undefined {
   return threadSchema.safeParse(metadata).data?.chatThreadId
 }
 
-function taskName({ subject, task }: WorkerMetadata) {
-  return subject ?? task.split('\n')[0] ?? task
-}
-
 async function answerClick(
   {
     surface,
@@ -197,11 +193,22 @@ async function answerClick(
   })
 }
 
-function followChanges(
-  identityOf: (worker: string) => ChatIdentity,
-  surface: ChatSurface,
+type FollowChangesParams = {
+  identityOf: (worker: string) => ChatIdentity
+  surface: ChatSurface
   status: ThreadStatus
-) {
+  openingOf: (
+    metadata: WorkerMetadata,
+    isOpen: boolean
+  ) => { message: ChatMessage }
+}
+
+function followChanges({
+  identityOf,
+  surface,
+  status,
+  openingOf
+}: FollowChangesParams) {
   return async (change: WorkerChange) => {
     const threadId = threadOf(change.worker)
 
@@ -211,6 +218,15 @@ function followChanges(
 
     if (change.type === 'finished') {
       const identity = identityOf(change.worker.name)
+      const opening = openedThreadSchema.safeParse(change.worker).data?.chatOpening
+
+      if (opening !== undefined) {
+        await surface.edit({
+          threadId,
+          messageId: opening.messageId,
+          message: openingOf(change.worker, false).message
+        })
+      }
 
       if (change.worker.report !== undefined) {
         await surface.post({
@@ -403,15 +419,15 @@ export function createWorkerThreads({
 
   const status = createThreadStatus({ surface, identityOf, lines, logger })
 
-  const openingOf = (metadata: WorkerMetadata) => {
-    const links = linksOf(metadata)
-    const { title } = profileOf(metadata.name)
-    const line = `${lines.greeting(title)}\n${lines.starting(taskName(metadata))}`
-
-    return {
-      linksKey: JSON.stringify(links),
-      message: openingCard({ line, links, approvers: allowedStarters, lines })
-    }
+  const openingOf = (metadata: WorkerMetadata, isOpen = true) => {
+    return workerOpening({
+      metadata,
+      title: profileOf(metadata.name).title,
+      links: linksOf(metadata),
+      approvers: allowedStarters,
+      lines,
+      isOpen
+    })
   }
 
   const followOpenedThread = async (threadId: string, worker: string) => {
@@ -656,7 +672,7 @@ export function createWorkerThreads({
     }
   })
 
-  const follow = followChanges(identityOf, surface, status)
+  const follow = followChanges({ identityOf, surface, status, openingOf })
 
   const linePoster = (options: LinePosterOptions) => {
     return postLineOnce({ ...options, surface, identityOf })

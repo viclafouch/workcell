@@ -236,8 +236,8 @@ describe('the host side of a worker thread', () => {
     expect(calls).toStrictEqual([threadPost(queued.line)])
   })
 
-  it('follows the worker status under its name, names a queued worker as queued, and closes with the report', async () => {
-    const { calls, surface } = recordSurface()
+  it('follows the worker status under its name, names a queued worker as queued, and closes with the report and no stop button', async () => {
+    const { calls, edits, surface } = recordSurface()
     const threads = createTestThreads(surface)
 
     await threads.follow({
@@ -257,6 +257,7 @@ describe('the host side of a worker thread', () => {
       type: 'finished',
       worker: {
         ...STARTED_WORKER,
+        chatOpening: { messageId: '1.0001', links: '[]' },
         report: 'Merged: the pull request and TASK-7.'
       }
     })
@@ -270,9 +271,11 @@ describe('the host side of a worker thread', () => {
       threadStatus('processing'),
       threadStatus('suspended'),
       threadStatus('active'),
+      expect.stringContaining('edit 1.0001: '),
       threadPost('Merged: the pull request and TASK-7.'),
       threadStatus('closed')
     ])
+    expect(actionsOf(edits[0]?.message)).toStrictEqual([TASK_LINK])
   })
 
   it('hands the replies and the stop of an allowed starter to the worker, and leaves a colleague alone', async () => {

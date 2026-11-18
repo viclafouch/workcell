@@ -103,10 +103,7 @@ export function orchestratorTools({
         inputSchema: z.object({
           repository: z.string().describe(repositoryChoice(repositories)),
           task: z.string().describe(ORCHESTRATOR_TOOLS_TEXT.task),
-          subject: z
-            .string()
-            .optional()
-            .describe(ORCHESTRATOR_TOOLS_TEXT.subject)
+          subject: z.string().describe(ORCHESTRATOR_TOOLS_TEXT.subject)
         })
       }).server<HarnessRunContext>(
         async ({ repository, task, subject }, { context, toolCallId }) => {

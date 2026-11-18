@@ -66,7 +66,8 @@ export const ORCHESTRATOR_TOOLS_TEXT = {
   startWorker:
     'Start a worker on a task that needs its own sandbox and its own context, such as a ticket to take to a pull request. The worker runs on its own, in its own thread, and outlives this conversation.',
   task: 'The task, in full: the worker reads nothing else.',
-  subject: 'The id of the ticket of the task, when it has one.',
+  subject:
+    'What the task is about, as the people of the chat read it on the thread of the worker: the id of its ticket when it has one, else a name of a few words in the language of the chat. Never a line of the task itself.',
   messageWorker:
     'Send a message to a live worker: it answers its open question, or steers its work, and wakes it when it sleeps.',
   stopWorker:

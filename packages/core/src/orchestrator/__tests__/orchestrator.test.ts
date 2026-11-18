@@ -547,7 +547,8 @@ describe('who the orchestrator works for', () => {
         [
           callTool('start_worker', {
             repository: REPOSITORY,
-            task: 'Fix the login.'
+            task: 'Fix the login.',
+            subject: 'login fix'
           }),
           { text: 'Alpha takes it.' }
         ],
