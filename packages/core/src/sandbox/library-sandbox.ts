@@ -1,3 +1,4 @@
+import { posix } from 'node:path'
 import { setTimeout } from 'node:timers/promises'
 import type { WorkspaceBinder } from '@tanstack/ai-harness/plugins/coding'
 import type {
@@ -9,7 +10,7 @@ import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { startLoop } from '#/host/loop.ts'
 import type { LogLine } from '#/host/mcp-server-log.ts'
 import { followCurrent } from './follow-current.ts'
-import { pathInside, WORKSPACE_ROOT } from './sandbox-facts.ts'
+import { WORKSPACE_ROOT } from './sandbox-facts.ts'
 import type { ListSandboxes } from './sandboxes-under-keys.ts'
 
 const LIBRARY_THREAD = 'workcell/library'
@@ -83,6 +84,16 @@ type CreateLibrarySandboxParams = {
   instances: SandboxInstanceStore
   logger: LibraryLogger
   mapFolders?: readonly string[]
+}
+
+function pathInside(root: string, path: string) {
+  const full = posix.resolve(root, path)
+
+  if (full !== root && !full.startsWith(`${root}/`)) {
+    throw new Error(`The path ${path} is outside the workspace ${root}.`)
+  }
+
+  return full
 }
 
 export function createLibrarySandbox({

@@ -23,6 +23,9 @@ export const FINISH_TASK_TEXT = {
     'A line in the thread, right under your last lines, that the person reads as any other line of yours: only what they have not read yet, such as the link of the pull request. Leave it out when your lines said it all, and the thread closes with no report.'
 }
 
+export const FILES_ANSWER =
+  'The person answered with files: they reach you in the next message.'
+
 export const FINISH_WITHOUT_STOP_REFUSAL =
   'No person told you to stop, so the task goes on. Ask your question to a person and end your turn: their answer reaches you as a new message. Call finish_task only in the turn of the message that tells you to stop.'
 

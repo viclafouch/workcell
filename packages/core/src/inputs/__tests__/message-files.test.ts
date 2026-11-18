@@ -11,7 +11,7 @@ import {
   type MessageFileOptions
 } from '#/inputs/message-files.ts'
 
-const CLAUDE_MODALITIES: readonly Modality[] = ['text', 'image', 'document']
+const IMAGE_AND_DOCUMENT_MODALITIES: readonly Modality[] = ['text', 'image', 'document']
 
 const IMAGE_BYTES = new TextEncoder().encode('image bytes')
 
@@ -46,7 +46,7 @@ function partsOf(input: unknown) {
   return parts
 }
 
-function textOf(input: unknown) {
+function serialized(input: unknown) {
   return JSON.stringify(input)
 }
 
@@ -65,7 +65,7 @@ async function readMessage(
   const input = await messageInput({
     text: 'Look at this.',
     files,
-    modalities: CLAUDE_MODALITIES,
+    modalities: IMAGE_AND_DOCUMENT_MODALITIES,
     options,
     putMedia: async (upload) => {
       return session.putMedia(upload)
@@ -139,7 +139,7 @@ describe('messageInput', () => {
       fileOf('dump.txt', 'text/plain', 'a'.repeat(LONG_TEXT_LENGTH))
     ])
 
-    expect(textOf(input)).toContain(
+    expect(serialized(input)).toContain(
       'you got the first 200000 of 300000 characters'
     )
   })
@@ -156,7 +156,7 @@ describe('messageInput', () => {
       { type: 'image' },
       { type: 'text' }
     ])
-    expect(textOf(partsOf(input).at(-1))).toContain(
+    expect(serialized(partsOf(input).at(-1))).toContain(
       '- archive.zip (application/zip): no reader exists for this type of file\\n- voice.mp3 (audio/mpeg): the model does not read audio files'
     )
   })
@@ -170,8 +170,8 @@ describe('messageInput', () => {
       }
     })
 
-    expect(textOf(input)).toContain('<p>ok</p>')
-    expect(textOf(input)).toContain(
+    expect(serialized(input)).toContain('<p>ok</p>')
+    expect(serialized(input)).toContain(
       'mockup.png (image/png): the project does not read this type of file'
     )
     expect(image.read).not.toHaveBeenCalled()
@@ -185,7 +185,7 @@ describe('messageInput', () => {
     )
     const { input } = await readMessage([big], { maxBytes: SIZE_LIMIT_BYTES })
 
-    expect(textOf(input)).toContain('bigger than the limit of 2 MB')
+    expect(serialized(input)).toContain('bigger than the limit of 2 MB')
     expect(big.read).not.toHaveBeenCalled()
   })
 
@@ -199,7 +199,7 @@ describe('messageInput', () => {
     }
     const { input, onDownloadError } = await readMessage([failing])
 
-    expect(textOf(input)).toContain(
+    expect(serialized(input)).toContain(
       'mockup.png (image/png): the download failed'
     )
     expect(onDownloadError).toHaveBeenCalledTimes(1)
@@ -210,6 +210,6 @@ describe('messageInput', () => {
       fileOf('data.csv', 'text/csv', new Uint8Array([INVALID_UTF8_BYTE]))
     ])
 
-    expect(textOf(input)).toContain('its text is not valid UTF-8')
+    expect(serialized(input)).toContain('its text is not valid UTF-8')
   })
 })

@@ -23,7 +23,6 @@ export {
 export { joinCutOffAnswer, WORKER_DURABILITY } from './host/agent-durability.ts'
 export { startLoop } from './host/loop.ts'
 export {
-  SEND_FILE_TOOL,
   SENT_FILE_EVENT,
   sentFileOfEvent,
   type SentFile

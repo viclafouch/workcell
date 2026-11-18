@@ -88,7 +88,7 @@ type OpenWorkcellParams = {
   idleSandboxMs?: number
   observability?: WorkerObservability
   onWorkerStart?: OnWorkerStart
-  files?: MessageFileOptions
+  messageFiles?: MessageFileOptions
   sentFiles?: SentFileStore
 }
 
@@ -197,7 +197,7 @@ export async function openWorkcell({
   idleSandboxMs,
   observability,
   onWorkerStart,
-  files,
+  messageFiles,
   sentFiles
 }: OpenWorkcellParams) {
   requireOneSandboxPackage([
@@ -213,6 +213,13 @@ export async function openWorkcell({
   ])
   const isStarter = isStarterIn(senders.starterIds)
   const filesLog = logger.child({ module: 'files' })
+  const messageReaderOf = (model: AnyTextAdapter) => {
+    return createMessageReader({
+      modalities: model.inputModalities,
+      options: messageFiles,
+      logger: filesLog
+    })
+  }
   const secretValues = Object.values(secrets)
   const sendFilesFrom = (readFile: ReadAgentFile) => {
     return sentFiles === undefined
@@ -289,11 +296,7 @@ export async function openWorkcell({
     workerNames,
     permissionMode,
     logger,
-    readMessage: createMessageReader({
-      modalities: models.worker.inputModalities,
-      options: files,
-      logger: filesLog
-    }),
+    readMessage: messageReaderOf(models.worker),
     onWorkerStart
   })
   const orchestratorHarness = defineOrchestratorHarness({
@@ -324,11 +327,7 @@ export async function openWorkcell({
     orchestrator: createOrchestrator({
       host,
       harness: orchestratorHarness,
-      readMessage: createMessageReader({
-        modalities: models.orchestrator.inputModalities,
-        options: files,
-        logger: filesLog
-      })
+      readMessage: messageReaderOf(models.orchestrator)
     }),
     viewWorkers: createWorkerView({
       host,

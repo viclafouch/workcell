@@ -1,4 +1,4 @@
-const BYTES_PER_MEGABYTE = 1_048_576
+import { megabytesOf } from './file-size.ts'
 
 export const MESSAGE_FILES_TEXT = {
   file: (name: string, mimeType: string, content: string) => {
@@ -20,7 +20,7 @@ export const MESSAGE_FILES_TEXT = {
       return `the model does not read ${kind} files`
     },
     tooBig: (maxBytes: number) => {
-      return `bigger than the limit of ${Math.round(maxBytes / BYTES_PER_MEGABYTE)} MB`
+      return `bigger than the limit of ${megabytesOf(maxBytes)} MB`
     },
     download: 'the download failed',
     notText: 'its text is not valid UTF-8'

@@ -1,4 +1,4 @@
-const BYTES_PER_MEGABYTE = 1_048_576
+import { megabytesOf } from './file-size.ts'
 
 export const SEND_FILE_TEXT = {
   description: [
@@ -15,7 +15,7 @@ export const SEND_FILE_TEXT = {
     return `${name} is sent to the person.`
   },
   tooBig: (maxBytes: number) => {
-    return `The file is bigger than the limit of ${Math.round(maxBytes / BYTES_PER_MEGABYTE)} MB, so it is not sent. Tell the person.`
+    return `The file is bigger than the limit of ${megabytesOf(maxBytes)} MB, so it is not sent. Tell the person.`
   },
   holdsSecret:
     'The file holds a secret value of the host, so it is not sent. Tell the person, with no detail of the secret.'

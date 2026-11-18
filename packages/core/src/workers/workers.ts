@@ -11,6 +11,7 @@ import { InMemoryLockStore } from '@tanstack/ai/locks'
 import { refusalOf, type IsStarter } from '#/host/allowed-senders.ts'
 import { logMcpServerChanges } from '#/host/mcp-server-log.ts'
 import type { MessageFile, MessageReader } from '#/inputs/message-files.ts'
+import { FILES_ANSWER } from '#/prompts/worker.ts'
 import type { WorkerMetadata } from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
 import {
@@ -268,7 +269,10 @@ async function sendWorkerMessage(
   const { threadId, sender, inputId, message, files = [] } = params
   const view = await options.host.observe(options.harness, { threadId })
   const { pendingWaits } = await view.snapshot()
-  const answers = answersOf(pendingWaits, message)
+  const answers = answersOf(
+    pendingWaits,
+    message === '' && files.length > 0 ? FILES_ANSWER : message
+  )
 
   if (answers.length === 0) {
     await submitInput(options, {

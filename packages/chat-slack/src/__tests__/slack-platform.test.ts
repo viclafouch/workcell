@@ -146,20 +146,20 @@ describe('slackPlatform', () => {
       identity: ALPHA,
       message: {
         markdown: '',
-        files: [{ filename: 'r2.mp4', data: Buffer.from('video bytes') }]
+        files: [{ filename: 'clip.mp4', data: Buffer.from('video bytes') }]
       }
     })
 
     expect(calls).toStrictEqual([
       {
         method: 'files.getUploadURLExternal',
-        body: { filename: 'r2.mp4', length: '11' }
+        body: { filename: 'clip.mp4', length: '11' }
       },
       { method: 'upload', body: { bytes: 'video bytes' } },
       {
         method: 'files.completeUploadExternal',
         body: {
-          files: JSON.stringify([{ id: 'F_FILE', title: 'r2.mp4' }]),
+          files: JSON.stringify([{ id: 'F_FILE', title: 'clip.mp4' }]),
           channel_id: 'C_WORKERS',
           thread_ts: '1.0001',
           initial_comment: 'From Alpha'

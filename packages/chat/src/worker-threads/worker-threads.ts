@@ -220,14 +220,6 @@ function followChanges({
       const identity = identityOf(change.worker.name)
       const opening = openedThreadSchema.safeParse(change.worker).data?.chatOpening
 
-      if (opening !== undefined) {
-        await surface.edit({
-          threadId,
-          messageId: opening.messageId,
-          message: openingOf(change.worker, false).message
-        })
-      }
-
       if (change.worker.report !== undefined) {
         await surface.post({
           target: { threadId },
@@ -237,6 +229,14 @@ function followChanges({
       }
 
       await status.close(threadId, identity)
+
+      if (opening !== undefined) {
+        await surface.edit({
+          threadId,
+          messageId: opening.messageId,
+          message: openingOf(change.worker, false).message
+        })
+      }
 
       return
     }
@@ -419,7 +419,7 @@ export function createWorkerThreads({
 
   const status = createThreadStatus({ surface, identityOf, lines, logger })
 
-  const openingOf = (metadata: WorkerMetadata, isOpen = true) => {
+  const openingOf = (metadata: WorkerMetadata, isOpen: boolean) => {
     return workerOpening({
       metadata,
       title: profileOf(metadata.name).title,
@@ -444,7 +444,7 @@ export function createWorkerThreads({
   const open = async (
     metadata: WorkerMetadata
   ): Promise<OpenedThreadMetadata> => {
-    const { linksKey, message } = openingOf(metadata)
+    const { linksKey, message } = openingOf(metadata, true)
     const opening = await surface.post({
       target: { channelId },
       identity: identityOf(metadata.name),
@@ -492,7 +492,7 @@ export function createWorkerThreads({
           return
         }
 
-        const { linksKey, message } = openingOf(metadata)
+        const { linksKey, message } = openingOf(metadata, true)
 
         if (chatOpening.links === linksKey) {
           return
@@ -614,7 +614,7 @@ export function createWorkerThreads({
               : undefined
 
           if (eventMessage !== undefined) {
-            await safely(`${chunk.type} post`, () => {
+            await safely('event post', () => {
               return postInThread(eventMessage)
             })
           }

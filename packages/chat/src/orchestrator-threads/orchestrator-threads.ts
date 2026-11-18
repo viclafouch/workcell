@@ -198,7 +198,7 @@ export function createOrchestratorThreads({
   allowedChannels,
   logger,
   lines = CHAT_LINES,
-  sentFiles: sentFileSource
+  sentFiles
 }: CreateOrchestratorThreadsParams): OrchestratorRoute {
   const log = logger.child({ module: 'chat' })
   const heldThreads = new Set<string>()
@@ -232,7 +232,7 @@ export function createOrchestratorThreads({
     const reply = createReplyStream(thread, turnLog, surface.linked)
     const tasks = new Map<string, TaskUpdateChunk>()
     const cards: CardElement[] = []
-    const sentFilesOfTurn: SentFile[] = []
+    const filesOfTurn: SentFile[] = []
     const ending: TurnEnding = {}
     let textMessageId = ''
 
@@ -298,7 +298,7 @@ export function createOrchestratorThreads({
         const sentFile = sentFileOfEvent(event.value)
 
         if (sentFile !== undefined) {
-          sentFilesOfTurn.push(sentFile)
+          filesOfTurn.push(sentFile)
         }
       }
     }
@@ -348,7 +348,7 @@ export function createOrchestratorThreads({
       await thread.post({ card })
     }
 
-    const uploads = await takeUploads(sentFileSource, sentFilesOfTurn)
+    const uploads = await takeUploads(sentFiles, filesOfTurn)
 
     if (uploads.length > 0) {
       await thread.post({ markdown: '', files: uploads })

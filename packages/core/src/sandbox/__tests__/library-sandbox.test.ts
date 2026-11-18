@@ -158,6 +158,18 @@ describe('the library sandbox', () => {
     )
   })
 
+  it('reads a file of its tree to send it, and refuses a path that leaves the tree', async () => {
+    const library = openLibrary('library-read-file')
+    await library.pullOnce()
+
+    expect(
+      new TextDecoder().decode(await library.readFile('app/README.md'))
+    ).toBe('The app repository.\n')
+    await expect(library.readFile('../etc/passwd')).rejects.toThrow(
+      'outside the workspace'
+    )
+  })
+
   it('refuses every write and every command, in plan mode and in its read-only tree', async () => {
     const library = openLibrary('library-writes')
     await library.pullOnce()

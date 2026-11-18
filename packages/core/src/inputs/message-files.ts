@@ -159,12 +159,12 @@ async function downloaded(
   }
 }
 
-async function readFile(
+async function readMessageFile(
   file: MessageFile,
+  info: MessageFileInfo,
   context: ReadContext
 ): Promise<FileReading> {
   const { reasons } = MESSAGE_FILES_TEXT
-  const info = { ...file, mimeType: resolvedMimeType(file) }
   const refusal = refusalOf(info, context)
 
   if (refusal !== undefined) {
@@ -227,21 +227,17 @@ export async function messageInput({
   }
   const readings = await Promise.all(
     files.map(async (file) => {
-      return { file, reading: await readFile(file, context) }
+      const info = { name: file.name, mimeType: resolvedMimeType(file), size: file.size }
+
+      return { info, reading: await readMessageFile(file, info, context) }
     })
   )
   const parts = readings.flatMap(({ reading }) => {
     return 'part' in reading ? [reading.part] : []
   })
-  const notRead = readings.flatMap(({ file, reading }) => {
+  const notRead = readings.flatMap(({ info, reading }) => {
     return 'notRead' in reading
-      ? [
-          MESSAGE_FILES_TEXT.notReadLine(
-            file.name,
-            resolvedMimeType(file),
-            reading.notRead
-          )
-        ]
+      ? [MESSAGE_FILES_TEXT.notReadLine(info.name, info.mimeType, reading.notRead)]
       : []
   })
 

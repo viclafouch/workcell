@@ -65,7 +65,7 @@ type SlackPlatformOptions = { fileCaption?: (name: string) => string }
 
 type UploadedFile = { id: string; title: string }
 
-type PostTarget = { channel: string; threadTs: string }
+type PostTarget = { channel: string; threadTs: string | undefined }
 
 function captionInEnglish(name: string) {
   return `From ${name}`
@@ -128,8 +128,17 @@ export function slackPlatform(
     return { id, title: filename }
   }
 
-  const uploadAll = (files: readonly FileUpload[]) => {
-    return Promise.all(files.map(upload))
+  const uploadFiles = async (
+    files: readonly FileUpload[],
+    share: Record<string, unknown> = {}
+  ) => {
+    const uploaded = await Promise.all(files.map(upload))
+    await adapter.webClient.apiCall('files.completeUploadExternal', {
+      files: JSON.stringify(uploaded),
+      ...share
+    })
+
+    return uploaded
   }
 
   const postOnceFilesReady = async (post: Record<string, unknown>) => {
@@ -170,14 +179,11 @@ export function slackPlatform(
     identity: ChatIdentity,
     images: readonly FileUpload[]
   ) => {
-    const uploaded = await uploadAll(images)
-    await adapter.webClient.apiCall('files.completeUploadExternal', {
-      files: JSON.stringify(uploaded)
-    })
+    const uploaded = await uploadFiles(images)
 
     return postOnceFilesReady({
       channel,
-      thread_ts: threadTs || undefined,
+      thread_ts: threadTs,
       text: uploaded
         .map(({ title }) => {
           return title
@@ -194,11 +200,9 @@ export function slackPlatform(
     identity: ChatIdentity,
     files: readonly FileUpload[]
   ) => {
-    const uploaded = await uploadAll(files)
-    await adapter.webClient.apiCall('files.completeUploadExternal', {
-      files: JSON.stringify(uploaded),
+    await uploadFiles(files, {
       channel_id: channel,
-      thread_ts: threadTs || undefined,
+      thread_ts: threadTs,
       initial_comment: fileCaption(identity.name)
     })
   }
@@ -210,7 +214,7 @@ export function slackPlatform(
   ) => {
     const post = {
       channel,
-      thread_ts: threadTs || undefined,
+      thread_ts: threadTs,
       ...contentOf(message),
       username: identity.name,
       icon_url: identity.iconUrl,
@@ -248,14 +252,14 @@ export function slackPlatform(
 
     return images.length > 0
       ? postImagesAs(target, identity, images)
-      : target.threadTs
+      : (target.threadTs ?? '')
   }
 
   const postAs = async ({ target, message, identity }: IdentityPost) => {
     const { channel, threadTs } = adapter.decodeThreadId(
       'channelId' in target ? target.channelId : target.threadId
     )
-    const postTarget = { channel, threadTs }
+    const postTarget = { channel, threadTs: threadTs || undefined }
     const ts =
       filesOf(message).length > 0
         ? await postFilesAs(postTarget, identity, message)

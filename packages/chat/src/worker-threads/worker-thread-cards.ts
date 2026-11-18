@@ -32,15 +32,15 @@ type OpeningCardParams = {
   links: readonly WorkerThreadLink[]
   approvers: readonly string[]
   lines: ChatLines
-  isOpen?: boolean
+  isOpen: boolean
 }
 
-export function openingCard({
+function openingCard({
   line,
   links,
   approvers,
   lines,
-  isOpen = true
+  isOpen
 }: OpeningCardParams): ChatMessage {
   const buttons = [
     ...links.map(({ id, label, url }) => {

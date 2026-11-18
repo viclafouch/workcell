@@ -271,9 +271,9 @@ describe('the host side of a worker thread', () => {
       threadStatus('processing'),
       threadStatus('suspended'),
       threadStatus('active'),
-      expect.stringContaining('edit 1.0001: '),
       threadPost('Merged: the pull request and TASK-7.'),
-      threadStatus('closed')
+      threadStatus('closed'),
+      expect.stringContaining('edit 1.0001: ')
     ])
     expect(actionsOf(edits[0]?.message)).toStrictEqual([TASK_LINK])
   })

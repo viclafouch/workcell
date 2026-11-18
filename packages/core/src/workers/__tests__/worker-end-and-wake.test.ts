@@ -7,7 +7,9 @@ import {
   it,
   vi
 } from 'vitest'
+import type { FakeResponseStep } from '@tanstack/ai/testing'
 import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
+import { FILES_ANSWER } from '#/prompts/worker.ts'
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import { TEST_STARTER } from '#/testing/test-doubles.ts'
 import {
@@ -377,6 +379,50 @@ describe('the thread of a worker', () => {
         return answeredMessages.join('\n')
       })
       .toContain('Answer: Draft')
+  })
+
+  it('answers the question of the worker with a file alone, then hands it the file in the next message', async () => {
+    const url = await createMigratedDatabase()
+    const seenMessages: string[] = []
+    const seeMessages: FakeResponseStep = ({ request }) => {
+      seenMessages.push(JSON.stringify(request.messages))
+
+      return { text: 'Got it.' }
+    }
+    await using agent = await openWorkers(url, [
+      ASK_DRAFT_OR_READY,
+      seeMessages,
+      seeMessages
+    ])
+    const worker = await agent.workers.startWorker({
+      repository: REPOSITORY,
+      starter: TEST_STARTER,
+      task: 'Ask first.'
+    })
+    await worker.firstTurn
+
+    await agent.workers.messageWorker({
+      threadId: worker.threadId,
+      sender: TEST_STARTER,
+      inputId: 'slack:answer',
+      message: '',
+      files: [
+        {
+          name: 'mockup.png',
+          mimeType: 'image/png',
+          read: async () => {
+            return new TextEncoder().encode('mockup bytes')
+          }
+        }
+      ]
+    })
+
+    await expect
+      .poll(() => {
+        return seenMessages.join('\n')
+      })
+      .toContain('"type":"image"')
+    expect(seenMessages.join('\n')).toContain(FILES_ANSWER)
   })
 
   it('wakes a sleeping worker with a message, once for one input id, also after a host restart', async () => {
