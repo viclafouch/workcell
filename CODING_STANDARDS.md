@@ -20,6 +20,8 @@ The `code-review` skill checks these judgement calls on each diff. oxlint checks
 
 - A call that only macOS has stays in the Keychain store, the launch agent and the keep-awake service of `@workcell/host`. A host on another system then swaps one place.
 - A vendor feature sits behind one of our interfaces. A call site never imports the vendor SDK directly.
+- The data of a service takes the type its official SDK exports, Chat SDK included. Workcell writes no type or schema for a shape that one of them already carries, and a custom query picks its fields from those types.
+- A vendor type stays in the package of its integration. The core and the other packages see the neutral types of Workcell, so a second tracker or chat plugs in behind the same interface.
 
 ## TanStack
 
