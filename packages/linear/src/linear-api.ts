@@ -1,133 +1,37 @@
-import { z } from 'zod'
-import { createPacedFetch, type RateLimitCheck } from '@workcell/core'
+import {
+  LinearError,
+  LinearGraphQLClient,
+  LinearSdk,
+  parseLinearError,
+  RatelimitedLinearError,
+  type Attachment,
+  type Issue,
+  type IssueLabel,
+  type WorkflowState
+} from '@linear/sdk'
+import { AsyncRetryer, RateLimiter } from '@tanstack/pacer'
 
 export const LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql'
 
 const REQUESTS_PER_MINUTE = 40
 
-const OK_STATUS = 200
+const WINDOW_MS = 60_000
 
-const RATE_LIMITED_STATUS = 429
+const REQUEST_TIMEOUT_MS = 30_000
 
-const RATE_LIMIT_BUDGETS = ['requests', 'complexity', 'endpoint-requests']
+const MAX_ATTEMPTS = 4
 
-const READY_TICKETS_QUERY = `query ReadyTickets($filter: IssueFilter!) {
-  issues(filter: $filter, first: 50) {
-    nodes {
-      id
-      identifier
-      title
-      url
-      state { id type }
-      labels(first: 20) { nodes { name } }
-      team { states(filter: { type: { eq: "started" } }, first: 10) { nodes { id position } } }
-    }
-  }
-}`
+const MAX_RETRY_WAIT_MS = 30_000
 
-const MOVE_TICKET_MUTATION = `mutation MoveTicket($id: String!, $stateId: String!) {
-  issueUpdate(id: $id, input: { stateId: $stateId }) { success }
-}`
+const UNNAMED_RATE_LIMIT_WAIT_MS = 60_000
 
-const RESET_TICKET_QUERY = `query ResetTicket($id: String!) {
-  issue(id: $id) {
-    id
-    identifier
-    state { id type name }
-    labels(first: 50) { nodes { id name } }
-    attachments(first: 50) { nodes { id url } }
-    team { states(filter: { type: { eq: "backlog" } }, first: 10) { nodes { id name position } } }
-  }
-}`
+const MS_PER_SECOND = 1000
 
-const REMOVE_LABEL_MUTATION = `mutation RemoveLabel($id: String!, $labelId: String!) {
-  issueRemoveLabel(id: $id, labelId: $labelId) { success }
-}`
+const FIRST_SERVER_ERROR_STATUS = 500
 
-const DELETE_ATTACHMENT_MUTATION = `mutation DeleteAttachment($id: String!) {
-  attachmentDelete(id: $id) { success }
-}`
+const STARTED_STATE_TYPE = 'started'
 
-const TEAM_KEYS_QUERY = `query TeamKeys {
-  teams(first: 250) { nodes { key } }
-}`
-
-const teamKeysSchema = z.object({
-  teams: z.object({ nodes: z.array(z.object({ key: z.string() })) })
-})
-
-const graphqlAnswerSchema = z.object({
-  data: z.unknown().optional(),
-  errors: z
-    .array(
-      z.object({
-        message: z.string(),
-        extensions: z.looseObject({ code: z.string().optional() }).optional()
-      })
-    )
-    .optional()
-})
-
-const readyTicketsSchema = z.object({
-  issues: z.object({
-    nodes: z.array(
-      z.object({
-        id: z.string(),
-        identifier: z.string(),
-        title: z.string(),
-        url: z.string(),
-        state: z.object({ id: z.string(), type: z.string() }),
-        labels: z.object({ nodes: z.array(z.object({ name: z.string() })) }),
-        team: z.object({
-          states: z.object({
-            nodes: z.array(z.object({ id: z.string(), position: z.number() }))
-          })
-        })
-      })
-    )
-  })
-})
-
-const moveTicketSchema = z.object({
-  issueUpdate: z.object({ success: z.boolean() })
-})
-
-const positionedStateSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  position: z.number()
-})
-
-const resetTicketSchema = z.object({
-  issue: z.object({
-    id: z.string(),
-    identifier: z.string(),
-    state: z.object({ id: z.string(), type: z.string(), name: z.string() }),
-    labels: z.object({
-      nodes: z.array(z.object({ id: z.string(), name: z.string() }))
-    }),
-    attachments: z.object({
-      nodes: z.array(z.object({ id: z.string(), url: z.string() }))
-    }),
-    team: z.object({
-      states: z.object({ nodes: z.array(positionedStateSchema) })
-    })
-  })
-})
-
-const removeLabelSchema = z.object({
-  issueRemoveLabel: z.object({ success: z.boolean() })
-})
-
-const deleteAttachmentSchema = z.object({
-  attachmentDelete: z.object({ success: z.boolean() })
-})
-
-type GraphqlRequestParams = {
-  operationName: string
-  query: string
-  variables?: Record<string, unknown>
-}
+const BACKLOG_STATE_TYPE = 'backlog'
 
 type ReadyTicketsFilter = {
   readyLabel: string
@@ -135,15 +39,21 @@ type ReadyTicketsFilter = {
   stateTypes: readonly string[]
 }
 
-export type LinearTicket = {
-  id: string
-  identifier: string
-  title: string
-  url: string
+export type LinearTicket = Pick<
+  Issue,
+  'id' | 'identifier' | 'title' | 'url'
+> & {
   stateId: string
   isStarted: boolean
   labels: string[]
   startedStateId: string | undefined
+}
+
+export type ResetTicket = Pick<Issue, 'id' | 'identifier'> & {
+  state: Pick<WorkflowState, 'id' | 'type' | 'name'>
+  labels: Pick<IssueLabel, 'id' | 'name'>[]
+  attachments: Pick<Attachment, 'id' | 'url'>[]
+  backlogState: Pick<WorkflowState, 'id' | 'name' | 'position'> | undefined
 }
 
 function readyTicketsFilter({
@@ -154,168 +64,299 @@ function readyTicketsFilter({
   return {
     and: [
       { labels: { some: { name: { eq: readyLabel } } } },
-      { labels: { some: { name: { in: repositoryLabels } } } },
-      { state: { type: { in: stateTypes } } }
+      { labels: { some: { name: { in: [...repositoryLabels] } } } },
+      { state: { type: { in: [...stateTypes] } } }
     ]
   }
 }
 
-function isLinearRateLimited({ response, text }: RateLimitCheck) {
-  if (response.status === RATE_LIMITED_STATUS) {
-    return true
+function matchIsTransient(error: Error | undefined) {
+  return (
+    error instanceof LinearError &&
+    (error.status === undefined || error.status >= FIRST_SERVER_ERROR_STATUS)
+  )
+}
+
+function rateLimitWaitMs({
+  retryAfter,
+  requestsRemaining,
+  requestsResetAt,
+  complexityRemaining,
+  complexityResetAt
+}: RatelimitedLinearError) {
+  if (retryAfter !== undefined) {
+    return retryAfter * MS_PER_SECOND
   }
 
-  const { errors = [] } = graphqlAnswerSchema.parse(JSON.parse(text))
-
-  return errors.some(({ extensions }) => {
-    return extensions?.code === 'RATELIMITED'
+  const resets = [
+    requestsRemaining === 0 ? requestsResetAt : undefined,
+    complexityRemaining === 0 ? complexityResetAt : undefined
+  ].filter((reset) => {
+    return reset !== undefined
   })
+
+  return resets.length === 0
+    ? UNNAMED_RATE_LIMIT_WAIT_MS
+    : Math.max(...resets) - Temporal.Now.instant().epochMilliseconds
 }
 
-function linearRateLimitResetAt(headers: Headers) {
-  const resets = RATE_LIMIT_BUDGETS.filter((budget) => {
-    return headers.get(`x-ratelimit-${budget}-remaining`) === '0'
-  })
-    .map((budget) => {
-      return Number(headers.get(`x-ratelimit-${budget}-reset`))
-    })
-    .filter((reset) => {
-      return Number.isFinite(reset) && reset > 0
-    })
-
-  return resets.length > 0 ? Math.max(...resets) : undefined
-}
-
-function firstState<State extends { position: number }>(states: State[]) {
+function firstState<State extends Pick<WorkflowState, 'position'>>(
+  states: readonly State[]
+) {
   return states.toSorted((left, right) => {
     return left.position - right.position
   })[0]
 }
 
+function uniqueOf(values: readonly (string | undefined)[]) {
+  return [
+    ...new Set(
+      values.filter((value) => {
+        return value !== undefined
+      })
+    )
+  ]
+}
+
 export function createLinearApi(apiKey: string) {
-  const { pacedFetch, [Symbol.dispose]: dispose } = createPacedFetch({
-    apiName: 'Linear',
-    subject: 'the Linear intake',
-    requestsPerMinute: REQUESTS_PER_MINUTE,
-    headers: { authorization: apiKey, 'content-type': 'application/json' },
-    isRateLimited: isLinearRateLimited,
-    rateLimitResetAt: linearRateLimitResetAt
+  const requests = new RateLimiter(() => {}, {
+    limit: REQUESTS_PER_MINUTE,
+    window: WINDOW_MS,
+    windowType: 'sliding'
+  })
+  const retryers = new Set<{ abort: () => void }>()
+  let rateLimitedUntil = Temporal.Instant.fromEpochMilliseconds(0)
+
+  const graphql = new LinearGraphQLClient(LINEAR_GRAPHQL_URL, {
+    headers: { Authorization: apiKey },
+    fetch: (url, init) => {
+      return fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+      })
+    }
   })
 
-  const request = async ({
-    operationName,
-    query,
-    variables
-  }: GraphqlRequestParams) => {
-    const { status, text } = await pacedFetch(LINEAR_GRAPHQL_URL, {
-      method: 'POST',
-      body: JSON.stringify({ operationName, query, variables })
-    })
-    const { data, errors = [] } = graphqlAnswerSchema.parse(JSON.parse(text))
+  const rateLimitError = () => {
+    return new Error(
+      `Linear rate limits the Linear intake until ${rateLimitedUntil.toString({ smallestUnit: 'millisecond' })}. The call did not run.`
+    )
+  }
 
-    if (status !== OK_STATUS || errors.length > 0) {
-      const reasons = errors.map(({ message }) => {
-        return message
-      })
+  const request = async <Data>(
+    document: string,
+    variables?: Record<string, unknown>
+  ): Promise<Data> => {
+    if (
+      Temporal.Instant.compare(Temporal.Now.instant(), rateLimitedUntil) < 0
+    ) {
+      throw rateLimitError()
+    }
 
+    if (!requests.maybeExecute()) {
       throw new Error(
-        `Linear refused ${operationName} with ${status}: ${reasons.join(' ')}`
+        `The budget of the Linear intake is ${REQUESTS_PER_MINUTE} Linear requests a minute: the next request can run in ${Math.ceil(requests.getMsUntilNextWindow() / MS_PER_SECOND)} s. The call did not run.`
       )
     }
 
-    return data
+    const retryer = new AsyncRetryer(
+      async () => {
+        try {
+          return await graphql.request<Data, Record<string, unknown>>(
+            document,
+            variables
+          )
+        } catch (error) {
+          throw parseLinearError(Error.isError(error) ? error : undefined)
+        }
+      },
+      {
+        maxAttempts: ({ store }) => {
+          const { lastError } = store.state
+
+          return lastError === undefined || matchIsTransient(lastError)
+            ? MAX_ATTEMPTS
+            : 1
+        },
+        maxWait: MAX_RETRY_WAIT_MS,
+        jitter: 0.2,
+        throwOnError: true
+      }
+    )
+    retryers.add(retryer)
+
+    try {
+      const answer = await retryer.execute()
+
+      if (answer === undefined) {
+        throw new Error('The Linear intake stopped before Linear answered.')
+      }
+
+      return answer
+    } catch (error) {
+      if (error instanceof RatelimitedLinearError) {
+        rateLimitedUntil = Temporal.Now.instant().add({
+          milliseconds: Math.max(Math.ceil(rateLimitWaitMs(error)), 0)
+        })
+        throw rateLimitError()
+      }
+
+      throw error
+    } finally {
+      retryers.delete(retryer)
+    }
   }
+
+  const linear = new LinearSdk(request)
 
   const readyTickets = async (
     filter: ReadyTicketsFilter
   ): Promise<LinearTicket[]> => {
-    const data = await request({
-      operationName: 'ReadyTickets',
-      query: READY_TICKETS_QUERY,
-      variables: { filter: readyTicketsFilter(filter) }
-    })
+    const issues = await linear.paginate(
+      (variables) => {
+        return linear.issues(variables)
+      },
+      { filter: readyTicketsFilter(filter) }
+    )
 
-    return readyTicketsSchema
-      .parse(data)
-      .issues.nodes.map(
-        ({ id, identifier, title, url, state, labels, team }) => {
-          return {
-            id,
-            identifier,
-            title,
-            url,
-            stateId: state.id,
-            isStarted: state.type === 'started',
-            labels: labels.nodes.map(({ name }) => {
-              return name
-            }),
-            startedStateId: firstState(team.states.nodes)?.id
+    if (issues.length === 0) {
+      return []
+    }
+
+    const [states, labels] = await Promise.all([
+      linear.paginate(
+        (variables) => {
+          return linear.workflowStates(variables)
+        },
+        {
+          filter: {
+            team: {
+              id: {
+                in: uniqueOf(
+                  issues.map(({ teamId }) => {
+                    return teamId
+                  })
+                )
+              }
+            }
+          }
+        }
+      ),
+      linear.paginate(
+        (variables) => {
+          return linear.issueLabels(variables)
+        },
+        {
+          filter: {
+            id: {
+              in: uniqueOf(
+                issues.flatMap(({ labelIds }) => {
+                  return labelIds
+                })
+              )
+            }
           }
         }
       )
+    ])
+    const labelNames = new Map(
+      labels.map(({ id, name }) => {
+        return [id, name]
+      })
+    )
+
+    return issues.flatMap(
+      ({ id, identifier, title, url, stateId, teamId, labelIds }) => {
+        if (stateId === undefined) {
+          return []
+        }
+
+        const teamStates = states.filter((state) => {
+          return state.teamId === teamId
+        })
+
+        return {
+          id,
+          identifier,
+          title,
+          url,
+          stateId,
+          isStarted: teamStates.some((state) => {
+            return state.id === stateId && state.type === STARTED_STATE_TYPE
+          }),
+          labels: uniqueOf(
+            labelIds.map((labelId) => {
+              return labelNames.get(labelId)
+            })
+          ),
+          startedStateId: firstState(
+            teamStates.filter(({ type }) => {
+              return type === STARTED_STATE_TYPE
+            })
+          )?.id
+        }
+      }
+    )
   }
 
   const moveTicket = async (id: string, stateId: string) => {
-    const data = await request({
-      operationName: 'MoveTicket',
-      query: MOVE_TICKET_MUTATION,
-      variables: { id, stateId }
-    })
+    const { success } = await linear.updateIssue(id, { stateId })
 
-    if (!moveTicketSchema.parse(data).issueUpdate.success) {
+    if (!success) {
       throw new Error(`Linear did not move ${id} to the state ${stateId}.`)
     }
   }
 
-  const readResetTicket = async (identifier: string) => {
-    const data = await request({
-      operationName: 'ResetTicket',
-      query: RESET_TICKET_QUERY,
-      variables: { id: identifier }
-    })
-    const { issue } = resetTicketSchema.parse(data)
+  const readResetTicket = async (identifier: string): Promise<ResetTicket> => {
+    const issue = await linear.issue(identifier)
+    const [state, labels, attachments, backlogStates] = await Promise.all([
+      issue.state,
+      issue.labels(),
+      issue.attachments(),
+      linear.workflowStates({
+        filter: {
+          team: { id: { eq: issue.teamId } },
+          type: { eq: BACKLOG_STATE_TYPE }
+        }
+      })
+    ])
+
+    if (state === undefined) {
+      throw new Error(`Linear gave no state to ${identifier}.`)
+    }
 
     return {
       id: issue.id,
       identifier: issue.identifier,
-      state: issue.state,
-      labels: issue.labels.nodes,
-      attachments: issue.attachments.nodes,
-      backlogState: firstState(issue.team.states.nodes)
+      state,
+      labels: labels.nodes,
+      attachments: attachments.nodes,
+      backlogState: firstState(backlogStates.nodes)
     }
   }
 
   const removeLabel = async (id: string, labelId: string) => {
-    const data = await request({
-      operationName: 'RemoveLabel',
-      query: REMOVE_LABEL_MUTATION,
-      variables: { id, labelId }
-    })
+    const { success } = await linear.issueRemoveLabel(id, labelId)
 
-    if (!removeLabelSchema.parse(data).issueRemoveLabel.success) {
+    if (!success) {
       throw new Error(`Linear did not remove the label ${labelId} of ${id}.`)
     }
   }
 
   const deleteAttachment = async (id: string) => {
-    const data = await request({
-      operationName: 'DeleteAttachment',
-      query: DELETE_ATTACHMENT_MUTATION,
-      variables: { id }
-    })
+    const { success } = await linear.deleteAttachment(id)
 
-    if (!deleteAttachmentSchema.parse(data).attachmentDelete.success) {
+    if (!success) {
       throw new Error(`Linear did not delete the attachment ${id}.`)
     }
   }
 
   const teamKeys = async () => {
-    const data = await request({
-      operationName: 'TeamKeys',
-      query: TEAM_KEYS_QUERY
-    })
+    const teams = await linear.paginate((variables) => {
+      return linear.teams(variables)
+    }, {})
 
-    return teamKeysSchema.parse(data).teams.nodes.map(({ key }) => {
+    return teams.map(({ key }) => {
       return key
     })
   }
@@ -327,7 +368,14 @@ export function createLinearApi(apiKey: string) {
     readResetTicket,
     removeLabel,
     deleteAttachment,
-    [Symbol.dispose]: dispose
+    [Symbol.dispose]: () => {
+      for (const retryer of retryers) {
+        retryer.abort()
+      }
+
+      retryers.clear()
+      requests.reset()
+    }
   }
 }
 

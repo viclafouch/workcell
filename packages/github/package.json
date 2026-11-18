@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@octokit/core": "catalog:",
+    "@octokit/graphql-schema": "catalog:",
     "@octokit/plugin-paginate-graphql": "catalog:",
     "@octokit/plugin-paginate-rest": "catalog:",
     "@octokit/plugin-retry": "catalog:",

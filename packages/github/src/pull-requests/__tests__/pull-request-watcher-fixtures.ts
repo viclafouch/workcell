@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw/http'
 import { setupServer } from 'msw/node'
 import { afterAll, beforeAll, beforeEach } from 'vitest'
 import { z } from 'zod'
+import type { StatusState } from '@octokit/graphql-schema'
 import type {
   ThreadLine,
   UpdateWorkerParams,
@@ -11,6 +12,7 @@ import type {
 import { testOctokit } from '#/api/__tests__/test-octokit.ts'
 import {
   createGithubApi,
+  type Author,
   type StatusContext,
   type WatchedPullRequest
 } from '#/api/github-api.ts'
@@ -45,11 +47,14 @@ const REVIEW_GATE: ReviewGate = {
 
 export const PULL_REQUEST_URL = 'https://github.com/acme/app/pull/42'
 
-export const COLLEAGUE = { __typename: 'User', login: 'colleague' }
+export const COLLEAGUE: Author = { __typename: 'User', login: 'colleague' }
 
-export const AI_REVIEW_BOT = { __typename: 'Bot', login: 'review-bot' }
+export const AI_REVIEW_BOT: Author = { __typename: 'Bot', login: 'review-bot' }
 
-export const ACTIONS_BOT = { __typename: 'Bot', login: 'github-actions' }
+export const ACTIONS_BOT: Author = {
+  __typename: 'Bot',
+  login: 'github-actions'
+}
 
 type FakePullRequest = {
   repository: string
@@ -108,7 +113,7 @@ export function openPullRequest(
 
 export function status(
   context: string,
-  state: string,
+  state: StatusState,
   changes: Partial<StatusContext> = {}
 ): StatusContext {
   return {
@@ -121,7 +126,10 @@ export function status(
   }
 }
 
-export function rollup(state: string, failedCheckRuns = 0) {
+export function rollup(
+  state: StatusState,
+  failedCheckRuns = 0
+): WatchedPullRequest['statusCheckRollup'] {
   return {
     state,
     contexts: {
@@ -134,7 +142,7 @@ export function rollup(state: string, failedCheckRuns = 0) {
   }
 }
 
-export function checks(state: string, ...contexts: StatusContext[]) {
+export function checks(state: StatusState, ...contexts: StatusContext[]) {
   return {
     statusCheckRollup: rollup(state),
     commits: { nodes: [{ commit: { status: { contexts } } }] }

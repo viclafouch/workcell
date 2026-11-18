@@ -1,3 +1,22 @@
+import type {
+  Actor,
+  AddedToMergeQueueEvent,
+  Bot,
+  CheckRunStateCount,
+  EnterpriseUserAccount,
+  StatusContext as GithubStatusContext,
+  IssueComment,
+  Mannequin,
+  Maybe,
+  Organization,
+  PullRequest,
+  PullRequestReview,
+  PullRequestReviewThread,
+  RemovedFromMergeQueueEvent,
+  StatusCheckRollup,
+  StatusCheckRollupContextConnection,
+  User
+} from '@octokit/graphql-schema'
 import { splitRepository, type GithubOctokit } from './github-octokit.ts'
 
 const ACTIONS_PAGE_SIZE = 100
@@ -10,55 +29,65 @@ const RUN_CONCLUSIONS_WITHOUT_FAILURE = new Set([
 
 const FAILED_JOB_CONCLUSIONS = new Set(['failure', 'timed_out'])
 
-export type Author = { __typename: string; login: string } | null
+type ActorKind = Bot | EnterpriseUserAccount | Mannequin | Organization | User
 
-export type StatusContext = {
-  id: string
-  context: string
-  state: string
-  description: string | null
-  targetUrl: string | null
-}
+export type Author = Maybe<
+  Pick<Actor, 'login'> & Required<Pick<ActorKind, '__typename'>>
+>
 
-type Comment = { id: string; url: string; author: Author }
+export type StatusContext = Pick<
+  GithubStatusContext,
+  'id' | 'context' | 'state' | 'description'
+> & { targetUrl: string | null }
+
+type Comment = Pick<IssueComment, 'id'> & { url: string; author: Author }
 
 type TimelineItem =
-  | { __typename: 'AddedToMergeQueueEvent'; id: string }
-  | {
-      __typename: 'RemovedFromMergeQueueEvent'
-      id: string
-      reason: string | null
-    }
+  | Required<Pick<AddedToMergeQueueEvent, '__typename' | 'id'>>
+  | (Required<Pick<RemovedFromMergeQueueEvent, '__typename' | 'id'>> &
+      Pick<RemovedFromMergeQueueEvent, 'reason'>)
 
-export type WatchedPullRequest = {
-  number: number
+export type WatchedPullRequest = Pick<
+  PullRequest,
+  'number' | 'merged' | 'mergeable'
+> & {
   url: string
-  merged: boolean
-  mergeable: string
   headRefOid: string
-  mergeCommit: { oid: string } | null
-  statusCheckRollup: {
-    state: string
-    contexts: {
-      checkRunCountsByState: { state: string; count: number }[] | null
+  mergeCommit: Maybe<{ oid: string }>
+  statusCheckRollup: Maybe<
+    Pick<StatusCheckRollup, 'state'> & {
+      contexts: Pick<
+        StatusCheckRollupContextConnection,
+        'checkRunCountsByState'
+      > & {
+        checkRunCountsByState: Maybe<
+          Pick<CheckRunStateCount, 'state' | 'count'>[]
+        >
+      }
     }
-  } | null
+  >
   commits: {
-    nodes: { commit: { status: { contexts: StatusContext[] } | null } }[]
+    nodes: { commit: { status: Maybe<{ contexts: StatusContext[] }> } }[]
   }
   reviewThreads: {
-    nodes: { isResolved: boolean; comments: { nodes: Comment[] } }[]
+    nodes: (Pick<PullRequestReviewThread, 'isResolved'> & {
+      comments: { nodes: Comment[] }
+    })[]
   }
   comments: { nodes: Comment[] }
-  reviews: { nodes: (Comment & { state: string; body: string })[] }
+  reviews: {
+    nodes: (Comment & Pick<PullRequestReview, 'state' | 'body'>)[]
+  }
   timelineItems: { nodes: TimelineItem[] }
 }
 
 type PullRequestSelection =
-  | { pullRequests: { nodes: { number: number; url: string }[] } }
+  | {
+      pullRequests: { nodes: (Pick<PullRequest, 'number'> & { url: string })[] }
+    }
   | { pullRequest: WatchedPullRequest | null }
 
-type WatchData = { viewer: { login: string } } & Record<
+type WatchData = { viewer: Pick<User, 'login'> } & Record<
   `pr${number}`,
   PullRequestSelection
 >
@@ -138,9 +167,7 @@ function watchQuery(heads: readonly PullRequestHead[]) {
   }
 }
 
-function readOf(
-  selection: PullRequestSelection | undefined
-): PullRequestRead {
+function readOf(selection: PullRequestSelection | undefined): PullRequestRead {
   if (selection !== undefined && 'pullRequests' in selection) {
     const [found] = selection.pullRequests.nodes
 

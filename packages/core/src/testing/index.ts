@@ -28,4 +28,5 @@ export {
   type ToolCall
 } from './tool-call.ts'
 export { createWorkers } from '#/workers/workers.ts'
+export { createMessageReader } from '#/inputs/message-files.ts'
 export { starterOnlyGuard } from '#/orchestrator/starter-only-tools.ts'

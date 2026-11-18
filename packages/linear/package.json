@@ -23,6 +23,10 @@
     "test": "vitest run",
     "test:changed": "vitest run --changed"
   },
+  "dependencies": {
+    "@linear/sdk": "catalog:",
+    "@tanstack/pacer": "catalog:"
+  },
   "devDependencies": {
     "@tanstack/ai": "catalog:",
     "@tanstack/ai-harness": "catalog:",

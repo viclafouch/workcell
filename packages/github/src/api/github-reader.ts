@@ -1,3 +1,15 @@
+import type {
+  Actor,
+  Commit,
+  GitActor,
+  Maybe,
+  PullRequest,
+  PullRequestReviewComment,
+  PullRequestReviewCommentConnection,
+  PullRequestReviewThread,
+  PullRequestReviewThreadConnection,
+  User
+} from '@octokit/graphql-schema'
 import type { PageInfoForward } from '@octokit/plugin-paginate-graphql'
 import { REVIEW_THREADS_TEXT } from '#/prompts/github.ts'
 import type { PullRequestHeadRef } from './github-api.ts'
@@ -78,45 +90,42 @@ const REVIEW_THREADS_QUERY = `query ReviewThreads($owner: String!, $name: String
 }`
 
 type FileHistoryData = {
-  repository: {
-    object: {
+  repository: Maybe<{
+    object: Maybe<{
       history: {
-        nodes: {
+        nodes: (Pick<Commit, 'messageHeadline' | 'messageBody'> & {
           oid: string
           committedDate: string
-          messageHeadline: string
-          messageBody: string
-          author: { name: string | null; user: { login: string } | null } | null
+          author: Maybe<
+            Pick<GitActor, 'name'> & { user: Maybe<Pick<User, 'login'>> }
+          >
           associatedPullRequests: {
-            nodes: { number: number; title: string; url: string }[]
+            nodes: (Pick<PullRequest, 'number' | 'title'> & { url: string })[]
           }
-        }[]
+        })[]
       }
-    } | null
-  } | null
+    }>
+  }>
 }
 
-type ReviewComment = {
-  author: { login: string } | null
-  body: string
+type ReviewComment = Pick<PullRequestReviewComment, 'body'> & {
   url: string
+  author: Maybe<Pick<Actor, 'login'>>
 }
 
-type ReviewThread = {
-  id: string
-  isResolved: boolean
-  isOutdated: boolean
-  path: string
-  line: number | null
-  originalLine: number | null
-  comments: { totalCount: number; nodes: ReviewComment[] }
+type ReviewThread = Pick<
+  PullRequestReviewThread,
+  'id' | 'isResolved' | 'isOutdated' | 'path' | 'line' | 'originalLine'
+> & {
+  comments: Pick<PullRequestReviewCommentConnection, 'totalCount'> & {
+    nodes: ReviewComment[]
+  }
 }
 
 type ReviewThreadsData = {
   repository: {
     pullRequest: {
-      reviewThreads: {
-        totalCount: number
+      reviewThreads: Pick<PullRequestReviewThreadConnection, 'totalCount'> & {
         pageInfo: PageInfoForward
         nodes: ReviewThread[]
       }

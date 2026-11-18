@@ -1,11 +1,12 @@
 import type { FileUpload } from 'chat'
-import { z } from 'zod'
-import { AsyncRetryer } from '@tanstack/pacer'
 import {
   cardToBlockKit,
   cardToFallbackText,
+  SlackFormatConverter,
   type SlackAdapter
 } from '@chat-adapter/slack'
+import { ErrorCode, type WebAPIPlatformError } from '@slack/web-api'
+import { AsyncRetryer } from '@tanstack/pacer'
 import type {
   ChatIdentity,
   ChatMessage,
@@ -46,15 +47,6 @@ function shownStatusLine(line: string) {
     : line
 }
 
-const uploadUrlSchema = z.object({
-  upload_url: z.string(),
-  file_id: z.string()
-})
-
-const postedSchema = z.object({ ts: z.string() })
-
-const slackErrorSchema = z.object({ data: z.object({ error: z.string() }) })
-
 const FILE_NOT_READY_ERROR = 'invalid_blocks'
 
 const FILE_READY_RETRY = { baseWait: 300, maxAttempts: 5 } as const
@@ -67,14 +59,32 @@ type UploadedFile = { id: string; title: string }
 
 type PostTarget = { channel: string; threadTs: string | undefined }
 
+type FileShare = {
+  channel_id: string
+  thread_ts: string | undefined
+  initial_comment: string
+}
+
+const formatConverter = new SlackFormatConverter()
+
 function captionInEnglish(name: string) {
   return `From ${name}`
 }
 
-async function bytesOf(data: FileUpload['data']) {
-  return data instanceof Blob
-    ? new Uint8Array(await data.arrayBuffer())
-    : new Uint8Array(data)
+async function bufferOf(data: FileUpload['data']) {
+  if (data instanceof Blob) {
+    return Buffer.from(await data.arrayBuffer())
+  }
+
+  return Buffer.isBuffer(data) ? data : Buffer.from(data)
+}
+
+function matchIsPlatformError(error: unknown): error is WebAPIPlatformError {
+  return (
+    Error.isError(error) &&
+    'code' in error &&
+    error.code === ErrorCode.PlatformError
+  )
 }
 
 function filesOf(message: ChatMessage) {
@@ -91,7 +101,7 @@ function contentOf(message: ChatMessage) {
         text: message.fallbackText ?? cardToFallbackText(message.card),
         blocks: cardToBlockKit(message.card)
       }
-    : { markdown_text: message.markdown }
+    : formatConverter.toSlackPayload({ markdown: message.markdown })
 }
 
 function imageBlocksOf(images: readonly UploadedFile[]) {
@@ -109,46 +119,41 @@ export function slackPlatform(
   adapter: SlackAdapter,
   { fileCaption = captionInEnglish }: SlackPlatformOptions = {}
 ): PlatformExtras {
-  const upload = async ({ filename, data }: FileUpload) => {
-    const bytes = await bytesOf(data)
-    const { upload_url: uploadUrl, file_id: id } = uploadUrlSchema.parse(
-      await adapter.webClient.files.getUploadURLExternal({
-        filename,
-        length: bytes.byteLength
-      })
-    )
-    const response = await fetch(uploadUrl, { method: 'POST', body: bytes })
-
-    if (!response.ok) {
-      throw new Error(
-        `Slack refused the bytes of ${filename} with the status ${response.status}.`
-      )
-    }
-
-    return { id, title: filename }
-  }
-
   const uploadFiles = async (
     files: readonly FileUpload[],
-    share: Record<string, unknown> = {}
-  ) => {
-    const uploaded = await Promise.all(files.map(upload))
-    await adapter.webClient.apiCall('files.completeUploadExternal', {
-      files: JSON.stringify(uploaded),
-      ...share
+    share?: FileShare
+  ): Promise<UploadedFile[]> => {
+    const { files: completions } = await adapter.webClient.filesUploadV2({
+      ...share,
+      file_uploads: await Promise.all(
+        files.map(async ({ filename, data }) => {
+          return { file: await bufferOf(data), filename, title: filename }
+        })
+      )
     })
 
-    return uploaded
+    return completions.flatMap((completion) => {
+      return (completion.files ?? []).map(({ id, title }) => {
+        if (id === undefined) {
+          throw new Error('Slack gave no id to an uploaded file.')
+        }
+
+        return { id, title: title ?? id }
+      })
+    })
   }
 
-  const postOnceFilesReady = async (post: Record<string, unknown>) => {
+  const postOnceFilesReady = async (
+    post: Parameters<typeof adapter.webClient.chat.postMessage>[0]
+  ) => {
     const posted = await new AsyncRetryer(async () => {
       try {
-        return { result: await adapter.webClient.apiCall('chat.postMessage', post) }
+        // oxlint-disable-next-line unicorn/require-post-message-target-origin -- chat.postMessage of the Slack Web API takes no target origin
+        return { result: await adapter.webClient.chat.postMessage(post) }
       } catch (error) {
         if (
-          slackErrorSchema.safeParse(error).data?.data.error ===
-          FILE_NOT_READY_ERROR
+          matchIsPlatformError(error) &&
+          error.data.error === FILE_NOT_READY_ERROR
         ) {
           throw error
         }
@@ -171,7 +176,11 @@ export function slackPlatform(
       throw posted.error
     }
 
-    return postedSchema.parse(posted.result).ts
+    if (posted.result.ts === undefined) {
+      throw new Error('Slack gave no timestamp to the post of the images.')
+    }
+
+    return posted.result.ts
   }
 
   const postImagesAs = async (
@@ -293,8 +302,7 @@ export function slackPlatform(
   ) => {
     const { channel, threadTs } = adapter.decodeThreadId(threadId)
     const shown = shownStatusLine(line)
-    await adapter.webClient.apiCall(
-      'assistant.threads.setStatus',
+    await adapter.webClient.assistant.threads.setStatus(
       shown === ''
         ? { channel_id: channel, thread_ts: threadTs, status: shown }
         : {

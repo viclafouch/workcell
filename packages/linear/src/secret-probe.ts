@@ -1,13 +1,20 @@
-import { requestVerdict, type SecretProbe } from '@workcell/core'
-import { LINEAR_GRAPHQL_URL } from './linear-api.ts'
+import { AuthenticationLinearError, LinearClient } from '@linear/sdk'
+import { PROBE_TIMEOUT_MS, type SecretProbe } from '@workcell/core'
 
 export const LINEAR_PROBE: SecretProbe = {
   service: 'Linear',
-  probe: (key) => {
-    return requestVerdict(LINEAR_GRAPHQL_URL, {
-      method: 'POST',
-      headers: { authorization: key, 'content-type': 'application/json' },
-      body: JSON.stringify({ query: '{ viewer { id } }' })
-    })
+  probe: async (apiKey) => {
+    try {
+      await new LinearClient({
+        apiKey,
+        signal: AbortSignal.timeout(PROBE_TIMEOUT_MS)
+      }).viewer
+
+      return 'accepted'
+    } catch (error) {
+      return error instanceof AuthenticationLinearError
+        ? 'refused'
+        : 'unreachable'
+    }
   }
 }

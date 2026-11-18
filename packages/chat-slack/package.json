@@ -24,6 +24,7 @@
     "test:changed": "vitest run --changed"
   },
   "dependencies": {
+    "@slack/web-api": "catalog:",
     "@tanstack/pacer": "catalog:"
   },
   "devDependencies": {

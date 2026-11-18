@@ -15,6 +15,7 @@ import type { WorkerMetadata } from '@workcell/core'
 import {
   createHostFreeLifecycle,
   createHostFreeSandbox,
+  createMessageReader,
   createWorkers,
   defineTestWorker,
   HOST_FREE_REPOSITORY,
@@ -411,6 +412,10 @@ describe('the Linear tools', () => {
       repositories: [HOST_FREE_REPOSITORY],
       workerNames: ['Alpha'],
       permissionMode: 'bypass',
+      readMessage: createMessageReader({
+        modalities: undefined,
+        logger: SILENT_HOST_LOGGER
+      }),
       logger: {
         child: () => {
           return { info: record, warn: record, error: record }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { WatchedPullRequest } from '#/api/github-api.ts'
+import type { StatusContext, WatchedPullRequest } from '#/api/github-api.ts'
 import type { PullRequestLines } from '#/prompts/github.ts'
 import {
   pullRequestEvents,
@@ -113,7 +113,7 @@ function reviewGateEventsOf(reviewGate?: ReviewGate) {
   })
 }
 
-function redStatus(context: string) {
+function redStatus(context: string): StatusContext {
   return {
     id: `status-${context}`,
     context,

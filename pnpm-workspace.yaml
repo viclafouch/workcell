@@ -9,12 +9,15 @@ trustPolicy: no-downgrade
 minimumReleaseAgeExclude:
   - '@tanstack/*'
   - '@json-render/*'
+  - '@linear/sdk@103.0.0'
 
 catalog:
   '@chat-adapter/slack': 4.45.0
   '@chat-adapter/state-memory': 4.45.0
   '@json-render/chat': 0.23.1
+  '@linear/sdk': 103.0.0
   '@octokit/core': ^7.0.8
+  '@octokit/graphql-schema': ^15.26.1
   '@octokit/plugin-paginate-graphql': ^6.0.0
   '@octokit/plugin-paginate-rest': ^16.0.0
   '@octokit/plugin-retry': ^8.1.1
@@ -24,6 +27,7 @@ catalog:
   '@opentelemetry/core': ^3.1.1
   '@opentelemetry/sdk-node': ^0.301.1
   '@opentelemetry/sdk-trace': ^3.1.1
+  '@slack/web-api': 7.19.0
   '@tanstack/ai': 1.4.0
   '@tanstack/ai-anthropic': 1.1.1
   '@tanstack/ai-compaction': 1.0.1

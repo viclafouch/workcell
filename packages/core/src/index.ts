@@ -2,12 +2,6 @@ export { createModelPricing, type ModelPriceTable } from './budget/pricing.ts'
 export { BUDGET_END_EVENT } from './budget/budget.ts'
 export { EntrySkillLimits, type BudgetLimits } from './budget/limits.ts'
 export {
-  createPacedFetch,
-  REQUEST_TIMEOUT_MS,
-  type PacedRequest,
-  type RateLimitCheck
-} from './http/paced-fetch.ts'
-export {
   bearer,
   PROBE_TIMEOUT_MS,
   requestVerdict,

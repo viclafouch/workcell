@@ -1,26 +1,27 @@
-import { z } from 'zod'
+import { callSlackApi } from '@chat-adapter/slack/api'
 import {
-  bearer,
   PROBE_TIMEOUT_MS,
   type ProbeVerdict,
   type SecretProbe
 } from '@workcell/core'
 
-const SLACK_API_URL = 'https://slack.com/api'
-
-const slackAnswerSchema = z.object({ ok: z.boolean() })
+const fetchWithinProbeTime: typeof fetch = (input, init) => {
+  return fetch(input, {
+    ...init,
+    signal: AbortSignal.timeout(PROBE_TIMEOUT_MS)
+  })
+}
 
 async function slackVerdict(
   method: string,
   token: string
 ): Promise<ProbeVerdict> {
   try {
-    const response = await fetch(`${SLACK_API_URL}/${method}`, {
-      method: 'POST',
-      ...bearer(token),
-      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS)
-    })
-    const { ok } = slackAnswerSchema.parse(await response.json())
+    const { ok } = await callSlackApi(
+      method,
+      {},
+      { token, fetch: fetchWithinProbeTime }
+    )
 
     return ok ? 'accepted' : 'refused'
   } catch {

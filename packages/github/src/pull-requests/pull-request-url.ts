@@ -7,10 +7,6 @@ export const taskPullRequestSchema = workerMetadataSchema.extend({
   pullRequest: z.string().optional()
 })
 
-export function pullRequestUrlPrefix(repository: string) {
-  return `${GITHUB_WEB_URL}/${repository}/pull/`
-}
-
 type BranchPullRequestsUrlParams = { repository: string; branch: string }
 
 function branchPullRequestsUrl({

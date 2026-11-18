@@ -32,11 +32,23 @@ const INTAKE = {
   pollIntervalMs: 60_000
 }
 
-const TODO = { id: 'state-todo', type: 'unstarted' }
+const TEAM = { id: 'team-acme' }
 
-const IN_PROGRESS = { id: 'state-in-progress', type: 'started', position: 1 }
+const TODO = { id: 'state-todo', type: 'unstarted', position: 0, team: TEAM }
 
-const IN_REVIEW = { id: 'state-in-review', type: 'started', position: 2 }
+const IN_PROGRESS = {
+  id: 'state-in-progress',
+  type: 'started',
+  position: 1,
+  team: TEAM
+}
+
+const IN_REVIEW = {
+  id: 'state-in-review',
+  type: 'started',
+  position: 2,
+  team: TEAM
+}
 
 const STATES = [TODO, IN_PROGRESS, IN_REVIEW]
 
@@ -74,16 +86,38 @@ const filterSchema = z.object({
   ])
 })
 
-const callSchema = z.discriminatedUnion('operationName', [
+const OPERATION_NAME = /(?:query|mutation) (?<name>\w+)/u
+
+const LAST_PAGE = { hasNextPage: false, endCursor: null }
+
+const callSchema = z.discriminatedUnion('operation', [
   z.object({
-    operationName: z.literal('ReadyTickets'),
+    operation: z.literal('issues'),
     variables: z.object({ filter: filterSchema })
   }),
   z.object({
-    operationName: z.literal('MoveTicket'),
-    variables: z.object({ id: z.string(), stateId: z.string() })
+    operation: z.literal('workflowStates'),
+    variables: z.object({})
+  }),
+  z.object({
+    operation: z.literal('issueLabels'),
+    variables: z.object({
+      filter: z.object({ id: z.object({ in: z.array(z.string()) }) })
+    })
+  }),
+  z.object({
+    operation: z.literal('updateIssue'),
+    variables: z.object({
+      id: z.string(),
+      input: z.object({ stateId: z.string() })
+    })
   })
 ])
+
+const requestSchema = z.object({
+  query: z.string(),
+  variables: z.record(z.string(), z.unknown()).default({})
+})
 
 let tickets: FakeTicket[]
 
@@ -117,9 +151,33 @@ function matches(ticket: FakeTicket, filter: z.infer<typeof filterSchema>) {
   )
 }
 
+function labelId(name: string) {
+  return `label-${name}`
+}
+
 function answerCall(call: z.infer<typeof callSchema>) {
-  if (call.operationName === 'MoveTicket') {
-    const { id, stateId } = call.variables
+  if (call.operation === 'workflowStates') {
+    return { data: { workflowStates: { nodes: STATES, pageInfo: LAST_PAGE } } }
+  }
+
+  if (call.operation === 'issueLabels') {
+    const nodes = tickets
+      .flatMap(({ labels }) => {
+        return labels
+      })
+      .filter((name) => {
+        return call.variables.filter.id.in.includes(labelId(name))
+      })
+      .map((name) => {
+        return { id: labelId(name), name }
+      })
+
+    return { data: { issueLabels: { nodes, pageInfo: LAST_PAGE } } }
+  }
+
+  if (call.operation === 'updateIssue') {
+    const { id } = call.variables
+    const { stateId } = call.variables.input
     const ticket = findTicket(id)
     const state = STATES.find((candidate) => {
       return candidate.id === stateId
@@ -132,7 +190,7 @@ function answerCall(call: z.infer<typeof callSchema>) {
     ticket.state = state
     moves.push(`${ticket.identifier} → ${stateId}`)
 
-    return { data: { issueUpdate: { success: true } } }
+    return { data: { issueUpdate: { success: true, lastSyncId: 1 } } }
   }
 
   const nodes = tickets
@@ -145,17 +203,21 @@ function answerCall(call: z.infer<typeof callSchema>) {
         identifier,
         title: 'Fix the login',
         url: `https://linear.app/acme/issue/${identifier}`,
-        state,
-        labels: {
-          nodes: labels.map((name) => {
-            return { name }
-          })
-        },
-        team: { states: { nodes: [IN_REVIEW, IN_PROGRESS] } }
+        state: { id: state.id },
+        team: TEAM,
+        labelIds: labels.map(labelId),
+        reactions: [],
+        sharedAccess: {
+          isShared: false,
+          sharedWithCount: 0,
+          viewerHasOnlySharedAccess: false,
+          disallowedIssueFields: [],
+          sharedWithUsers: []
+        }
       }
     })
 
-  return { data: { issues: { nodes } } }
+  return { data: { issues: { nodes, pageInfo: LAST_PAGE } } }
 }
 
 const network = setupServer(
@@ -175,7 +237,10 @@ const network = setupServer(
       return HttpResponse.json(
         {
           errors: [
-            { message: 'Slow down.', extensions: { code: 'RATELIMITED' } }
+            {
+              message: 'Slow down.',
+              extensions: { type: 'ratelimited', code: 'RATELIMITED' }
+            }
           ]
         },
         {
@@ -185,7 +250,16 @@ const network = setupServer(
       )
     }
 
-    return HttpResponse.json(answerCall(callSchema.parse(await request.json())))
+    const { query, variables } = requestSchema.parse(await request.json())
+
+    return HttpResponse.json(
+      answerCall(
+        callSchema.parse({
+          operation: OPERATION_NAME.exec(query)?.groups?.name,
+          variables
+        })
+      )
+    )
   })
 )
 

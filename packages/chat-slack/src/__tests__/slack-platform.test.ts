@@ -40,7 +40,19 @@ const network = setupServer(
       return HttpResponse.json(UPLOAD_ANSWER)
     }
 
-    if (method === 'chat.postMessage' && slackAnswer.postsBeforeFileIsReady > 0) {
+    if (method === 'files.completeUploadExternal') {
+      return HttpResponse.json({
+        ok: true,
+        files: z
+          .array(z.object({ id: z.string(), title: z.string() }))
+          .parse(JSON.parse(body.files ?? '[]'))
+      })
+    }
+
+    if (
+      method === 'chat.postMessage' &&
+      slackAnswer.postsBeforeFileIsReady > 0
+    ) {
       slackAnswer.postsBeforeFileIsReady -= 1
 
       return HttpResponse.json({ ok: false, error: 'invalid_blocks' })
@@ -51,7 +63,12 @@ const network = setupServer(
     )
   }),
   http.post(UPLOAD_URL, async ({ request }) => {
-    calls.push({ method: 'upload', body: { bytes: await request.text() } })
+    const multipart = await request.text()
+    const [, part = ''] = multipart.split('\r\n\r\n')
+    calls.push({
+      method: 'upload',
+      body: { bytes: part.slice(0, part.indexOf('\r\n')) }
+    })
 
     return new HttpResponse('OK')
   })
