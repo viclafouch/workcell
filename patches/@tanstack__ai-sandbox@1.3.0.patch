@@ -14,10 +14,10 @@ index 018fcdbe4822eb44ea3162d08642b05bca794eb9..87247297eac3db1216e51ae51a0979f6
 +    onStep?: (step: SandboxSetupStep) => void | Promise<void>;
  }): Promise<BootstrapResult>;
 diff --git a/dist/esm/bootstrap.js b/dist/esm/bootstrap.js
-index bd7ee4555940d97efda2a80a19802a4063bf7f8d..48fb9cb137406a781baed598af1ecd783a585369 100644
+index bd7ee4555940d97efda2a80a19802a4063bf7f8d..d7ee0700f8780609f3453292c0850b92217651a6 100644
 --- a/dist/esm/bootstrap.js
 +++ b/dist/esm/bootstrap.js
-@@ -39,12 +39,15 @@ async function bootstrapWorkspace(handle, workspace, options = {}) {
+@@ -39,12 +39,16 @@ async function bootstrapWorkspace(handle, workspace, options = {}) {
  		if (Object.keys(resolved).length > 0) await handle.env.set(resolved);
  	}
  	if (workspace.source.type === "git") {
@@ -33,13 +33,14 @@ index bd7ee4555940d97efda2a80a19802a4063bf7f8d..48fb9cb137406a781baed598af1ecd78
 +				url: workspace.source.url,
 +				ref: workspace.source.ref,
 +				auth: workspace.source.auth,
-+				...workspace.source.depth !== void 0 ? { depth: workspace.source.depth } : {}
++				...workspace.source.depth !== void 0 ? { depth: workspace.source.depth } : {},
++				...workspace.source.filter !== void 0 ? { filter: workspace.source.filter } : {}
 +			});
 +		}
  	}
  	const skills = workspace.skills ?? [];
  	for (const skill of skills) if (skill.kind === "git") {
-@@ -73,28 +76,34 @@ async function bootstrapWorkspace(handle, workspace, options = {}) {
+@@ -73,28 +77,34 @@ async function bootstrapWorkspace(handle, workspace, options = {}) {
  	if (plan.length > 0) {
  		const shell = await createBootstrapShell(handle, { cwd: root });
  		try {
@@ -95,6 +96,54 @@ index bd7ee4555940d97efda2a80a19802a4063bf7f8d..48fb9cb137406a781baed598af1ecd78
  			}
  		} finally {
  			await shell.dispose();
+diff --git a/dist/esm/contracts.d.ts b/dist/esm/contracts.d.ts
+index 375bca8de6e4a6d32102e4497c992ad49563c146..d60e76d096c14748d30e1c57fe3a8112e130a171 100644
+--- a/dist/esm/contracts.d.ts
++++ b/dist/esm/contracts.d.ts
+@@ -153,6 +153,7 @@ export interface SandboxGit {
+             token: string;
+         };
+         depth?: number | 'full';
++        filter?: string;
+         signal?: AbortSignal;
+     }) => Promise<void>;
+     status: (dir?: string) => Promise<string>;
+diff --git a/dist/esm/git-exec.js b/dist/esm/git-exec.js
+index abbfcb06c2735e1132f9153b0ab06f5f17c14554..164bfed4bf7c8a7bcb6275162d308ac66bb1ca70 100644
+--- a/dist/esm/git-exec.js
++++ b/dist/esm/git-exec.js
+@@ -15,7 +15,7 @@ function createExecBackedGit(process, defaultRoot) {
+ 		return q(d);
+ 	};
+ 	return {
+-		clone: async ({ url, dir, ref, auth, depth, signal }) => {
++		clone: async ({ url, dir, ref, auth, depth, filter, signal }) => {
+ 			assertNoLeadingDash(url, "url");
+ 			const target = dir ?? defaultRoot;
+ 			assertNoLeadingDash(target, "dir");
+@@ -24,10 +24,12 @@ function createExecBackedGit(process, defaultRoot) {
+ 			const resolvedDepth = depth ?? 1;
+ 			if (resolvedDepth !== "full" && (!Number.isInteger(resolvedDepth) || resolvedDepth <= 0)) throw new Error("git-exec: depth must be a positive integer or \"full\".");
+ 			const depthArg = resolvedDepth === "full" ? "" : `--depth ${resolvedDepth} --single-branch `;
++			if (filter !== void 0 && filter.length === 0) throw new Error("git-exec: filter must not be empty.");
++			const filterArg = filter ? `--filter=${q(filter)} ` : "";
+ 			const parentSlash = target.lastIndexOf("/");
+ 			if (parentSlash > 0) await process.exec(`mkdir -p ${q(target.slice(0, parentSlash))}`, signal && { signal });
+ 			if (auth?.token) {
+-				await process.exec(`git -c credential.helper=${q(CREDENTIAL_HELPER)} clone ${refArg}${depthArg}-- ${q(url)} ${q(target)}`, {
++				await process.exec(`git -c credential.helper=${q(CREDENTIAL_HELPER)} clone ${refArg}${depthArg}${filterArg}-- ${q(url)} ${q(target)}`, {
+ 					env: {
+ 						GIT_ASKPASS_USER: auth.username ?? "x-access-token",
+ 						GIT_ASKPASS_TOKEN: auth.token,
+@@ -37,7 +39,7 @@ function createExecBackedGit(process, defaultRoot) {
+ 				});
+ 				return;
+ 			}
+-			await process.exec(`git clone ${refArg}${depthArg}-- ${q(url)} ${q(target)}`, signal && { signal });
++			await process.exec(`git clone ${refArg}${depthArg}${filterArg}-- ${q(url)} ${q(target)}`, signal && { signal });
+ 		},
+ 		status: async (dir) => (await process.exec(`git -C ${at(dir)} status --porcelain`)).stdout,
+ 		add: async (paths, dir) => {
 diff --git a/dist/esm/index.d.ts b/dist/esm/index.d.ts
 index c114b4da8a1e6a24645158d7e727b78fb692b361..ad33a834ab84d4188a2431f44b7331c2502176d2 100644
 --- a/dist/esm/index.d.ts
@@ -169,3 +218,45 @@ index 3de62cc7e9b0408a384989941b3327af9d8610b7..54352a32c1dffadf9ae2405bbde5571c
  			} catch (error) {
  				await created.destroy().catch(() => {});
  				throw error;
+diff --git a/dist/esm/workspace.d.ts b/dist/esm/workspace.d.ts
+index e1ed4af17e86354bcb763eb47a0503ae328da9f0..1001ef157b6c404ac8520027f04c98168d37085d 100644
+--- a/dist/esm/workspace.d.ts
++++ b/dist/esm/workspace.d.ts
+@@ -20,6 +20,7 @@ export type WorkspaceSource = {
+      * depth, or `'full'` to fetch the entire history.
+      */
+     depth?: number | 'full';
++    filter?: string;
+ } | {
+     type: 'local';
+     path: string;
+@@ -35,6 +36,7 @@ export declare function gitSource(input: {
+         token: string;
+     };
+     depth?: number | 'full';
++    filter?: string;
+ }): WorkspaceSource;
+ export declare function githubRepo(input: {
+     repo: string;
+@@ -44,6 +46,7 @@ export declare function githubRepo(input: {
+         token: string;
+     };
+     depth?: number | 'full';
++    filter?: string;
+ }): WorkspaceSource;
+ export declare function localSource(path: string): WorkspaceSource;
+ /**
+diff --git a/dist/esm/workspace.js b/dist/esm/workspace.js
+index f74cd29d0126b6471698924d30c01c1d1e8c90f9..aa22077f1ff1454da9d7c826b3aa60bb1b625ab2 100644
+--- a/dist/esm/workspace.js
++++ b/dist/esm/workspace.js
+@@ -12,7 +12,8 @@ function githubRepo(input) {
+ 		url: input.repo.startsWith("http") ? input.repo : `https://github.com/${input.repo}.git`,
+ 		ref: input.ref,
+ 		auth: input.auth,
+-		depth: input.depth
++		depth: input.depth,
++		filter: input.filter
+ 	};
+ }
+ function localSource(path) {

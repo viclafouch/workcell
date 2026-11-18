@@ -23,6 +23,7 @@ const ABOVE_THE_LIMIT_BYTES = ABOVE_THE_LIMIT_MEBIBYTES * BYTES_PER_MEBIBYTE
 const SEED_ORIGIN = `set -eu
 git init --quiet --bare --initial-branch=dev origin.git
 git -C origin.git config uploadpack.allowAnySHA1InWant true
+git -C origin.git config uploadpack.allowFilter true
 git init --quiet --initial-branch=dev seed
 cd seed
 for i in $(seq ${HISTORY_COMMITS}); do
@@ -92,9 +93,19 @@ async function fullClone(origin: string) {
   return sandbox
 }
 
-async function workerOnTheStaleBranch() {
+async function bloblessClone(origin: string) {
+  const sandbox = await hostFree.provider.create({})
+  await exec(
+    sandbox,
+    `git clone --quiet --filter=blob:none --branch dev ${origin} .`
+  )
+
+  return sandbox
+}
+
+async function workerOnTheStaleBranch(clone = shallowClone) {
   const origin = await seedOrigin()
-  const sandbox = await shallowClone(origin)
+  const sandbox = await clone(origin)
   await exec(sandbox, MERGE_THE_STALE_BRANCH)
 
   return { origin, sandbox }
@@ -122,22 +133,22 @@ describe('the save of the worker changes', () => {
   it('leaves out the history of the remote branch the worker merged', async () => {
     const { sandbox } = await workerOnTheStaleBranch()
 
-    const { patch } = await capture(sandbox)
+    const { content } = await capture(sandbox)
 
-    expect(patch).toContain('+mine')
-    expect(patch).toContain('+two')
-    expect(patch).not.toContain('stale-marker')
-    expect(patch).not.toContain('history-')
+    expect(content).toContain('mine\n')
+    expect(content).toContain('two\n')
+    expect(content).not.toContain('stale-marker')
+    expect(content).not.toContain('history-')
   })
 
   it('leaves out the commits the worker pushed', async () => {
     const { sandbox } = await workerOnTheStaleBranch()
     await exec(sandbox, PUSH)
 
-    const { patch } = await capture(sandbox)
+    const { content } = await capture(sandbox)
 
-    expect(patch).not.toContain('+mine')
-    expect(patch).toContain('+two')
+    expect(content).not.toContain('mine\n')
+    expect(content).toContain('two\n')
   })
 
   it('leaves no bundle in the sandbox', async () => {
@@ -161,13 +172,37 @@ describe('the save of the worker changes', () => {
     await expect(exec(sandbox, LEFT_NOTHING_BEHIND)).resolves.toBe('')
   })
 
-  it('saves the changes when the remote is out of reach', async () => {
-    const { sandbox } = await workerOnTheStaleBranch()
-    await exec(sandbox, 'git remote set-url origin file:///nowhere')
+  it.each([
+    { kind: 'shallow', clone: shallowClone },
+    { kind: 'blobless', clone: bloblessClone }
+  ])(
+    'saves the changes of a $kind clone when the remote is out of reach',
+    async ({ clone }) => {
+      const { sandbox } = await workerOnTheStaleBranch(clone)
+      await exec(sandbox, 'git remote set-url origin file:///nowhere')
 
-    const { patch } = await capture(sandbox)
+      const { content } = await capture(sandbox)
 
-    expect(patch).toContain('+two')
+      expect(content).toContain('mine\n')
+      expect(content).toContain('two\n')
+    }
+  )
+
+  it('comes back in a fresh blobless clone from the save of a blobless clone', async () => {
+    const { origin, sandbox } = await workerOnTheStaleBranch(bloblessClone)
+    const captured = await capture(sandbox)
+    const fresh = await bloblessClone(origin)
+
+    await restoreChanges(fresh, captured)
+
+    await expect(
+      exec(
+        fresh,
+        'git status --short --branch && git log --format=%s -1 && cat mine.md uncommitted.md'
+      )
+    ).resolves.toBe(
+      `## ${BRANCH}\n?? uncommitted.md\nkeep my work\nmine\ntwo\n`
+    )
   })
 
   it.each([

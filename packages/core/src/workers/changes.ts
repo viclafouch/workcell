@@ -52,7 +52,7 @@ bytes=$(wc -c < ${BUNDLE})
 echo "branch=$branch"
 echo "bytes=$bytes"`
 
-const UNPUSHED_PATCH_COMMAND = `git log --patch --cc --text --format=%B ${CHANGES_REF} --not --remotes`
+const UNPUSHED_CONTENT_COMMAND = `objects=$(git rev-list --objects --no-object-names --missing=allow-promisor ${CHANGES_REF} --not --remotes) && printf '%s\\n' "$objects" | git cat-file --batch`
 
 const DISCARD_COMMAND = `git update-ref -d ${CHANGES_REF} && rm -f ${BUNDLE}`
 
@@ -85,7 +85,7 @@ export type WorkerChanges = {
   remove: (threadId: string) => Promise<void>
 }
 
-type CapturedChanges = SavedChanges & { patch: string }
+type CapturedChanges = SavedChanges & { content: string }
 
 async function run(
   handle: SandboxHandle,
@@ -136,12 +136,12 @@ export async function captureChanges(
       )
     }
 
-    const [bundle, patch] = await Promise.all([
+    const [bundle, content] = await Promise.all([
       handle.fs.readBytes(`${WORKSPACE_ROOT}/${BUNDLE}`),
-      run(handle, UNPUSHED_PATCH_COMMAND)
+      run(handle, UNPUSHED_CONTENT_COMMAND)
     ])
 
-    return { branch: branchLine[1] || undefined, bundle, patch }
+    return { branch: branchLine[1] || undefined, bundle, content }
   } finally {
     await run(handle, DISCARD_COMMAND)
   }

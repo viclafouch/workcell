@@ -278,7 +278,7 @@ export function createWorkerSandbox({
 
       const leaked = secretValuesOf(current.sandbox).flatMap(
         ([name, value]) => {
-          return value !== '' && captured.patch.includes(value) ? [name] : []
+          return value !== '' && captured.content.includes(value) ? [name] : []
         }
       )
 
