@@ -1,31 +1,36 @@
 type LinearToolNames = {
   readTools: readonly string[]
   writeTools: readonly string[]
+  access: 'read' | 'comment' | 'create'
 }
 
+const NO_WRITE = 'You write nothing in Linear.'
+
 function writeLines(
-  writeTools: readonly string[],
+  { writeTools, access }: LinearToolNames,
   ownTicket: string | undefined
 ) {
-  if (writeTools.length === 0) {
-    return ['You write nothing in Linear.']
+  if (access === 'create') {
+    return [
+      `You create a Linear ticket with ${writeTools.join(', ')}, with no id, when an allowed starter asks for one. Any other Linear write is refused.`
+    ]
   }
 
-  return ownTicket === undefined
-    ? ['You write nothing in Linear.']
-    : [
+  return access === 'comment' && ownTicket !== undefined
+    ? [
         `You comment on ${ownTicket} with ${writeTools.join(', ')}, with no question. Any other Linear write is refused.`
       ]
+    : [NO_WRITE]
 }
 
 export function linearPrompt(
-  { readTools, writeTools }: LinearToolNames,
+  tools: LinearToolNames,
   ownTicket: string | undefined
 ) {
   return [
-    `You read Linear with ${readTools.join(', ')}.`,
+    `You read Linear with ${tools.readTools.join(', ')}.`,
     'When one of these tools is missing, the Linear server is down: say so, and never guess what a ticket says.',
-    ...writeLines(writeTools, ownTicket)
+    ...writeLines(tools, ownTicket)
   ].join('\n')
 }
 

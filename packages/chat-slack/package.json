@@ -43,6 +43,7 @@
   },
   "peerDependencies": {
     "@chat-adapter/slack": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
     "@workcell/chat": "workspace:*",
     "@workcell/core": "workspace:*",
     "chat": "catalog:",

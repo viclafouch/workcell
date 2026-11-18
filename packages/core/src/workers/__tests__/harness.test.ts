@@ -18,6 +18,7 @@ import {
   TEST_STARTER
 } from '#/testing/test-doubles.ts'
 import {
+  decideWorkerToolCall,
   defineTestWorker,
   runWorkerToolCall,
   type ToolCall
@@ -154,6 +155,20 @@ describe('the worker harness', () => {
     expect(run.result).toContain('a-b')
   })
 
+  it.each(['acceptEdits', 'plan'] as const)(
+    'lets webfetch read a page with no question, in %s mode',
+    async (mode) => {
+      const toolCall = {
+        name: 'webfetch',
+        input: { url: 'https://docs.example.com/guide' }
+      }
+
+      await expect(
+        decideWorkerToolCall({ hostFree, toolCall, mode })
+      ).resolves.toStrictEqual({ decision: 'allow' })
+    }
+  )
+
   it('asks before a command that no rule allows', async () => {
     await expect(runBash('pnpm test:unit')).resolves.toMatchObject({
       asked: true
@@ -199,15 +214,6 @@ describe('the worker harness', () => {
     expect(run.result).toContain('[redacted]')
     expect(run.result).not.toContain(SANDBOX_SECRETS.NPM_TOKEN)
     expect(run.modelContext).not.toContain(SANDBOX_SECRETS.NPM_TOKEN)
-  })
-
-  it('has no webfetch tool, so no fetch leaves the host', async () => {
-    const run = await runToolCall({
-      name: 'webfetch',
-      input: { url: 'https://example.com' }
-    })
-
-    expect(run.result).toContain('Unknown tool: webfetch')
   })
 
   it('cuts a long host tool result before the model reads it', async () => {

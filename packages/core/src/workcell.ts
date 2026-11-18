@@ -70,6 +70,7 @@ type OpenWorkcellParams = {
     limits: BudgetLimits
     plugins: readonly HarnessPlugin[]
     scope?: string
+    skillDirs?: readonly string[]
   }
   gitIdentity: WorkerIdentityEnvParams
   workerNames: readonly string[]

@@ -11,6 +11,7 @@ import {
   type WorkspaceBinder
 } from '@tanstack/ai-harness/plugins/coding'
 import { boundToolOutput } from '@tanstack/ai-harness/plugins/node'
+import { skills } from '@tanstack/ai-skills/harness'
 import {
   untilABudgetStop,
   workerBudget,
@@ -30,8 +31,10 @@ import {
   workerTelemetry,
   type WorkerObservability
 } from '#/telemetry/worker-telemetry.ts'
+import { WEB_FETCH_RULE } from '#/workers/permission-rules.ts'
 import type { Workers } from '#/workers/workers.ts'
 import { orchestratorTools } from './orchestrator-tools.ts'
+import { starterOnlyGuard } from './starter-only-tools.ts'
 
 const ORCHESTRATOR_HARNESS_NAME = 'workcell/orchestrator'
 
@@ -53,6 +56,7 @@ type DefineOrchestratorHarnessParams = {
   limits: BudgetLimits
   plugins: readonly HarnessPlugin[]
   scope?: string
+  skillDirs?: readonly string[]
   observability?: WorkerObservability
 }
 
@@ -83,8 +87,11 @@ export function defineOrchestratorHarness({
   pricing,
   limits,
   plugins,
+  skillDirs = [],
   observability
 }: DefineOrchestratorHarnessParams) {
+  const orchestratorSkills = skills({ dirs: skillDirs })
+
   return defineHarness({
     name: ORCHESTRATOR_HARNESS_NAME,
     adapter,
@@ -104,11 +111,13 @@ export function defineOrchestratorHarness({
       return [
         durableCompaction(compactionAdapter),
         workerTelemetry({ ...observability, pricing }),
-        permissions({ root: library.root }),
-        workspaceTools({ workspace: library.workspace, web: false }),
+        permissions({ root: library.root, rules: [WEB_FETCH_RULE] }),
+        workspaceTools({ workspace: library.workspace }),
         boundToolOutput(),
         libraryMap(library.map),
         orchestratorTools({ workers, isStarter, repositories }),
+        starterOnlyGuard(isStarter),
+        orchestratorSkills,
         usage({ model: pricing.modelCost }),
         workerBudget({
           pricing,

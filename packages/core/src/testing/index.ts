@@ -28,3 +28,4 @@ export {
   type ToolCall
 } from './tool-call.ts'
 export { createWorkers } from '#/workers/workers.ts'
+export { starterOnlyGuard } from '#/orchestrator/starter-only-tools.ts'

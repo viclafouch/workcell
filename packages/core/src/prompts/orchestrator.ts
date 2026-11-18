@@ -13,6 +13,10 @@ const SENDER_LINE_START = 'This message comes from'
 export const STARTER_RULE =
   'Only an allowed starter can start, steer or stop a worker.'
 
+export function starterOnlyActionRefusal(action: string) {
+  return `The user of this message may not ${action}: only an allowed starter can.`
+}
+
 export const DEFAULT_ORCHESTRATOR_SCOPE =
   'questions on the code of the library, and the work of the workers'
 

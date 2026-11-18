@@ -6,7 +6,7 @@ import {
   type PermissionRule
 } from '@tanstack/ai-harness'
 import { mcp } from '@tanstack/ai-mcp/harness'
-import { agentMetadataSchema } from '@workcell/core'
+import { agentMetadataSchema, StarterOnlyTools } from '@workcell/core'
 import { linearPrompt } from '#/prompts/linear.ts'
 
 export const LINEAR_MCP_URL = 'https://mcp.linear.app/mcp'
@@ -22,11 +22,31 @@ const READ_TOOLS = [
   'list_comments',
   'list_issues',
   'get_milestone',
+  'list_milestones',
   'get_document',
-  'get_project'
+  'get_project',
+  'list_projects',
+  'get_team',
+  'list_teams',
+  'get_user',
+  'list_users',
+  'list_issue_labels',
+  'list_issue_statuses'
 ].map(linearTool)
 
 const COMMENT_TOOL = linearTool('save_comment')
+
+const ISSUE_TOOL = linearTool('save_issue')
+
+const NEW_ISSUE = 'create an issue'
+
+const issueInputSchema = z.looseObject({ id: z.string().optional() })
+
+function issueTarget(input: unknown) {
+  const { id } = issueInputSchema.parse(input)
+
+  return id === undefined ? NEW_ISSUE : `edit issue ${id}`
+}
 
 const commentInputSchema = z.looseObject({
   id: z.string().optional(),
@@ -59,7 +79,7 @@ function commentTarget(input: unknown, ownTicket: string | undefined) {
   return 'comment outside an issue'
 }
 
-type LinearAccess = 'read' | 'write'
+type LinearAccess = 'read' | 'comment' | 'create'
 
 type AgentMetadata = z.infer<typeof agentMetadataSchema>
 
@@ -70,7 +90,7 @@ const READ_RULES: PermissionRule[] = [
   })
 ]
 
-const WRITE_RULES: PermissionRule[] = [
+const COMMENT_RULES: PermissionRule[] = [
   { tool: COMMENT_TOOL, decision: 'deny', kind: 'execute' },
   {
     tool: COMMENT_TOOL,
@@ -80,9 +100,26 @@ const WRITE_RULES: PermissionRule[] = [
   }
 ]
 
+const CREATE_RULES: PermissionRule[] = [
+  { tool: ISSUE_TOOL, resource: NEW_ISSUE, decision: 'allow' }
+]
+
 const ACCESS_RULES: Record<LinearAccess, PermissionRule[]> = {
   read: READ_RULES,
-  write: [...READ_RULES, ...WRITE_RULES]
+  comment: [...READ_RULES, ...COMMENT_RULES],
+  create: [...READ_RULES, ...CREATE_RULES]
+}
+
+const WRITE_TOOLS: Record<LinearAccess, string[]> = {
+  read: [],
+  comment: [COMMENT_TOOL],
+  create: [ISSUE_TOOL]
+}
+
+const STARTER_ONLY: Record<LinearAccess, string[]> = {
+  read: [],
+  comment: [],
+  create: [ISSUE_TOOL]
 }
 
 type LinearToolsParams = {
@@ -90,8 +127,8 @@ type LinearToolsParams = {
   access?: LinearAccess
 }
 
-export function linearTools({ apiKey, access = 'write' }: LinearToolsParams) {
-  const writeTools = access === 'write' ? [COMMENT_TOOL] : []
+export function linearTools({ apiKey, access = 'comment' }: LinearToolsParams) {
+  const writeTools = WRITE_TOOLS[access]
 
   return [
     mcp({
@@ -117,7 +154,7 @@ export function linearTools({ apiKey, access = 'write' }: LinearToolsParams) {
           prompts: [
             () => {
               return linearPrompt(
-                { readTools: READ_TOOLS, writeTools },
+                { readTools: READ_TOOLS, writeTools, access },
                 metadata.subject
               )
             }
@@ -131,7 +168,18 @@ export function linearTools({ apiKey, access = 'write' }: LinearToolsParams) {
                 commands: (input) => {
                   return [commentTarget(input, metadata.subject)]
                 }
+              },
+              [ISSUE_TOOL]: {
+                commands: (input) => {
+                  return [issueTarget(input)]
+                }
               }
+            }),
+            ...STARTER_ONLY[access].map((tool) => {
+              return StarterOnlyTools.item({
+                tool,
+                action: 'create a Linear ticket'
+              })
             })
           ]
         }

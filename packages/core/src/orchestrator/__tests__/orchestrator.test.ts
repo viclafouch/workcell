@@ -1,6 +1,13 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { z } from 'zod'
+import { toolDefinition } from '@tanstack/ai'
+import { definePlugin } from '@tanstack/ai-harness'
 import type { FakeResponseStep } from '@tanstack/ai/testing'
 import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
+import { StarterOnlyTools } from '#/orchestrator/starter-only-tools.ts'
 import { DEFAULT_ORCHESTRATOR_SCOPE } from '#/prompts/orchestrator.ts'
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import {
@@ -19,6 +26,7 @@ import {
   routedResponses,
   textOf,
   TICKET_START,
+  toolResults,
   systemPromptTexts,
   toolResultsOf
 } from '#/workers/__tests__/worker-fixtures.ts'
@@ -28,6 +36,52 @@ import {
   openWorkers,
   openWorkerTestbed
 } from '#/workers/__tests__/worker-testbed.ts'
+
+const PUBLISH_TOOL = 'publish_note'
+
+const COLLEAGUE_PUBLISH_THREAD = 'slack/CTEST/2.0001'
+
+const publishedNotes: string[] = []
+
+const starterOnlyPublish = definePlugin({
+  name: 'test/starter-only-publish',
+  setup: () => {
+    return {
+      tools: [
+        toolDefinition({
+          name: PUBLISH_TOOL,
+          description: 'Publish a note that the team reads.',
+          inputSchema: z.object({ text: z.string() })
+        }).server(async ({ text }) => {
+          publishedNotes.push(text)
+
+          return 'Published.'
+        })
+      ],
+      contribute: [
+        StarterOnlyTools.item({ tool: PUBLISH_TOOL, action: 'publish a note' })
+      ]
+    }
+  }
+})
+
+const TEAM_SKILL = `---
+name: write-release-notes
+description: Write the release notes of the team.
+---
+# Write release notes
+`
+
+function recordSystemPromptsThen(
+  systemPrompts: string[],
+  next: ReturnType<typeof callTool>
+): FakeResponseStep {
+  return ({ request }) => {
+    systemPrompts.push(...systemPromptTexts(request.systemPrompts))
+
+    return next
+  }
+}
 
 function recordSystemPrompts(systemPrompts: string[]): FakeResponseStep {
   return ({ request }) => {
@@ -401,6 +455,67 @@ describe('who the orchestrator works for', () => {
       'The user of this message may not stop a worker.'
     )
     await expect(agent.workers.listWorkers()).resolves.toHaveLength(1)
+  })
+
+  it('runs a starter-only tool for an allowed starter, and refuses it to a colleague', async () => {
+    publishedNotes.length = 0
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses([
+        callTool(PUBLISH_TOOL, { text: 'From the starter.' }),
+        { text: 'Done.' },
+        callTool(PUBLISH_TOOL, { text: 'From a colleague.' }),
+        { text: 'No.' }
+      ]),
+      { orchestratorPlugins: [starterOnlyPublish] }
+    )
+
+    await askOrchestrator(agent, { message: 'Publish it.' })
+    await askOrchestrator(agent, {
+      user: COLLEAGUE,
+      threadId: COLLEAGUE_PUBLISH_THREAD,
+      inputId: 'slack:CTEST:2.0001',
+      message: 'Publish it.'
+    })
+    const view = await agent.host.observe(agent.orchestrator.harness, {
+      threadId: COLLEAGUE_PUBLISH_THREAD
+    })
+
+    expect(publishedNotes).toStrictEqual(['From the starter.'])
+    expect(toolResults(await view.transcript())).toContain(
+      'The user of this message may not publish a note: only an allowed starter can.'
+    )
+  })
+
+  it('lists the skills of its skill folders, and loads one', async () => {
+    const systemPrompts: string[] = []
+    const skillDir = await mkdtemp(join(tmpdir(), 'orchestrator-skills-'))
+    await mkdir(join(skillDir, 'write-release-notes'))
+    await writeFile(
+      join(skillDir, 'write-release-notes', 'SKILL.md'),
+      TEAM_SKILL
+    )
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses([
+        recordSystemPromptsThen(
+          systemPrompts,
+          callTool('load_skill', { name: 'write-release-notes' })
+        ),
+        { text: 'Loaded.' }
+      ]),
+      { orchestratorSkillDirs: [skillDir] }
+    )
+
+    const answer = await askOrchestrator(agent, { message: 'Write the notes.' })
+    await rm(skillDir, { recursive: true, force: true })
+
+    expect(systemPrompts.join('\n')).toContain('write-release-notes')
+    expect(toolResultsOf(answer.events).join('\n')).toContain(
+      '# Write release notes'
+    )
   })
 
   it('refuses the message of a colleague outside the colleague threads, and answers its starter there', async () => {

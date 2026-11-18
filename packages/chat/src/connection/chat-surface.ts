@@ -1,5 +1,6 @@
 import type { Chat, PostableCard, PostableMarkdown } from 'chat'
 import { AsyncQueuer } from '@tanstack/pacer'
+import { linkText, type TextLink } from './text-links.ts'
 
 export const POST_INTERVAL_MS = 1_000
 
@@ -46,12 +47,24 @@ type QueuedCall = () => Promise<void>
 type CreateChatSurfaceParams = {
   chat: Chat
   extras?: PlatformExtras
+  links?: readonly TextLink[]
 }
 
 export function createChatSurface({
   chat,
-  extras = {}
+  extras = {},
+  links = []
 }: CreateChatSurfaceParams) {
+  const linked = (markdown: string) => {
+    return linkText(markdown, links)
+  }
+
+  const linkedMessage = (message: ChatMessage): ChatMessage => {
+    return 'markdown' in message
+      ? { ...message, markdown: linked(message.markdown) }
+      : message
+  }
+
   const queues = new Map<string, AsyncQueuer<QueuedCall>>()
 
   const queueOf = (channelId: string) => {
@@ -100,7 +113,11 @@ export function createChatSurface({
     return { threadId: sent.threadId, messageId: sent.id }
   }
 
-  const post = (chatPost: ChatPost): Promise<PostedMessage> => {
+  const post = (unlinkedPost: ChatPost): Promise<PostedMessage> => {
+    const chatPost = {
+      ...unlinkedPost,
+      message: linkedMessage(unlinkedPost.message)
+    }
     const { identity } = chatPost
     const { postAs } = extras
 
@@ -115,7 +132,11 @@ export function createChatSurface({
     const thread = chat.thread(threadId)
 
     return paced(thread.channelId, async () => {
-      await thread.adapter.editMessage(threadId, messageId, message)
+      await thread.adapter.editMessage(
+        threadId,
+        messageId,
+        linkedMessage(message)
+      )
     })
   }
 
@@ -150,6 +171,7 @@ export function createChatSurface({
   return {
     post,
     edit,
+    linked,
     setStatus,
     setStatusLine,
     subscribe,

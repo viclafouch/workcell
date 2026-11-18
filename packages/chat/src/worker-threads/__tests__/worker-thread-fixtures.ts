@@ -298,6 +298,9 @@ export function recordSurface() {
       edits.push(edit)
       calls.push(`edit ${edit.messageId}: ${textOf(edit.message)}`)
     },
+    linked: (markdown) => {
+      return markdown
+    },
     setStatus: async (threadId, status, identity) => {
       calls.push(
         `${identity?.name ?? 'the app'} ${identity?.iconUrl ?? 'app picture'} status ${threadId} ${status}`

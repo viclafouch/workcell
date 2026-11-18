@@ -131,6 +131,7 @@ export async function openWorkers(
     starterIds = [TEST_STARTER.id],
     plugins = [],
     orchestratorPlugins = [],
+    orchestratorSkillDirs,
     workerNames = TEST_NAMES,
     maxRunningTurns = TEST_MAX_RUNNING_TURNS,
     observability,
@@ -157,6 +158,7 @@ export async function openWorkers(
     starterIds?: readonly string[]
     plugins?: readonly HarnessPlugin[]
     orchestratorPlugins?: readonly HarnessPlugin[]
+    orchestratorSkillDirs?: readonly string[]
     workerNames?: readonly string[]
     observability?: WorkerObservability
     onWorkerStart?: OnWorkerStart
@@ -247,7 +249,8 @@ export async function openWorkers(
         name: ORCHESTRATOR_NAME,
         scope: orchestratorScope,
         limits: orchestratorLimits,
-        plugins: orchestratorPlugins
+        plugins: orchestratorPlugins,
+        skillDirs: orchestratorSkillDirs
       },
       gitIdentity: HOST_GIT_IDENTITY,
       workerNames,

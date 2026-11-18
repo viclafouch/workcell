@@ -35,7 +35,7 @@ import {
 } from '#/telemetry/worker-telemetry.ts'
 import { denyGuard } from './deny-guard.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
-import { SANDBOX_PERMISSION_RULES } from './permission-rules.ts'
+import { SANDBOX_PERMISSION_RULES, WEB_FETCH_RULE } from './permission-rules.ts'
 
 export const WORKER_HARNESS_NAME = 'workcell/worker'
 
@@ -97,10 +97,10 @@ export function defineWorkerHarness({
         workerTelemetry({ ...observability, pricing }),
         permissions({
           root: WORKSPACE_ROOT,
-          rules: SANDBOX_PERMISSION_RULES
+          rules: [...SANDBOX_PERMISSION_RULES, WEB_FETCH_RULE]
         }),
         denyGuard(),
-        workspaceTools({ workspace, web: false, outside: 'ask' }),
+        workspaceTools({ workspace, outside: 'ask' }),
         boundToolOutput(),
         workerSkills,
         lifecycle,

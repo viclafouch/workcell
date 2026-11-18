@@ -28,6 +28,7 @@ export {
   type PostedMessage,
   type SessionStatus
 } from './connection/chat-surface.ts'
+export { linkText, type TextLink } from './connection/text-links.ts'
 export {
   createThreadCleaner,
   type ThreadCleaner

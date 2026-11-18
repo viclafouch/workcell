@@ -4,3 +4,4 @@ export {
   SLACK_SECRET_NAMES,
   slackPlatform
 } from './slack-platform.ts'
+export { SLACK_FORMATTING, slackFormatting } from './slack-formatting.ts'

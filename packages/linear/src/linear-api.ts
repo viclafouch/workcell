@@ -48,6 +48,14 @@ const DELETE_ATTACHMENT_MUTATION = `mutation DeleteAttachment($id: String!) {
   attachmentDelete(id: $id) { success }
 }`
 
+const TEAM_KEYS_QUERY = `query TeamKeys {
+  teams(first: 250) { nodes { key } }
+}`
+
+const teamKeysSchema = z.object({
+  teams: z.object({ nodes: z.array(z.object({ key: z.string() })) })
+})
+
 const graphqlAnswerSchema = z.object({
   data: z.unknown().optional(),
   errors: z
@@ -118,7 +126,7 @@ const deleteAttachmentSchema = z.object({
 type GraphqlRequestParams = {
   operationName: string
   query: string
-  variables: Record<string, unknown>
+  variables?: Record<string, unknown>
 }
 
 type ReadyTicketsFilter = {
@@ -301,8 +309,20 @@ export function createLinearApi(apiKey: string) {
     }
   }
 
+  const teamKeys = async () => {
+    const data = await request({
+      operationName: 'TeamKeys',
+      query: TEAM_KEYS_QUERY
+    })
+
+    return teamKeysSchema.parse(data).teams.nodes.map(({ key }) => {
+      return key
+    })
+  }
+
   return {
     readyTickets,
+    teamKeys,
     moveTicket,
     readResetTicket,
     removeLabel,

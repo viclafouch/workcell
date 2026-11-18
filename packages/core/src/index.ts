@@ -29,6 +29,8 @@ export type {
   StopOrchestratorParams
 } from './orchestrator/orchestrator.ts'
 export type { LibraryRepositories } from './sandbox/library-sandbox.ts'
+export { StarterOnlyTools } from './orchestrator/starter-only-tools.ts'
+export { instructionFiles } from './prompts/instruction-files.ts'
 export {
   proxiedDockerSandbox,
   type ProxiedDockerSandboxParams

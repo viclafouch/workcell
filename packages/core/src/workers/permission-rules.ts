@@ -47,3 +47,9 @@ export const SANDBOX_PERMISSION_RULES: PermissionRule[] = DENIED_COMMANDS.map(
     return { tool: 'bash', resource, decision: 'deny', kind: 'execute' }
   }
 )
+
+export const WEB_FETCH_RULE: PermissionRule = {
+  tool: 'webfetch',
+  decision: 'allow',
+  kind: 'read'
+}

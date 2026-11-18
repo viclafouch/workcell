@@ -16,6 +16,7 @@ import type {
 } from '#/connection/chat-connection.ts'
 import type { LogLine } from '#/connection/chat-logger.ts'
 import type { ChatSurface, SessionStatus } from '#/connection/chat-surface.ts'
+import { splitAtLastSpace } from '#/connection/text-links.ts'
 import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 
 const TASK_DETAILS_MAX_LENGTH = 300
@@ -103,10 +104,15 @@ type ReplyState = {
   controller?: ReadableStreamDefaultController<StreamChunk>
   posting?: Promise<SentMessage | null>
   text: string
+  unsent: string
 }
 
-function createReplyStream(thread: Thread, log: ThreadLog) {
-  const state: ReplyState = { text: '' }
+function createReplyStream(
+  thread: Thread,
+  log: ThreadLog,
+  linked: (markdown: string) => string
+) {
+  const state: ReplyState = { text: '', unsent: '' }
 
   const postChunks = async (chunks: ReadableStream<StreamChunk>) => {
     try {
@@ -118,7 +124,7 @@ function createReplyStream(thread: Thread, log: ThreadLog) {
     }
   }
 
-  const push = (chunk: StreamChunk) => {
+  const open = () => {
     state.posting ??= postChunks(
       new ReadableStream<StreamChunk>({
         start: (controller) => {
@@ -126,15 +132,40 @@ function createReplyStream(thread: Thread, log: ThreadLog) {
         }
       })
     )
+  }
 
-    if (chunk.type === 'markdown_text') {
-      state.text += chunk.text
+  const sendText = (text: string) => {
+    if (text === '') {
+      return
     }
 
+    const markdown = linked(text)
+    state.text += markdown
+    state.controller?.enqueue({ type: 'markdown_text', text: markdown })
+  }
+
+  const flushText = () => {
+    sendText(state.unsent)
+    state.unsent = ''
+  }
+
+  const push = (chunk: StreamChunk) => {
+    open()
+
+    if (chunk.type === 'markdown_text') {
+      const { complete, rest } = splitAtLastSpace(state.unsent + chunk.text)
+      state.unsent = rest
+      sendText(complete)
+
+      return
+    }
+
+    flushText()
     state.controller?.enqueue(chunk)
   }
 
   const finish = async () => {
+    flushText()
     state.controller?.close()
     const sent = await state.posting
 
@@ -146,7 +177,7 @@ function createReplyStream(thread: Thread, log: ThreadLog) {
   }
 
   const hasText = () => {
-    return state.text !== ''
+    return state.text !== '' || state.unsent !== ''
   }
 
   return { push, finish, hasText }
@@ -183,10 +214,11 @@ export function createOrchestratorThreads({
 
   const answer = async ({ thread, user, text, inputId }: ChatPrompt) => {
     const turnLog = logger.child({ module: 'chat', threadId: thread.id })
-    const reply = createReplyStream(thread, turnLog)
+    const reply = createReplyStream(thread, turnLog, surface.linked)
     const tasks = new Map<string, TaskUpdateChunk>()
     const cards: CardElement[] = []
     const ending: TurnEnding = {}
+    let textMessageId = ''
 
     const updateTask = (id: string, change: Partial<TaskUpdateChunk>) => {
       const task = tasks.get(id)
@@ -202,7 +234,13 @@ export function createOrchestratorThreads({
 
     const onEvent = (event: TurnEvent) => {
       if (event.type === EventType.TEXT_MESSAGE_CONTENT) {
-        reply.push({ type: 'markdown_text', text: event.delta })
+        const separator =
+          reply.hasText() && event.messageId !== textMessageId ? '\n\n' : ''
+        textMessageId = event.messageId
+        reply.push({
+          type: 'markdown_text',
+          text: `${separator}${event.delta}`
+        })
       }
 
       if (event.type === EventType.TOOL_CALL_START) {

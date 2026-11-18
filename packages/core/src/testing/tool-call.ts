@@ -6,6 +6,7 @@ import {
   PermissionCallCapability,
   type HarnessHost,
   type HarnessPlugin,
+  type HarnessUser,
   type PermissionMode
 } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
@@ -48,6 +49,7 @@ type ToolCallOptions = {
   secrets?: Readonly<Record<string, string>>
   metadata?: WorkerMetadata
   plugins?: readonly HarnessPlugin[]
+  user?: HarnessUser
 }
 
 const toolListSchema = z.array(z.object({ name: z.string() }))
@@ -132,7 +134,8 @@ export async function runWorkerToolCall({
   mode = 'acceptEdits',
   secrets = {},
   metadata,
-  plugins
+  plugins,
+  user = TEST_STARTER
 }: ToolCallOptions) {
   const modelTools: string[] = []
   const systemPrompts: string[] = []
@@ -165,7 +168,7 @@ export async function runWorkerToolCall({
   })
   const session = await host.open(worker, {
     threadId: 'worker-tool-call',
-    user: TEST_STARTER
+    user
   })
 
   if (metadata !== undefined) {

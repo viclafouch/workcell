@@ -19,6 +19,7 @@ import {
 import { CARD_EVENT, cardEventValue } from '#/cards/card-event.ts'
 import { openChatConnection } from '#/connection/chat-connection.ts'
 import { createChatSurface } from '#/connection/chat-surface.ts'
+import type { TextLink } from '#/connection/text-links.ts'
 import {
   createOrchestratorThreads,
   isOrchestratorThreadIn
@@ -50,6 +51,13 @@ function answered(fields: Partial<Answer> = {}): Answer {
     error: undefined,
     waits: [],
     ...fields
+  }
+}
+
+const TASK_LINK: TextLink = {
+  pattern: /TASK-\d+/gu,
+  toLink: (match) => {
+    return `[${match}](https://tracker.test/${match})`
   }
 }
 
@@ -205,13 +213,15 @@ function fakeOrchestrator({
 
 async function openOrchestratorChat(
   orchestrator: Pick<Orchestrator, 'ask' | 'stop' | 'holds'>,
-  lines?: ChatLines
+  lines?: ChatLines,
+  links?: readonly TextLink[]
 ) {
   const slackChat = openSlackChat()
   const threads = createOrchestratorThreads({
     surface: createChatSurface({
       chat: slackChat.chat,
-      extras: slackSessionStatus(slackChat.slack)
+      extras: slackSessionStatus(slackChat.slack),
+      links
     }),
     orchestrator,
     allowedStarters: [STARTER],
@@ -280,6 +290,54 @@ describe('an orchestrator thread', () => {
       'text Alpha works on TASK-7.',
       'stop active'
     ])
+  })
+
+  it('links each text that a link rule names, also when the stream splits it', async () => {
+    const fake = fakeOrchestrator({
+      events: [
+        {
+          type: EventType.TEXT_MESSAGE_CONTENT,
+          messageId: 'message-1',
+          delta: 'Alpha works on TA'
+        },
+        {
+          type: EventType.TEXT_MESSAGE_CONTENT,
+          messageId: 'message-1',
+          delta: 'SK-7 now.'
+        }
+      ]
+    })
+    await using chat = await openOrchestratorChat(
+      fake.orchestrator,
+      undefined,
+      [TASK_LINK]
+    )
+
+    await chat.ask('What runs?')
+
+    expect(sent()).toContain(
+      'text Alpha works on [TASK-7](https://tracker.test/TASK-7) now.'
+    )
+  })
+
+  it('starts each text message of a turn on its own paragraph', async () => {
+    const fake = fakeOrchestrator({
+      events: [
+        {
+          type: EventType.TEXT_MESSAGE_CONTENT,
+          messageId: 'message-1',
+          delta: 'I check the ticket.'
+        },
+        ...LIST_WORKERS_TURN
+      ]
+    })
+    await using chat = await openOrchestratorChat(fake.orchestrator)
+
+    await chat.ask('What runs?')
+
+    expect(sent()).toContain(
+      'text I check the ticket.\n\nAlpha works on TASK-7.'
+    )
   })
 
   it('marks the task card of a tool call that TanStack ends in error, whatever its content', async () => {

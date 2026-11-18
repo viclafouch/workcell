@@ -3,7 +3,11 @@ import { setupServer } from 'msw/node'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { toolDefinition, type TextOptions } from '@tanstack/ai'
-import { createHarnessHost, type PermissionMode } from '@tanstack/ai-harness'
+import {
+  createHarnessHost,
+  type HarnessUser,
+  type PermissionMode
+} from '@tanstack/ai-harness'
 import { createMCPServer } from '@tanstack/ai-mcp/server'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
@@ -18,6 +22,7 @@ import {
   readOnlyCredentials,
   runWorkerToolCall,
   SILENT_HOST_LOGGER,
+  starterOnlyGuard,
   TEST_STARTER,
   type ToolCall
 } from '@workcell/core/testing'
@@ -83,7 +88,10 @@ const fakeLinear = createMCPServer({
         id: z.string().optional()
       })
     ),
-    fakeLinearTool('save_issue', z.object({ title: z.string() })),
+    fakeLinearTool(
+      'save_issue',
+      z.object({ title: z.string(), id: z.string().optional() })
+    ),
     fakeLinearTool('delete_comment', z.object({ id: z.string() })),
     fakeLinearTool('list_teams', z.object({ query: z.string() }))
   ]
@@ -122,26 +130,46 @@ function linearToolNames(names: readonly string[]) {
   })
 }
 
+type LinearAccess = Parameters<typeof linearTools>[0]['access']
+
+const COLLEAGUE: HarnessUser = { id: 'colleague' }
+
+type RunOptions = {
+  mode?: PermissionMode
+  access?: LinearAccess
+  user?: HarnessUser
+}
+
 async function runToolCall(
   toolCall: ToolCall,
-  mode?: PermissionMode,
-  access?: 'read' | 'write'
+  { mode, access, user }: RunOptions = {}
 ) {
   const run = await runWorkerToolCall({
     hostFree,
     toolCall,
     mode,
+    user,
     metadata: WORKER_METADATA,
-    plugins: linearTools({ apiKey: LINEAR_API_KEY, access })
+    plugins: [
+      ...linearTools({ apiKey: LINEAR_API_KEY, access }),
+      starterOnlyGuard(isStarterIn([TEST_STARTER.id]))
+    ]
   })
 
   return { ...run, modelTools: linearToolNames(run.modelTools) }
 }
 
+function createIssue(input: Record<string, unknown>, user?: HarnessUser) {
+  return runToolCall(
+    { name: 'linear_save_issue', input: { title: 'Fix the header', ...input } },
+    { mode: 'plan', access: 'create', user }
+  )
+}
+
 function comment(input: Record<string, unknown>, mode?: PermissionMode) {
   return runToolCall(
     { name: 'linear_save_comment', input: { body: 'Done.', ...input } },
-    mode
+    { mode }
   )
 }
 
@@ -163,7 +191,7 @@ describe('the Linear tools', () => {
   it('gives the model the Linear tools of a worker, and hides the others, in bypass mode', async () => {
     const run = await runToolCall(
       { name: 'linear_get_issue', input: { id: OWN_TICKET } },
-      'bypass'
+      { mode: 'bypass' }
     )
 
     expect(run.modelTools.toSorted()).toStrictEqual([
@@ -173,6 +201,7 @@ describe('the Linear tools', () => {
       'linear_get_project',
       'linear_list_comments',
       'linear_list_issues',
+      'linear_list_teams',
       'linear_save_comment'
     ])
   })
@@ -183,8 +212,7 @@ describe('the Linear tools', () => {
         name: 'linear_save_comment',
         input: { body: 'Done.', issueId: OWN_TICKET }
       },
-      'plan',
-      'read'
+      { mode: 'plan', access: 'read' }
     )
 
     expect(run.modelTools.toSorted()).toStrictEqual([
@@ -193,7 +221,8 @@ describe('the Linear tools', () => {
       'linear_get_milestone',
       'linear_get_project',
       'linear_list_comments',
-      'linear_list_issues'
+      'linear_list_issues',
+      'linear_list_teams'
     ])
     expect(run.systemPrompt).toContain('You write nothing in Linear.')
     expect(run.systemPrompt).not.toContain('You comment on')
@@ -285,10 +314,54 @@ describe('the Linear tools', () => {
         name: 'linear_save_comment',
         input: { body: 'Done.', issueId: OWN_TICKET }
       },
-      'plan'
+      { mode: 'plan' }
     )
 
     expect(run.result).toContain(PLAN_DENIAL)
+    expect(linearCalls).toStrictEqual([])
+  })
+
+  it('gives a ticket creator the Linear read tools and save_issue, and no comment', async () => {
+    const run = await createIssue({})
+
+    expect(run.modelTools.toSorted()).toStrictEqual([
+      'linear_get_document',
+      'linear_get_issue',
+      'linear_get_milestone',
+      'linear_get_project',
+      'linear_list_comments',
+      'linear_list_issues',
+      'linear_list_teams',
+      'linear_save_issue'
+    ])
+    expect(run.systemPrompt).toContain(
+      'You create a Linear ticket with linear_save_issue'
+    )
+  })
+
+  it('creates a ticket for an allowed starter in plan mode, with no question', async () => {
+    const run = await createIssue({})
+
+    expect(run.asked).toBe(false)
+    expect(linearCalls).toStrictEqual([
+      { tool: 'save_issue', input: { title: 'Fix the header' } }
+    ])
+  })
+
+  it('refuses to edit a ticket that exists', async () => {
+    const run = await createIssue({ id: 'TASK-8' })
+
+    expect(run.asked).toBe(false)
+    expect(run.result).toContain(PLAN_DENIAL)
+    expect(linearCalls).toStrictEqual([])
+  })
+
+  it('refuses a ticket to a colleague, and names who can create one', async () => {
+    const run = await createIssue({}, COLLEAGUE)
+
+    expect(run.result).toContain(
+      'The user of this message may not create a Linear ticket: only an allowed starter can.'
+    )
     expect(linearCalls).toStrictEqual([])
   })
 
