@@ -211,6 +211,28 @@ describe('the worker lifecycle', () => {
     ).toHaveLength(1)
   })
 
+  it('closes a worker with no report when its lines in the thread said it all', async () => {
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(url, [
+      { text: 'Done, the chart is in the thread.' },
+      { toolCalls: [{ name: 'finish_task', input: {} }] }
+    ])
+
+    const worker = await agent.workers.startWorker({
+      repository: REPOSITORY,
+      starter: TEST_STARTER,
+      task: 'Draw a chart.',
+      subject: 'chart'
+    })
+    await worker.firstTurn
+    await tellToStop(agent, worker.threadId)
+    await waitForArchive(agent, worker.threadId)
+    const entry = await agent.host.sessions.get({ threadId: worker.threadId })
+
+    expect(entry).toMatchObject({ archived: true })
+    expect(entry?.metadata).not.toHaveProperty('report')
+  })
+
   it('refuses a second worker on a ticket or a branch with a live worker, also after a restart', async () => {
     const url = await createMigratedDatabase()
     await runWorkerThenStop(url, [{ text: 'On it.' }], {

@@ -98,7 +98,7 @@ type IndexEntryUpdate = (current: { metadata?: WorkerMetadata }) => {
 
 type WorkerEnd = {
   worker: NamedWorker
-  report: string
+  report?: string
   updateIndexEntry: (update: IndexEntryUpdate) => Promise<void>
 }
 
@@ -239,7 +239,7 @@ const finishTaskDefinition = toolDefinition({
   name: FINISH_TASK,
   description: FINISH_TASK_TEXT.description,
   inputSchema: z.object({
-    report: z.string().describe(FINISH_TASK_TEXT.report)
+    report: z.string().optional().describe(FINISH_TASK_TEXT.report)
   })
 })
 

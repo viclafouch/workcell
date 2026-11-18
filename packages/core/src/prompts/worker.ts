@@ -18,9 +18,9 @@ export function shallowCloneFact(depth: number) {
 
 export const FINISH_TASK_TEXT = {
   description:
-    'End the task for good, only in the turn of a message where a person tells you to stop. A task that needs no change, or names the wrong target, is a question for a person: ask whether to close it, retarget it or go on, then end your turn and wait for the answer. It sends your report, archives this worker and destroys its sandbox. Your turn ends right after it.',
+    'End the task for good, only in the turn of a message where a person tells you to stop. A task that needs no change, or names the wrong target, is a question for a person: ask whether to close it, retarget it or go on, then end your turn and wait for the answer. It posts your report when you give one, archives this worker and destroys its sandbox. Your turn ends right after it.',
   report:
-    'What you did and how it ended, with the links a person needs: the pull request and the ticket. The person reads it as is, as any other line of yours, right under your last lines in the thread: it adds only what they did not say, and when they said it all, a few words close the task.'
+    'A line in the thread, right under your last lines, that the person reads as any other line of yours: only what they have not read yet, such as the link of the pull request. Leave it out when your lines said it all, and the thread closes with no report.'
 }
 
 export const FINISH_WITHOUT_STOP_REFUSAL =
