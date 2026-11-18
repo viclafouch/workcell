@@ -278,7 +278,8 @@ describe('an orchestrator thread', () => {
         threadId: TEST_THREAD,
         user: { id: STARTER },
         inputId: `chat:${TEST_THREAD}:100.0001`,
-        message: `@${BOT_USER} What runs?`
+        message: `@${BOT_USER} What runs?`,
+        files: []
       }
     ])
     expect(sent()).toStrictEqual([

@@ -20,6 +20,17 @@ A reply in that thread reaches it too, also while it works, and so does a direct
 
 When numbers read better as a picture, it adds a card under its answer: a table, a chart, or a few key figures.
 
+## Send it a file or a link
+
+Drop a screenshot, a PDF or a text file in your message, and the robot reads it with your words.
+
+- **Pictures and PDFs**: it reads them when its model does.
+- **Text files**, such as a web page, a note or a data table: it reads them as text.
+- **A file it cannot read**, such as an archive or a voice note: it names it in its answer, with the reason.
+- **A link**: it gets the whole address, even when Slack shows it shortened.
+
+Your team can narrow the files it reads, down to one type or to none.
+
 ## Who the robot answers
 
 - **The people on the allowed list** talk to it in any channel where it is a member. They start, steer and stop work.

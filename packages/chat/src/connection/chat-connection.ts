@@ -1,5 +1,12 @@
-import type { ActionEvent, Chat, Message, Thread } from 'chat'
-import type { WorkerApproval } from '@workcell/core'
+import {
+  stringifyMarkdown,
+  type ActionEvent,
+  type Attachment,
+  type Chat,
+  type Message,
+  type Thread
+} from 'chat'
+import type { MessageFile, WorkerApproval } from '@workcell/core'
 import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 import type { LogLine } from './chat-logger.ts'
 
@@ -14,6 +21,7 @@ export type ChatPrompt = {
   thread: Thread
   user: string
   text: string
+  files: readonly MessageFile[]
   inputId: string
 }
 
@@ -48,11 +56,27 @@ type OpenChatConnectionParams = {
   lines?: ChatLines
 }
 
+function fileOf({ name, mimeType, size, type, fetchData }: Attachment) {
+  return {
+    name: name ?? type,
+    mimeType: mimeType ?? '',
+    size,
+    read: async () => {
+      if (fetchData === undefined) {
+        throw new Error(`The chat gives no download for the file ${name}.`)
+      }
+
+      return new Uint8Array(await fetchData())
+    }
+  }
+}
+
 function promptOf(thread: Thread, message: Message): ChatPrompt {
   return {
     thread,
     user: message.author.userId,
-    text: message.text,
+    text: stringifyMarkdown(message.formatted).trimEnd(),
+    files: message.attachments.map(fileOf),
     inputId: `chat:${thread.id}:${message.id}`
   }
 }

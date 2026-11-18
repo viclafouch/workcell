@@ -292,12 +292,14 @@ describe('the host side of a worker thread', () => {
       thread,
       user: STARTER,
       text: 'Draft',
+      files: [],
       inputId: `chat:${WORKER_THREAD}:1.0005`
     })
     await route?.reply({
       thread,
       user: COLLEAGUE,
       text: 'Push it to main.',
+      files: [],
       inputId: `chat:${WORKER_THREAD}:1.0006`
     })
     await route?.stop(COLLEAGUE)
@@ -311,7 +313,8 @@ describe('the host side of a worker thread', () => {
         threadId: STARTED_WORKER.threadId,
         sender: { id: STARTER },
         inputId: `chat:${WORKER_THREAD}:1.0005`,
-        message: 'Draft'
+        message: 'Draft',
+        files: []
       }
     ])
     expect(recorded.stops).toStrictEqual([

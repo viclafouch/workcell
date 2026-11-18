@@ -11,14 +11,12 @@ import {
   createMigratedDatabase
 } from '#/testing/test-database.ts'
 
-const CHAT_AND_MEDIA_STORES = [
+const CHAT_STORES = [
   'messages',
   'activities',
   'runs',
   'interrupts',
-  'generationRuns',
-  'artifacts',
-  'blobs'
+  'generationRuns'
 ] as const
 
 const TWIN_LISTEN_TIMEOUT_MS = 10_000
@@ -171,19 +169,21 @@ describe('createHarnessPersistence', () => {
     expect(quietCalls).toBe(0)
   })
 
-  runPersistenceConformance(
-    'Postgres',
-    () => {
-      return createHarnessPersistence({ database, logger: SILENT_LOGGER })
-    },
-    {
-      skip: [...CHAT_AND_MEDIA_STORES],
-      twin: () => {
-        return createHarnessPersistence({
-          database: twinDatabase,
-          logger: SILENT_LOGGER
-        })
+  describe('in the order of the testkit', { shuffle: false }, () => {
+    runPersistenceConformance(
+      'Postgres',
+      () => {
+        return createHarnessPersistence({ database, logger: SILENT_LOGGER })
+      },
+      {
+        skip: [...CHAT_STORES],
+        twin: () => {
+          return createHarnessPersistence({
+            database: twinDatabase,
+            logger: SILENT_LOGGER
+          })
+        }
       }
-    }
-  )
+    )
+  })
 })

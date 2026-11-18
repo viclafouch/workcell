@@ -17,6 +17,10 @@ import { readOnlyCredentials } from './host/read-only-credentials.ts'
 import { toTanStackLogger, type LeveledLog } from './host/tanstack-logger.ts'
 import { waitUntilReady } from './host/wait-until-ready.ts'
 import { defineOrchestratorHarness } from './orchestrator/orchestrator-harness.ts'
+import {
+  createMessageReader,
+  type MessageFileOptions
+} from './inputs/message-files.ts'
 import { createOrchestrator } from './orchestrator/orchestrator.ts'
 import {
   createLibrarySandbox,
@@ -82,6 +86,7 @@ type OpenWorkcellParams = {
   idleSandboxMs?: number
   observability?: WorkerObservability
   onWorkerStart?: OnWorkerStart
+  files?: MessageFileOptions
 }
 
 export abstract class StartRefusalError extends Error {
@@ -188,7 +193,8 @@ export async function openWorkcell({
   maxRunningTurns,
   idleSandboxMs,
   observability,
-  onWorkerStart
+  onWorkerStart,
+  files
 }: OpenWorkcellParams) {
   requireOneSandboxPackage([
     ...Object.values(sandboxes),
@@ -202,6 +208,7 @@ export async function openWorkcell({
     models.compaction.model
   ])
   const isStarter = isStarterIn(senders.starterIds)
+  const filesLog = logger.child({ module: 'files' })
   const secretValues = Object.values(secrets)
   const activity = createWorkerActivity({ pricing, secretValues })
   const host = createAgentHost({
@@ -268,6 +275,11 @@ export async function openWorkcell({
     workerNames,
     permissionMode,
     logger,
+    readMessage: createMessageReader({
+      modalities: models.worker.inputModalities,
+      options: files,
+      logger: filesLog
+    }),
     onWorkerStart
   })
   const orchestratorHarness = defineOrchestratorHarness({
@@ -289,7 +301,15 @@ export async function openWorkcell({
     harness,
     workers,
     library,
-    orchestrator: createOrchestrator({ host, harness: orchestratorHarness }),
+    orchestrator: createOrchestrator({
+      host,
+      harness: orchestratorHarness,
+      readMessage: createMessageReader({
+        modalities: models.orchestrator.inputModalities,
+        options: files,
+        logger: filesLog
+      })
+    }),
     viewWorkers: createWorkerView({
       host,
       harness,

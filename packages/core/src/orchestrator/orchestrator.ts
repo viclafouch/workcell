@@ -4,6 +4,7 @@ import type {
   HarnessSession,
   HarnessUser
 } from '@tanstack/ai-harness'
+import type { MessageFile, MessageReader } from '#/inputs/message-files.ts'
 import type { OrchestratorHarness } from './orchestrator-harness.ts'
 
 const MODE_KEY = 'mode'
@@ -13,6 +14,7 @@ const PLAN_MODE = 'plan'
 type CreateOrchestratorParams = {
   host: HarnessHost
   harness: OrchestratorHarness
+  readMessage: MessageReader
 }
 
 export type AskOrchestratorParams = {
@@ -21,6 +23,7 @@ export type AskOrchestratorParams = {
   inputId: string
   message: string
   onEvent: (event: StreamChunk) => void | Promise<void>
+  files?: readonly MessageFile[]
 }
 
 export type StopOrchestratorParams = { threadId: string; user: HarnessUser }
@@ -37,18 +40,25 @@ async function keepReadOnly(session: HarnessSession<OrchestratorHarness>) {
 
 export function createOrchestrator({
   host,
-  harness
+  harness,
+  readMessage
 }: CreateOrchestratorParams) {
   const ask = async ({
     threadId,
     user,
     inputId,
     message,
+    files = [],
     onEvent
   }: AskOrchestratorParams) => {
     await using session = await host.open(harness, { threadId, user })
     await keepReadOnly(session)
-    const operation = session.send(message, { inputId, busy: 'steer' })
+    const input = await readMessage({
+      session,
+      text: message,
+      files
+    })
+    const operation = session.send(input, { inputId, busy: 'steer' })
     const receipt = await operation.receipt
 
     if (receipt.status === 'rejected') {

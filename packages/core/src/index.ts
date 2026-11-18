@@ -22,6 +22,11 @@ export {
 } from './workcell.ts'
 export { joinCutOffAnswer, WORKER_DURABILITY } from './host/agent-durability.ts'
 export { startLoop } from './host/loop.ts'
+export type {
+  MessageFile,
+  MessageFileInfo,
+  MessageFileOptions
+} from './inputs/message-files.ts'
 export { toTanStackLogger } from './host/tanstack-logger.ts'
 export type {
   AskOrchestratorParams,

@@ -210,6 +210,46 @@ describe('the chat connection of the orchestrator', () => {
     ])
   })
 
+  it('hands the orchestrator the URL behind each shortened link, and the files of the message', async () => {
+    const files: ChatPrompt['files'][number][] = []
+    const texts: string[] = []
+    await using connection = await openTestConnection({
+      orchestrator: {
+        ...recordOrchestrator().orchestrator,
+        ask: async (prompt) => {
+          texts.push(prompt.text)
+          files.push(...prompt.files)
+        }
+      }
+    })
+
+    await connection.deliverEvent({
+      ...mention(
+        'read <https://example.com/docs/guides/media|example.com/docs/…/media>',
+        { ts: '150.0001' }
+      ),
+      attachments: [
+        { from_url: 'https://example.com/docs/guides/media', title: 'Media' }
+      ],
+      files: [
+        {
+          id: 'F1',
+          name: 'mockup.png',
+          mimetype: 'image/png',
+          size: 2048,
+          url_private: 'https://files.slack.com/files-pri/T_TEAM-F1/mockup.png'
+        }
+      ]
+    })
+
+    expect(texts).toStrictEqual([
+      `@${BOT_USER} read [example.com/docs/…/media](https://example.com/docs/guides/media)`
+    ])
+    expect(files).toMatchObject([
+      { name: 'mockup.png', mimeType: 'image/png', size: 2048 }
+    ])
+  })
+
   it('hands a direct message to the orchestrator', async () => {
     const recorded = recordOrchestrator()
     await using connection = await openTestConnection({

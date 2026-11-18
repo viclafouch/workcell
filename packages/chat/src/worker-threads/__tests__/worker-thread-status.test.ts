@@ -116,12 +116,14 @@ describe('the status line of a worker thread', () => {
       thread,
       user: COLLEAGUE,
       text: 'Push it to main.',
+      files: [],
       inputId: `chat:${WORKER_THREAD}:1.0005`
     })
     await route?.reply({
       thread,
       user: STARTER,
       text: 'Go on.',
+      files: [],
       inputId: `chat:${WORKER_THREAD}:1.0006`
     })
 
@@ -147,6 +149,7 @@ describe('the status line of a worker thread', () => {
         thread: slackChat.chat.thread(WORKER_THREAD),
         user: STARTER,
         text: 'Go on.',
+        files: [],
         inputId: `chat:${WORKER_THREAD}:1.0006`
       })
     ).rejects.toThrow('The host refused the input.')
@@ -168,6 +171,7 @@ describe('the status line of a worker thread', () => {
       thread: slackChat.chat.thread(WORKER_THREAD),
       user: STARTER,
       text: 'Go on.',
+      files: [],
       inputId: `chat:${WORKER_THREAD}:1.0006`
     })
     await threads.follow({ type: 'status', worker: STARTED_WORKER })

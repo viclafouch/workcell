@@ -10,6 +10,7 @@ import type {
 import { InMemoryLockStore } from '@tanstack/ai/locks'
 import { refusalOf, type IsStarter } from '#/host/allowed-senders.ts'
 import { logMcpServerChanges } from '#/host/mcp-server-log.ts'
+import type { MessageFile, MessageReader } from '#/inputs/message-files.ts'
 import type { WorkerMetadata } from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
 import {
@@ -41,6 +42,7 @@ type WorkersOptions = {
   workerNames: readonly string[]
   permissionMode: PermissionMode
   logger: WorkerLogger
+  readMessage: MessageReader
   onWorkerStart?: OnWorkerStart
 }
 
@@ -79,6 +81,7 @@ export type MessageWorkerParams = {
   sender: HarnessUser
   inputId: string
   message: string
+  files?: readonly MessageFile[]
 }
 
 export type WorkerApproval = {
@@ -239,6 +242,68 @@ function liveWorkerTracker(
   }
 }
 
+type WorkerMessageOptions = Pick<
+  WorkersOptions,
+  'host' | 'harness' | 'readMessage'
+>
+
+async function readWorkerMessage(
+  { host, harness, readMessage }: WorkerMessageOptions,
+  { threadId, sender, files = [] }: MessageWorkerParams,
+  text: string
+) {
+  if (files.length === 0) {
+    return text
+  }
+
+  await using session = await host.open(harness, { threadId, user: sender })
+
+  return await readMessage({ session, text, files })
+}
+
+async function sendWorkerMessage(
+  options: WorkerMessageOptions,
+  params: MessageWorkerParams
+) {
+  const { threadId, sender, inputId, message, files = [] } = params
+  const view = await options.host.observe(options.harness, { threadId })
+  const { pendingWaits } = await view.snapshot()
+  const answers = answersOf(pendingWaits, message)
+
+  if (answers.length === 0) {
+    await submitInput(options, {
+      threadId,
+      user: sender,
+      input: {
+        op: 'steer',
+        message: await readWorkerMessage(options, params, message)
+      },
+      inputId: personInputId(inputId)
+    })
+
+    return
+  }
+
+  await submitInput(options, {
+    threadId,
+    user: sender,
+    input: { op: 'resolve', resume: answers },
+    inputId: personInputId(inputId)
+  })
+
+  if (files.length > 0) {
+    await submitInput(options, {
+      threadId,
+      user: sender,
+      input: {
+        op: 'followUp',
+        message: await readWorkerMessage(options, params, '')
+      },
+      inputId: personInputId(`${inputId}:files`)
+    })
+  }
+}
+
 async function finishIdleWorker(
   {
     host,
@@ -281,6 +346,7 @@ export function createWorkers({
   workerNames,
   permissionMode,
   logger,
+  readMessage,
   onWorkerStart = noStartMetadata
 }: WorkersOptions) {
   const locks = new InMemoryLockStore()
@@ -458,28 +524,8 @@ export function createWorkers({
     })
   }
 
-  const messageWorker = async ({
-    threadId,
-    sender,
-    inputId,
-    message
-  }: MessageWorkerParams) => {
-    const view = await host.observe(harness, { threadId })
-    const { pendingWaits } = await view.snapshot()
-    const answers = answersOf(pendingWaits, message)
-
-    await submitInput(
-      { host, harness },
-      {
-        threadId,
-        user: sender,
-        input:
-          answers.length === 0
-            ? { op: 'steer', message }
-            : { op: 'resolve', resume: answers },
-        inputId: personInputId(inputId)
-      }
-    )
+  const messageWorker = async (params: MessageWorkerParams) => {
+    await sendWorkerMessage({ host, harness, readMessage }, params)
   }
 
   const answerApproval = async ({

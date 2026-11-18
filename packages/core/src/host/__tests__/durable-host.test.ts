@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { defineHarness } from '@tanstack/ai-harness'
 import { fakeText } from '@tanstack/ai/testing'
+import { mediaIdOf, mediaPart } from '@tanstack/ai-harness/media'
 import { createAgentHost } from '#/host/agent-host.ts'
 import type { Database } from '#/store/database.ts'
 import { createHarnessPersistence } from '#/store/harness-persistence.ts'
@@ -55,6 +56,15 @@ async function openAgentHost(url: string, replies: string[]) {
   }
 }
 
+function firstMediaIdOf(content: unknown) {
+  const parts: unknown[] = Array.isArray(content) ? content : []
+  const ids = parts.flatMap((part) => {
+    return mediaIdOf(part) ?? []
+  })
+
+  return ids[0] ?? ''
+}
+
 async function measureLog(database: Database) {
   const [log] = await database.query<{
     head: number
@@ -96,6 +106,32 @@ describe('a host on Postgres', () => {
       threadId: 'restart',
       harness: HARNESS_NAME
     })
+  })
+
+  it('keeps a file of a message across a restart', async () => {
+    const url = await createMigratedDatabase()
+    const bytes = new TextEncoder().encode('image bytes')
+    {
+      await using first = await openAgentHost(url, ['A mockup.'])
+      await using session = await first.open('file-restart')
+      const record = await session.putMedia({
+        body: bytes,
+        mimeType: 'image/png',
+        name: 'mockup.png'
+      })
+      await session.send([
+        { type: 'text', content: 'What is this?' },
+        mediaPart(record)
+      ])
+    }
+
+    await using second = await openAgentHost(url, [])
+    await using reopened = await second.open('file-restart')
+    const [question] = await reopened.transcript()
+
+    expect(
+      await reopened.loadMedia({ id: firstMediaIdOf(question?.content) })
+    ).toStrictEqual(bytes)
   })
 
   it('reopens a thread that a stopped host still owns, from the log alone', async () => {

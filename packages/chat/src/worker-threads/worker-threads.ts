@@ -327,7 +327,7 @@ function routeOfThread({
   }
 
   return {
-    reply: async ({ user, text, inputId }) => {
+    reply: async ({ user, text, files, inputId }) => {
       if (ignoresColleague(user)) {
         return
       }
@@ -341,7 +341,8 @@ function routeOfThread({
           threadId,
           sender: { id: user },
           inputId,
-          message: text
+          message: text,
+          files
         })
       } catch (error) {
         await status.showLive(chatThreadId, worker)
