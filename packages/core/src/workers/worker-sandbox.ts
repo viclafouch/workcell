@@ -1,3 +1,4 @@
+import { posix } from 'node:path'
 import {
   createPluginEvent,
   definePlugin,
@@ -13,11 +14,7 @@ import {
 } from '@tanstack/ai-sandbox'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { followCurrent, type SandboxBackend } from '#/sandbox/follow-current.ts'
-import {
-  pathInside,
-  readSandboxFacts,
-  WORKSPACE_ROOT
-} from '#/sandbox/sandbox-facts.ts'
+import { readSandboxFacts, WORKSPACE_ROOT } from '#/sandbox/sandbox-facts.ts'
 import type { ListSandboxes } from '#/sandbox/sandboxes-under-keys.ts'
 import {
   captureChanges,
@@ -383,7 +380,7 @@ export function createWorkerSandbox({
       throw new Error(`The worker of the thread ${threadId} has no open sandbox.`)
     }
 
-    return current.backend.readFile(pathInside(WORKSPACE_ROOT, path))
+    return current.backend.readFile(posix.resolve(WORKSPACE_ROOT, path))
   }
 
   return { workspace, plugin, rebind, save, inspect, forget, readFile }
