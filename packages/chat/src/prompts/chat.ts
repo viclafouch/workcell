@@ -30,13 +30,13 @@ export const CHAT_LINES: ChatLines = {
     return `Hi, ${title} here.`
   },
   starting: (taskName) => {
-    return `I take ${taskName}. My sandbox is getting ready.`
+    return `I take ${taskName}. Setting up.`
   },
   queuedName: (name) => {
     return `${name} (queued)`
   },
   readingStatus: 'Reading your message.',
-  setupStatus: 'Getting my sandbox ready.',
+  setupStatus: 'Setting up, it takes a few minutes.',
   planTitle: 'Steps',
   planProgress: ({ done, total }) => {
     return `Steps: ${done} of ${total} done.`

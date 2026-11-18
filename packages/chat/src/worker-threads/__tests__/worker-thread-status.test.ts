@@ -29,7 +29,7 @@ const SETUP_EVENT_SETTLE_MS = 20
 
 const IDLE_WORKER = { ...STARTED_WORKER, liveStatus: 'idle' as const }
 
-const SETUP_LINE = threadLine('Getting my sandbox ready.')
+const SETUP_LINE = threadLine('Setting up, it takes a few minutes.')
 
 function sandboxSetupUntil(released: Promise<null>, reached: () => void) {
   return definePlugin({

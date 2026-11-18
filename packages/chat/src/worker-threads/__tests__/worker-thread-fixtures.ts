@@ -83,7 +83,7 @@ export const QUESTION_TEXT = [
   '2. Ready'
 ].join('\n')
 
-export const STARTING_LINE = 'I take TASK-7. My sandbox is getting ready.'
+export const STARTING_LINE = 'I take TASK-7. Setting up.'
 
 export const ASK_DRAFT_OR_READY: FakeResponse = {
   toolCalls: [
