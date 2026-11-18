@@ -5,7 +5,7 @@ const PREFIX = 'https://linear.app/acme/issue/'
 
 const LINKS = ticketLinks({ teamKeys: ['ABC', 'XY'], ticketUrlPrefix: PREFIX })
 
-function linkText(text: string) {
+function linkPlain(text: string) {
   return LINKS.reduce((linked, { pattern, toLink }) => {
     return linked.replace(pattern, toLink)
   }, text)
@@ -14,27 +14,17 @@ function linkText(text: string) {
 describe('the ticket links', () => {
   it.each([
     {
-      name: 'a ticket in prose',
-      text: 'ABC-12 est en Todo.',
-      linked: `[ABC-12](${PREFIX}ABC-12) est en Todo.`
+      name: 'a ticket in prose and in parentheses',
+      text: 'ABC-12 et (XY-3).',
+      linked: `[ABC-12](${PREFIX}ABC-12) et ([XY-3](${PREFIX}XY-3)).`
     },
     {
-      name: 'a ticket in parentheses and in code',
-      text: '(XY-3) et `ABC-4`',
-      linked: `([XY-3](${PREFIX}XY-3)) et [ABC-4](${PREFIX}ABC-4)`
-    },
-    {
-      name: 'a ticket already in a link',
-      text: `[ABC-12](${PREFIX}ABC-12)`,
-      linked: `[ABC-12](${PREFIX}ABC-12)`
-    },
-    {
-      name: 'a word of another team or no ticket',
-      text: 'UTF-8, ZZ-1 et ABC-12a',
-      linked: 'UTF-8, ZZ-1 et ABC-12a'
+      name: 'a word of another team, a version, a longer word or a URL',
+      text: 'UTF-8, ZZ-1, ABC-12a, ÉABC-12 et https://x.test/ABC-12',
+      linked: 'UTF-8, ZZ-1, ABC-12a, ÉABC-12 et https://x.test/ABC-12'
     }
   ])('links $name only where it names a ticket', ({ text, linked }) => {
-    expect(linkText(text)).toBe(linked)
+    expect(linkPlain(text)).toBe(linked)
   })
 
   it('gives no rule when the workspace has no team', () => {

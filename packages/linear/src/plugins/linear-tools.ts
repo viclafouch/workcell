@@ -7,7 +7,13 @@ import {
 } from '@tanstack/ai-harness'
 import { mcp } from '@tanstack/ai-mcp/harness'
 import { agentMetadataSchema, StarterOnlyTools } from '@workcell/core'
-import { linearPrompt } from '#/prompts/linear.ts'
+import {
+  commentLine,
+  createLine,
+  linearPrompt,
+  noWriteLine,
+  TICKET_CREATION
+} from '#/prompts/linear.ts'
 
 export const LINEAR_MCP_URL = 'https://mcp.linear.app/mcp'
 
@@ -104,22 +110,32 @@ const CREATE_RULES: PermissionRule[] = [
   { tool: ISSUE_TOOL, resource: NEW_ISSUE, decision: 'allow' }
 ]
 
-const ACCESS_RULES: Record<LinearAccess, PermissionRule[]> = {
-  read: READ_RULES,
-  comment: [...READ_RULES, ...COMMENT_RULES],
-  create: [...READ_RULES, ...CREATE_RULES]
+type StarterOnlyTool = { tool: string; action: string }
+
+type LinearRights = {
+  rules: PermissionRule[]
+  starterOnly: StarterOnlyTool[]
+  writeLine: (ownTicket: string | undefined) => string
 }
 
-const WRITE_TOOLS: Record<LinearAccess, string[]> = {
-  read: [],
-  comment: [COMMENT_TOOL],
-  create: [ISSUE_TOOL]
-}
-
-const STARTER_ONLY: Record<LinearAccess, string[]> = {
-  read: [],
-  comment: [],
-  create: [ISSUE_TOOL]
+const RIGHTS: Record<LinearAccess, LinearRights> = {
+  read: { rules: READ_RULES, starterOnly: [], writeLine: noWriteLine },
+  comment: {
+    rules: [...READ_RULES, ...COMMENT_RULES],
+    starterOnly: [],
+    writeLine: (ownTicket) => {
+      return ownTicket === undefined
+        ? noWriteLine()
+        : commentLine(ownTicket, COMMENT_TOOL)
+    }
+  },
+  create: {
+    rules: [...READ_RULES, ...CREATE_RULES],
+    starterOnly: [{ tool: ISSUE_TOOL, action: TICKET_CREATION }],
+    writeLine: () => {
+      return createLine(ISSUE_TOOL)
+    }
+  }
 }
 
 type LinearToolsParams = {
@@ -128,7 +144,7 @@ type LinearToolsParams = {
 }
 
 export function linearTools({ apiKey, access = 'comment' }: LinearToolsParams) {
-  const writeTools = WRITE_TOOLS[access]
+  const rights = RIGHTS[access]
 
   return [
     mcp({
@@ -154,13 +170,13 @@ export function linearTools({ apiKey, access = 'comment' }: LinearToolsParams) {
           prompts: [
             () => {
               return linearPrompt(
-                { readTools: READ_TOOLS, writeTools, access },
-                metadata.subject
+                READ_TOOLS,
+                rights.writeLine(metadata.subject)
               )
             }
           ],
           contribute: [
-            ...ACCESS_RULES[access].map((rule) => {
+            ...rights.rules.map((rule) => {
               return PermissionRules.item(rule)
             }),
             PermissionResources.item({
@@ -175,11 +191,8 @@ export function linearTools({ apiKey, access = 'comment' }: LinearToolsParams) {
                 }
               }
             }),
-            ...STARTER_ONLY[access].map((tool) => {
-              return StarterOnlyTools.item({
-                tool,
-                action: 'create a Linear ticket'
-              })
+            ...rights.starterOnly.map((tool) => {
+              return StarterOnlyTools.item(tool)
             })
           ]
         }

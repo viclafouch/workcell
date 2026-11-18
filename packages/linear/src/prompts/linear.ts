@@ -1,36 +1,22 @@
-type LinearToolNames = {
-  readTools: readonly string[]
-  writeTools: readonly string[]
-  access: 'read' | 'comment' | 'create'
+export const TICKET_CREATION = 'create a Linear ticket'
+
+export function noWriteLine() {
+  return 'You write nothing in Linear.'
 }
 
-const NO_WRITE = 'You write nothing in Linear.'
-
-function writeLines(
-  { writeTools, access }: LinearToolNames,
-  ownTicket: string | undefined
-) {
-  if (access === 'create') {
-    return [
-      `You create a Linear ticket with ${writeTools.join(', ')}, with no id, when an allowed starter asks for one. Any other Linear write is refused.`
-    ]
-  }
-
-  return access === 'comment' && ownTicket !== undefined
-    ? [
-        `You comment on ${ownTicket} with ${writeTools.join(', ')}, with no question. Any other Linear write is refused.`
-      ]
-    : [NO_WRITE]
+export function commentLine(ownTicket: string, tool: string) {
+  return `You comment on ${ownTicket} with ${tool}, with no question. Any other Linear write is refused.`
 }
 
-export function linearPrompt(
-  tools: LinearToolNames,
-  ownTicket: string | undefined
-) {
+export function createLine(tool: string) {
+  return `You create a Linear ticket with ${tool}, with no id, when an allowed starter asks for one. Any other Linear write is refused.`
+}
+
+export function linearPrompt(readTools: readonly string[], writeLine: string) {
   return [
-    `You read Linear with ${tools.readTools.join(', ')}.`,
+    `You read Linear with ${readTools.join(', ')}.`,
     'When one of these tools is missing, the Linear server is down: say so, and never guess what a ticket says.',
-    ...writeLines(tools, ownTicket)
+    writeLine
   ].join('\n')
 }
 

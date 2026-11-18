@@ -12,7 +12,7 @@ Workcell serves a public you do not know: any team, any repository, any stack. T
 
 ## Invariants
 
-1. **The sandbox is the boundary.** The agent loop runs on the host, and every tool call of the model runs in a sandbox. The model key and the token of each integration stay on the host.
+1. **The sandbox is the boundary.** The agent loop runs on the host, and every file and command call of the model runs in a sandbox. A web fetch reads public pages from the host. The model key and the token of each integration stay on the host.
 2. **One agent loop with skills.** Procedure lives in skills, hard limits in tools and in the harness. A new kind of work is a new skill.
 3. **Only an allowed starter starts work.** The tool code checks the starter against the list in config. The prompt explains the rule, the code enforces it.
 4. **Provider agnostic.** The model sits behind a TanStack adapter, the store is plain Postgres, and the sandbox provider changes in one line. A vendor feature sits behind one of our interfaces.

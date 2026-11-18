@@ -8,7 +8,7 @@ import type { OrchestratorHarness } from './orchestrator-harness.ts'
 
 const MODE_KEY = 'mode'
 
-const READ_ONLY_MODE = 'plan'
+const PLAN_MODE = 'plan'
 
 type CreateOrchestratorParams = {
   host: HarnessHost
@@ -30,8 +30,8 @@ async function keepReadOnly(session: HarnessSession<OrchestratorHarness>) {
     return key === MODE_KEY
   })
 
-  if (mode?.value !== READ_ONLY_MODE) {
-    await session.setPluginSetting({ key: MODE_KEY, value: READ_ONLY_MODE })
+  if (mode?.value !== PLAN_MODE) {
+    await session.setPluginSetting({ key: MODE_KEY, value: PLAN_MODE })
   }
 }
 

@@ -16,7 +16,7 @@ import type {
 } from '#/connection/chat-connection.ts'
 import type { LogLine } from '#/connection/chat-logger.ts'
 import type { ChatSurface, SessionStatus } from '#/connection/chat-surface.ts'
-import { splitAtLastSpace } from '#/connection/text-links.ts'
+import { splitAtSafeSpace } from '#/connection/text-links.ts'
 import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
 
 const TASK_DETAILS_MAX_LENGTH = 300
@@ -153,7 +153,7 @@ function createReplyStream(
     open()
 
     if (chunk.type === 'markdown_text') {
-      const { complete, rest } = splitAtLastSpace(state.unsent + chunk.text)
+      const { complete, rest } = splitAtSafeSpace(state.unsent + chunk.text)
       state.unsent = rest
       sendText(complete)
 

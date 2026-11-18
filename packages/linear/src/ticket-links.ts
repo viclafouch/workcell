@@ -17,12 +17,10 @@ export function ticketLinks({ teamKeys, ticketUrlPrefix }: TicketLinksParams) {
   return [
     {
       pattern: new RegExp(
-        `(?<![\\w/[-])\`?(?:${keys})-\\d+\`?(?![\\w\\]-])`,
+        String.raw`(?<![\p{L}\p{N}_/-])(?:${keys})-\d+(?![\p{L}\p{N}_-])`,
         'gu'
       ),
-      toLink: (match: string) => {
-        const ticket = match.replaceAll('`', '')
-
+      toLink: (ticket: string) => {
         return `[${ticket}](${ticketUrlPrefix}${ticket})`
       }
     }

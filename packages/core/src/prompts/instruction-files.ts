@@ -9,10 +9,6 @@ type InstructionFilesParams = {
   repositories?: Readonly<Record<string, string>>
 }
 
-function readText(file: string) {
-  return readFile(file, 'utf8')
-}
-
 export function instructionFiles({
   files,
   repositories = {}
@@ -29,8 +25,12 @@ export function instructionFiles({
           const entry = await setupContext.session.indexEntry()
           const repositoryFile = repositories[entry?.metadata?.repository ?? '']
           const [read, repositoryRead] = await Promise.all([
-            Promise.all(files.map(readText)),
-            repositoryFile === undefined ? '' : readText(repositoryFile)
+            Promise.all(
+              files.map((file) => {
+                return readFile(file, 'utf8')
+              })
+            ),
+            repositoryFile === undefined ? '' : readFile(repositoryFile, 'utf8')
           ])
           texts = read
           repositoryText = repositoryRead
