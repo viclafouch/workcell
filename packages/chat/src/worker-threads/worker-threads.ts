@@ -40,7 +40,7 @@ import {
 } from './worker-thread-cards.ts'
 import {
   markAsked,
-  postOfEvent,
+  messageOfEvent,
   postQuestions,
   type ThreadPosts
 } from './worker-thread-posts.ts'
@@ -531,13 +531,13 @@ export function createWorkerThreads({
         workerThread.opened = { threadId: opened.chatThreadId, identity }
       }
 
-      const postInThread = async (message: ChatMessage, asBot = false) => {
-        const { opened } = workerThread
-
-        if (opened !== undefined) {
-          const { threadId, identity } = opened
-          await surface.post({ target: { threadId }, message, identity: asBot ? undefined : identity })
+      const postInThread = async (message: ChatMessage) => {
+        if (workerThread.opened === undefined) {
+          return
         }
+
+        const { threadId, identity } = workerThread.opened
+        await surface.post({ target: { threadId }, identity, message })
       }
 
       const showPlan = async () => {
@@ -608,14 +608,14 @@ export function createWorkerThreads({
           stoppedWaits.splice(0)
         },
         onChunk: async ({ messages }, chunk) => {
-          const eventPost =
+          const eventMessage =
             chunk.type === 'CUSTOM'
-              ? await postOfEvent(chunk.name, chunk.value, sentFiles)
+              ? await messageOfEvent(chunk.name, chunk.value, sentFiles)
               : undefined
 
-          if (eventPost !== undefined) {
+          if (eventMessage !== undefined) {
             await safely(`${chunk.type} post`, () => {
-              return postInThread(eventPost.message, eventPost.asBot)
+              return postInThread(eventMessage)
             })
           }
 

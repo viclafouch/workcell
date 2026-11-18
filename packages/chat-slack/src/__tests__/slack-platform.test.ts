@@ -20,20 +20,40 @@ type SlackCall = { method: string; body: Record<string, string> }
 
 const calls: SlackCall[] = []
 
-const slackAnswer = { givesTimestamp: true }
+const slackAnswer = { givesTimestamp: true, postsBeforeFileIsReady: 0 }
 
 const TIMESTAMP = { ts: '2.0001' }
+
+const UPLOAD_URL = 'https://files.slack.com/upload/v1/F_FILE'
+
+const UPLOAD_ANSWER = { ok: true, upload_url: UPLOAD_URL, file_id: 'F_FILE' }
 
 const network = setupServer(
   http.post('https://slack.com/api/:method', async ({ request, params }) => {
     const { token: _token, ...body } = formBodySchema.parse(
       Object.fromEntries(new URLSearchParams(await request.text()))
     )
-    calls.push({ method: z.string().parse(params.method), body })
+    const method = z.string().parse(params.method)
+    calls.push({ method, body })
+
+    if (method === 'files.getUploadURLExternal') {
+      return HttpResponse.json(UPLOAD_ANSWER)
+    }
+
+    if (method === 'chat.postMessage' && slackAnswer.postsBeforeFileIsReady > 0) {
+      slackAnswer.postsBeforeFileIsReady -= 1
+
+      return HttpResponse.json({ ok: false, error: 'invalid_blocks' })
+    }
 
     return HttpResponse.json(
       slackAnswer.givesTimestamp ? { ok: true, ...TIMESTAMP } : { ok: true }
     )
+  }),
+  http.post(UPLOAD_URL, async ({ request }) => {
+    calls.push({ method: 'upload', body: { bytes: await request.text() } })
+
+    return new HttpResponse('OK')
   })
 )
 
@@ -65,10 +85,82 @@ describe('slackPlatform', () => {
   beforeEach(() => {
     calls.length = 0
     slackAnswer.givesTimestamp = true
+    slackAnswer.postsBeforeFileIsReady = 0
   })
 
   afterAll(() => {
     network.close()
+  })
+
+  it('posts an image in a message of the identity once Slack has it ready', async () => {
+    slackAnswer.postsBeforeFileIsReady = 1
+    const postAs = requirePostAs()
+
+    await postAs({
+      target: { threadId: 'slack:C_WORKERS:1.0001' },
+      identity: ALPHA,
+      message: {
+        markdown: '',
+        files: [{ filename: 'chart.png', data: Buffer.from('png bytes') }]
+      }
+    })
+    const imagePost = {
+      method: 'chat.postMessage',
+      body: {
+        channel: 'C_WORKERS',
+        thread_ts: '1.0001',
+        text: 'chart.png',
+        blocks: JSON.stringify([
+          { type: 'image', slack_file: { id: 'F_FILE' }, alt_text: 'chart.png' }
+        ]),
+        username: ALPHA.name,
+        icon_url: ALPHA.iconUrl
+      }
+    }
+
+    expect(calls).toStrictEqual([
+      {
+        method: 'files.getUploadURLExternal',
+        body: { filename: 'chart.png', length: '9' }
+      },
+      { method: 'upload', body: { bytes: 'png bytes' } },
+      {
+        method: 'files.completeUploadExternal',
+        body: { files: JSON.stringify([{ id: 'F_FILE', title: 'chart.png' }]) }
+      },
+      imagePost,
+      imagePost
+    ])
+  })
+
+  it('shares another file in the thread with a caption that names the identity', async () => {
+    const postAs = requirePostAs()
+
+    await postAs({
+      target: { threadId: 'slack:C_WORKERS:1.0001' },
+      identity: ALPHA,
+      message: {
+        markdown: '',
+        files: [{ filename: 'r2.mp4', data: Buffer.from('video bytes') }]
+      }
+    })
+
+    expect(calls).toStrictEqual([
+      {
+        method: 'files.getUploadURLExternal',
+        body: { filename: 'r2.mp4', length: '11' }
+      },
+      { method: 'upload', body: { bytes: 'video bytes' } },
+      {
+        method: 'files.completeUploadExternal',
+        body: {
+          files: JSON.stringify([{ id: 'F_FILE', title: 'r2.mp4' }]),
+          channel_id: 'C_WORKERS',
+          thread_ts: '1.0001',
+          initial_comment: 'From Alpha'
+        }
+      }
+    ])
   })
 
   it('posts in a thread under the name and the image of an identity, with no link preview', async () => {

@@ -2,7 +2,7 @@ import type { CardElement } from 'chat'
 import { describe, expect, it } from 'vitest'
 import { SENT_FILE_EVENT } from '@workcell/core'
 import { CARD_EVENT, cardEventValue } from '#/cards/card-event.ts'
-import { postOfEvent } from '#/worker-threads/worker-thread-posts.ts'
+import { messageOfEvent } from '#/worker-threads/worker-thread-posts.ts'
 
 const CARD: CardElement = {
   type: 'card',
@@ -24,27 +24,27 @@ function sentFilesHolding(keys: readonly string[]) {
   }
 }
 
-describe('postOfEvent', () => {
-  it('posts a card as the worker, and a file as the bot, since a chat uploads a file as the bot only', async () => {
+describe('messageOfEvent', () => {
+  it('turns a card event into a card, and a sent-file event into its file', async () => {
     const sentFiles = sentFilesHolding([SENT_NOTES.key])
-    const cardPost = await postOfEvent(
+    const cardPost = await messageOfEvent(
       CARD_EVENT,
       cardEventValue(CARD),
       sentFiles
     )
-    const filePost = await postOfEvent(SENT_FILE_EVENT, SENT_NOTES, sentFiles)
+    const filePost = await messageOfEvent(SENT_FILE_EVENT, SENT_NOTES, sentFiles)
 
-    expect(cardPost).toStrictEqual({ message: { card: CARD }, asBot: false })
+    expect(cardPost).toStrictEqual({ card: CARD })
     expect(filePost).toMatchObject({
-      message: { markdown: '', files: [{ filename: 'notes.md' }] },
-      asBot: true
+      markdown: '',
+      files: [{ filename: 'notes.md' }]
     })
   })
 
   it('posts a sent file once, and nothing for a file the store no longer holds', async () => {
     const sentFiles = sentFilesHolding([SENT_NOTES.key])
-    const first = await postOfEvent(SENT_FILE_EVENT, SENT_NOTES, sentFiles)
-    const second = await postOfEvent(SENT_FILE_EVENT, SENT_NOTES, sentFiles)
+    const first = await messageOfEvent(SENT_FILE_EVENT, SENT_NOTES, sentFiles)
+    const second = await messageOfEvent(SENT_FILE_EVENT, SENT_NOTES, sentFiles)
 
     expect(first).toBeDefined()
     expect(second).toBeUndefined()
@@ -55,10 +55,10 @@ describe('postOfEvent', () => {
 
     expect(
       await Promise.all([
-        postOfEvent('workcell.other', {}, sentFiles),
-        postOfEvent(SENT_FILE_EVENT, { name: 'notes.md' }, sentFiles),
-        postOfEvent(CARD_EVENT, { card: 'none' }, sentFiles),
-        postOfEvent(SENT_FILE_EVENT, SENT_NOTES)
+        messageOfEvent('workcell.other', {}, sentFiles),
+        messageOfEvent(SENT_FILE_EVENT, { name: 'notes.md' }, sentFiles),
+        messageOfEvent(CARD_EVENT, { card: 'none' }, sentFiles),
+        messageOfEvent(SENT_FILE_EVENT, SENT_NOTES)
       ])
     ).toStrictEqual([undefined, undefined, undefined, undefined])
   })

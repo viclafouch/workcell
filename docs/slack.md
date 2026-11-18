@@ -37,6 +37,8 @@ Ask for a file in your own words, such as a slide deck of a topic, or the notes 
 
 It writes the files that are text: a web page or a slide deck, a note, a data table, code. It also sends a file it finds or makes in its closed box, such as a picture of the code or a chart a robot drew.
 
+A picture from a robot at work shows in its own message, under its name. Any other file from it shows under the lead robot, with a line that names the robot that made it.
+
 A file that holds a secret of your team never leaves the robot: it tells you so instead.
 
 ## Who the robot answers

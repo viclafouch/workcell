@@ -51,24 +51,20 @@ export async function postQuestions(
   }
 }
 
-export type EventPost = { message: ChatMessage; asBot: boolean }
-
-export async function postOfEvent(
+export async function messageOfEvent(
   name: string,
   value: unknown,
   sentFiles?: SentFileSource
-): Promise<EventPost | undefined> {
+): Promise<ChatMessage | undefined> {
   const card = name === CARD_EVENT ? cardOfEvent(value) : undefined
 
   if (card !== undefined) {
-    return { message: { card }, asBot: false }
+    return { card }
   }
 
   const sentFile = name === SENT_FILE_EVENT ? sentFileOfEvent(value) : undefined
   const files =
     sentFile === undefined ? [] : await takeUploads(sentFiles, [sentFile])
 
-  return files.length === 0
-    ? undefined
-    : { message: { markdown: '', files }, asBot: true }
+  return files.length === 0 ? undefined : { markdown: '', files }
 }

@@ -23,6 +23,9 @@
     "test": "vitest run",
     "test:changed": "vitest run --changed"
   },
+  "dependencies": {
+    "@tanstack/pacer": "catalog:"
+  },
   "devDependencies": {
     "@chat-adapter/slack": "catalog:",
     "@tanstack/ai": "catalog:",
