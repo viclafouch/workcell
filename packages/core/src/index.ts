@@ -40,9 +40,24 @@ export type { LibraryRepositories } from './sandbox/library-sandbox.ts'
 export { StarterOnlyTools } from './orchestrator/starter-only-tools.ts'
 export { instructionFiles } from './prompts/instruction-files.ts'
 export {
+  destroyProxiedDockerSandbox,
   proxiedDockerSandbox,
   type ProxiedDockerSandboxParams
 } from './sandbox/proxied-docker-sandbox.ts'
+export {
+  startCredentialProxy,
+  type CredentialProxy,
+  type CredentialProxyParams
+} from './sandbox/egress/credential-proxy.ts'
+export {
+  basicAuthorization,
+  bearerAuthorization,
+  credentialPlaceholder,
+  decideEgressConnection,
+  decideEgressRequest,
+  type CredentialRule,
+  type SandboxEgress
+} from './sandbox/egress/egress-policy.ts'
 export { workerRepo } from './sandbox/worker-repo.ts'
 export {
   DATABASE_SECRET_NAMES,

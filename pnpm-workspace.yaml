@@ -27,6 +27,7 @@ catalog:
   '@opentelemetry/core': ^3.1.1
   '@opentelemetry/sdk-node': ^0.301.1
   '@opentelemetry/sdk-trace': ^3.1.1
+  '@peculiar/x509': ^3.1.0
   '@slack/web-api': 7.19.0
   '@tanstack/ai': 1.4.0
   '@tanstack/ai-anthropic': 1.1.1
@@ -60,6 +61,8 @@ catalog:
   pino: ^10.4.0
   pino-pretty: ^13.2.0
   pino-roll: ^4.0.0
+  read-tls-client-hello: ^2.0.0
+  reflect-metadata: ^0.2.2
   turbo: ^2.11.11
   typescript: ^7.0.2
   vitest: ^5.1.0

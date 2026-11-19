@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import Dockerode from 'dockerode'
 import type {
   SandboxCapabilities,
@@ -6,21 +7,25 @@ import type {
   SandboxProvider
 } from '@tanstack/ai-sandbox'
 import { DOCKER_CAPS, DockerHandle } from '@tanstack/ai-sandbox-docker'
-import { AsyncRetryer } from '@tanstack/pacer'
+import type { CredentialProxy } from './egress/credential-proxy.ts'
+import type { SandboxEgress } from './egress/egress-policy.ts'
+import {
+  configureRelay,
+  createRelay,
+  EGRESS_LABEL,
+  ensureRelayRunning,
+  HOST_GATEWAY_NAME,
+  RELAY_IMAGE,
+  relayAddress,
+  removeRelay,
+  trustEgressAuthority
+} from './egress/sandbox-relay.ts'
 
-const SANDBOX_NETWORK = 'workcell-sandbox'
-const SANDBOX_SUBNET = '10.231.0.0/24'
-const EGRESS_NETWORK = 'workcell-egress-out'
-const EGRESS_CONTAINER = 'workcell-egress'
-const EGRESS_ADDRESS = '10.231.0.2'
 const WORKDIR = '/workspace'
 const AGENT_HOME = '/home/agent'
 const SANDBOX_LABEL = 'workcell.sandbox'
 const UNNAMED_SANDBOX = 'unnamed'
 const NOT_FOUND_STATUS = 404
-const CONFLICT_STATUS = 409
-const EGRESS_ATTEMPTS = 5
-const EGRESS_RETRY_WAIT_MS = 500
 const BYTES_PER_GIBIBYTE = 1_073_741_824
 const SANDBOX_MEMORY_GIBIBYTES = 6
 const SANDBOX_MEMORY_BYTES = SANDBOX_MEMORY_GIBIBYTES * BYTES_PER_GIBIBYTE
@@ -41,8 +46,14 @@ type CacheVolume = { name: string; mountPath: string }
 
 export type ProxiedDockerSandboxParams = {
   image: string
-  egressImage: string
+  egress: SandboxEgress
+  credentialProxy: Pick<
+    CredentialProxy,
+    'port' | 'registerSandbox' | 'forgetSandbox'
+  >
   logger: { info: LogLine; warn: LogLine }
+  proxyHost?: string
+  relayImage?: string
   keepAliveCommand?: string[]
   sandboxEnv?: Readonly<Record<string, string>>
   labels?: Readonly<Record<string, string>>
@@ -54,7 +65,7 @@ type SandboxContainerDefinitionParams = Required<
     ProxiedDockerSandboxParams,
     'image' | 'keepAliveCommand' | 'sandboxEnv' | 'labels' | 'cacheVolumes'
   >
-> & { key: string }
+> & { key: string; egressName: string; dnsAddress: string }
 
 function toMounts(
   cacheVolumes: readonly CacheVolume[]
@@ -70,19 +81,23 @@ export function sandboxContainerDefinition({
   keepAliveCommand,
   sandboxEnv,
   labels,
-  cacheVolumes
+  cacheVolumes,
+  egressName,
+  dnsAddress
 }: SandboxContainerDefinitionParams): Dockerode.ContainerCreateOptions {
   return {
     Image: image,
     Cmd: keepAliveCommand,
     WorkingDir: WORKDIR,
-    Env: Object.entries(sandboxEnv).map(([name, value]) => {
-      return `${name}=${value}`
-    }),
-    Labels: { ...labels, [SANDBOX_LABEL]: key },
+    Env: Object.entries({ ...sandboxEnv, NODE_USE_SYSTEM_CA: '1' }).map(
+      ([name, value]) => {
+        return `${name}=${value}`
+      }
+    ),
+    Labels: { ...labels, [SANDBOX_LABEL]: key, [EGRESS_LABEL]: egressName },
     HostConfig: {
-      NetworkMode: SANDBOX_NETWORK,
-      Dns: [EGRESS_ADDRESS],
+      NetworkMode: egressName,
+      Dns: [dnsAddress],
       Memory: SANDBOX_MEMORY_BYTES,
       MemorySwap: SANDBOX_MEMORY_BYTES,
       Mounts: toMounts(cacheVolumes)
@@ -135,112 +150,41 @@ export async function findImage(docker: Dockerode, tag: string) {
   }
 }
 
-async function ensureNetwork(
-  docker: Dockerode,
-  network: Dockerode.NetworkCreateOptions
-) {
-  const networks = await docker.listNetworks({
-    filters: { name: [network.Name] }
-  })
-
-  if (
-    networks.some(({ Name }) => {
-      return Name === network.Name
-    })
-  ) {
-    return
-  }
-
-  await docker.createNetwork(network)
+function refuseFork(): never {
+  throw new Error('A proxied Docker sandbox does not fork.')
 }
 
-async function ensureNetworks(docker: Dockerode) {
-  await Promise.all([
-    ensureNetwork(docker, {
-      Name: SANDBOX_NETWORK,
-      Internal: true,
-      IPAM: { Config: [{ Subnet: SANDBOX_SUBNET }] }
-    }),
-    ensureNetwork(docker, { Name: EGRESS_NETWORK })
-  ])
+async function egressNameOf(container: Dockerode.Container) {
+  const { Config } = await container.inspect()
+
+  return Config.Labels[EGRESS_LABEL] ?? null
 }
 
-async function startEgressProxy(
-  docker: Dockerode,
-  egressImage: string,
-  imageId: string
-) {
-  const container = docker.getContainer(EGRESS_CONTAINER)
+export async function destroyProxiedDockerSandbox(id: string) {
+  const docker = new Dockerode()
+  const container = docker.getContainer(id)
+  let egressName: string | null = null
 
   try {
-    const { Image, State } = await container.inspect()
-
-    if (Image === imageId) {
-      if (!State.Running) {
-        await container.start()
-      }
-
-      return
-    }
-
-    await container.remove({ force: true })
+    egressName = await egressNameOf(container)
+    await container.remove({ force: true, v: true })
   } catch (error) {
     if (!isNotFound(error)) {
       throw error
     }
   }
 
-  const egress = await docker.createContainer({
-    name: EGRESS_CONTAINER,
-    Image: egressImage,
-    Env: [`EGRESS_ADDRESS=${EGRESS_ADDRESS}`],
-    HostConfig: {
-      NetworkMode: EGRESS_NETWORK,
-      RestartPolicy: { Name: 'unless-stopped' }
-    }
-  })
-  await docker.getNetwork(SANDBOX_NETWORK).connect({
-    Container: egress.id,
-    EndpointConfig: { IPAMConfig: { IPv4Address: EGRESS_ADDRESS } }
-  })
-  await egress.start()
-}
-
-async function ensureEgressProxy(docker: Dockerode, egressImage: string) {
-  const image = await findImage(docker, egressImage)
-  const failure = await new AsyncRetryer(
-    async () => {
-      try {
-        await startEgressProxy(docker, egressImage, image.Id)
-
-        return null
-      } catch (error) {
-        if (hasStatus(error, CONFLICT_STATUS)) {
-          throw error
-        }
-
-        return error
-      }
-    },
-    {
-      maxAttempts: EGRESS_ATTEMPTS,
-      baseWait: EGRESS_RETRY_WAIT_MS,
-      jitter: 0.25
-    }
-  ).execute()
-
-  if (failure !== null && failure !== undefined) {
-    throw new Error('The egress proxy did not start.', { cause: failure })
+  if (egressName !== null) {
+    await removeRelay(docker, egressName)
   }
-}
-
-function refuseFork(): never {
-  throw new Error('A proxied Docker sandbox does not fork.')
 }
 
 export function proxiedDockerSandbox({
   image,
-  egressImage,
+  egress,
+  credentialProxy,
+  proxyHost = HOST_GATEWAY_NAME,
+  relayImage = RELAY_IMAGE,
   logger,
   keepAliveCommand = DEFAULT_KEEP_ALIVE_COMMAND,
   sandboxEnv = {},
@@ -272,10 +216,48 @@ export function proxiedDockerSandbox({
     }
   }
 
+  async function connectEgress(
+    sandbox: Dockerode.Container,
+    egressName: string
+  ) {
+    const relay = docker.getContainer(egressName)
+    await ensureRelayRunning(relay)
+    const registration = await credentialProxy.registerSandbox({
+      id: sandbox.id,
+      egress
+    })
+    await configureRelay({
+      relay,
+      egressName,
+      registration,
+      proxy: { host: proxyHost, port: credentialProxy.port }
+    })
+    await trustEgressAuthority(sandbox, registration.certificateAuthority)
+  }
+
+  async function removeSandbox(id: string, egressName: string | null) {
+    credentialProxy.forgetSandbox(id)
+
+    try {
+      await docker.getContainer(id).remove({ force: true, v: true })
+    } catch (error) {
+      if (!isNotFound(error)) {
+        throw error
+      }
+    }
+
+    if (egressName !== null) {
+      await removeRelay(docker, egressName)
+    }
+
+    logger.info({ sandboxId: id }, 'sandbox destroyed')
+  }
+
   class ProxiedDockerHandle extends DockerHandle {
     override async destroy() {
+      const egressName = await egressNameOf(docker.getContainer(this.id))
       await super.destroy()
-      logger.info({ sandboxId: this.id }, 'sandbox destroyed')
+      await removeSandbox(this.id, egressName)
     }
   }
 
@@ -295,6 +277,34 @@ export function proxiedDockerSandbox({
     return handle
   }
 
+  async function startSandbox(key: string) {
+    const egressName = `workcell-egress-${randomUUID()}`
+    const relay = await createRelay(docker, { egressName, relayImage })
+
+    const container = await docker.createContainer(
+      sandboxContainerDefinition({
+        key,
+        image,
+        keepAliveCommand,
+        sandboxEnv,
+        labels,
+        cacheVolumes,
+        egressName,
+        dnsAddress: await relayAddress(relay, egressName)
+      })
+    )
+
+    try {
+      await container.start()
+      await connectEgress(container, egressName)
+    } catch (error) {
+      await removeSandbox(container.id, egressName)
+      throw error
+    }
+
+    return container
+  }
+
   return {
     name: 'docker',
     capabilities: () => {
@@ -302,26 +312,8 @@ export function proxiedDockerSandbox({
     },
     create: async ({ id, env }: SandboxCreateInput) => {
       await findImage(docker, image)
-      await ensureNetworks(docker)
-      await ensureEgressProxy(docker, egressImage)
       await seedOnce()
-      const container = await docker.createContainer(
-        sandboxContainerDefinition({
-          key: id ?? UNNAMED_SANDBOX,
-          image,
-          keepAliveCommand,
-          sandboxEnv,
-          labels,
-          cacheVolumes
-        })
-      )
-      try {
-        await container.start()
-      } catch (error) {
-        await container.remove({ force: true, v: true })
-        throw error
-      }
-
+      const container = await startSandbox(id ?? UNNAMED_SANDBOX)
       logger.info({ sandboxId: container.id }, 'sandbox created')
       const handle = await toHandle(container)
 
@@ -335,11 +327,20 @@ export function proxiedDockerSandbox({
       const container = docker.getContainer(id)
 
       try {
-        const { State } = await container.inspect()
+        const { State, Config } = await container.inspect()
+        const egressName = Config.Labels[EGRESS_LABEL]
+
+        if (egressName === undefined) {
+          await removeSandbox(id, null)
+
+          return null
+        }
 
         if (!State.Running) {
           await container.start()
         }
+
+        await connectEgress(container, egressName)
       } catch (error) {
         if (isNotFound(error)) {
           return null
@@ -363,16 +364,8 @@ export function proxiedDockerSandbox({
       })
     },
     destroy: async ({ id }) => {
-      const container = docker.getContainer(id)
-
-      try {
-        await container.remove({ force: true, v: true })
-      } catch (error) {
-        if (!isNotFound(error)) {
-          throw error
-        }
-      }
-
+      credentialProxy.forgetSandbox(id)
+      await destroyProxiedDockerSandbox(id)
       logger.info({ sandboxId: id }, 'sandbox destroyed')
     }
   }

@@ -6,7 +6,9 @@ const SANDBOX = {
   image: 'project-sandbox',
   keepAliveCommand: ['tail', '-f', '/dev/null'],
   sandboxEnv: {},
-  labels: {}
+  labels: {},
+  egressName: 'workcell-egress-test',
+  dnsAddress: '10.0.0.2'
 }
 
 describe('the container definition of a proxied Docker sandbox', () => {

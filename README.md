@@ -35,7 +35,7 @@ Each integration is its own package, and a project picks the ones it uses.
 
 | Package | What it brings |
 | --- | --- |
-| `@workcell/core` | The host, the worker engine, the budget, the Postgres stores, and the Docker sandbox behind an egress allowlist |
+| `@workcell/core` | The host, the worker engine, the budget, the Postgres stores, and the Docker sandbox behind an egress allowlist and a credential proxy |
 | `@workcell/github` | The pull request watcher, the read and review tools, and the finish refusal while a pull request is open |
 | `@workcell/linear` | Linear tickets as triggers, and the Linear tools |
 | `@workcell/chat` | The chat of the workers and of the orchestrator bot on [Chat SDK](https://chat-sdk.dev), and `show_card`: tables, charts and key figures as native cards |

@@ -28,10 +28,13 @@
     "db:migration:create": "node-pg-migrate create --migrations-dir src/store/migrations --migration-file-language sql"
   },
   "dependencies": {
+    "@peculiar/x509": "catalog:",
     "@tanstack/pacer": "catalog:",
     "dockerode": "catalog:",
     "node-pg-migrate": "catalog:",
-    "pg": "catalog:"
+    "pg": "catalog:",
+    "read-tls-client-hello": "catalog:",
+    "reflect-metadata": "catalog:"
   },
   "devDependencies": {
     "@opentelemetry/api": "catalog:",

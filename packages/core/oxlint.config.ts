@@ -122,6 +122,13 @@ const FOUR_ARGUMENT_SET_IF_OF_TANSTACK_METADATA_STORE = {
   }
 } satisfies OxlintOverride
 
+const REFLECT_POLYFILL_THAT_THE_CERTIFICATE_LIBRARY_NEEDS = {
+  files: ['src/sandbox/egress/egress-certificates.ts'],
+  rules: {
+    'import/no-unassigned-import': ['error', { allow: ['reflect-metadata'] }]
+  }
+} satisfies OxlintOverride
+
 const VITEST_PROVIDED_CONTEXT_MERGES_ONLY_AS_AN_INTERFACE = {
   files: ['src/testing/test-database.ts'],
   rules: {
@@ -160,6 +167,7 @@ export default defineConfig({
   },
   overrides: [
     FOUR_ARGUMENT_SET_IF_OF_TANSTACK_METADATA_STORE,
+    REFLECT_POLYFILL_THAT_THE_CERTIFICATE_LIBRARY_NEEDS,
     VITEST_PROVIDED_CONTEXT_MERGES_ONLY_AS_AN_INTERFACE,
     {
       files: ['src/testing/fail-on-console.ts'],
