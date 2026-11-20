@@ -87,6 +87,8 @@ describe('the view of a worker', () => {
       pendingWaits: [],
       spentUsd: 1.5,
       sandbox: {
+        state: 'ready',
+        id: 'sandbox-1',
         branch: 'task-1-other',
         diff: '1 file changed, 2 insertions(+)',
         untrackedFiles: 0,
@@ -105,7 +107,10 @@ describe('the view of a worker', () => {
       turnUsd: 0.4,
       spentUsd: 1.5,
       branch: 'task-1-other',
+      startupMs: undefined,
       sandbox: {
+        state: 'ready',
+        id: 'sandbox-1',
         diff: '1 file changed, 2 insertions(+)',
         untrackedFiles: 0,
         memoryBytes: 1024,

@@ -8,7 +8,8 @@ export const workerMetadataSchema = z.looseObject({
   subject: z.string().optional(),
   branch: z.string().optional(),
   inputId: z.string().optional(),
-  report: z.string().optional()
+  report: z.string().optional(),
+  startupMs: z.number().optional()
 })
 
 export type WorkerMetadata = z.infer<typeof workerMetadataSchema>

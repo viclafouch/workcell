@@ -82,6 +82,7 @@ export function createWorkerActivity({
     name: ACTIVITY_PLUGIN,
     setup: (setupContext) => {
       const { threadId } = setupContext.session
+      let isStartupKept = false
 
       const update = (
         { context }: { context: HarnessRunContext },
@@ -97,12 +98,37 @@ export function createWorkerActivity({
         }
       }
 
+      const keepStartup = async () => {
+        try {
+          await setupContext.session.updateIndexEntry((current) => {
+            return current.metadata?.startupMs === undefined
+              ? {
+                  metadata: {
+                    ...current.metadata,
+                    startupMs: Date.now() - current.createdAt
+                  }
+                }
+              : undefined
+          })
+        } catch (error) {
+          setupContext.logger.warn(
+            `[${ACTIVITY_PLUGIN}] startup time not kept`,
+            { error }
+          )
+        }
+      }
+
       const followTurn: ChatMiddleware<HarnessRunContext> = {
         name: ACTIVITY_PLUGIN,
-        onIteration: (chat) => {
+        onIteration: async (chat) => {
           update(chat, () => {
             return { phase: 'model', command: undefined }
           })
+
+          if (!isStartupKept && chat.context.run.source === 'turn') {
+            isStartupKept = true
+            await keepStartup()
+          }
         },
         onBeforeToolCall: (chat, { toolName, args }) => {
           update(chat, () => {

@@ -1,12 +1,15 @@
 import { z } from 'zod'
 import type { HarnessHost, PendingWait } from '@tanstack/ai-harness'
 import type { ModelPricing } from '#/budget/budget.ts'
-import type { SandboxFacts } from '#/sandbox/sandbox-facts.ts'
 import type { WorkerHarness } from './harness.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
 import type { ListedWorker } from './live-workers.ts'
 import type { TurnActivity, WorkerActivity } from './worker-activity.ts'
-import type { WorkerSandbox } from './worker-sandbox.ts'
+import type {
+  SandboxInSetup,
+  SandboxReady,
+  WorkerSandbox
+} from './worker-sandbox.ts'
 
 export const workerViewSchema = z.object({
   threadId: z.string(),
@@ -18,13 +21,25 @@ export const workerViewSchema = z.object({
   turnUsd: z.number().optional(),
   spentUsd: z.number(),
   branch: z.string().optional(),
+  startupMs: z.number().optional(),
   sandbox: z
-    .object({
-      diff: z.string(),
-      untrackedFiles: z.number(),
-      memoryBytes: z.number().optional(),
-      memoryMaxBytes: z.number().optional()
-    })
+    .discriminatedUnion('state', [
+      z.object({
+        state: z.literal('setup'),
+        id: z.string().optional(),
+        step: z.enum(['create', 'clone', 'setup', 'restore', 'bind']),
+        commands: z.array(z.string()).optional(),
+        elapsedMs: z.number()
+      }),
+      z.object({
+        state: z.literal('ready'),
+        id: z.string(),
+        diff: z.string(),
+        untrackedFiles: z.number(),
+        memoryBytes: z.number().optional(),
+        memoryMaxBytes: z.number().optional()
+      })
+    ])
     .optional()
 })
 
@@ -36,7 +51,7 @@ type WorkerFacts = {
   isQueued: boolean
   pendingWaits: readonly Pick<PendingWait, 'turn'>[]
   spentUsd: number
-  sandbox: SandboxFacts | null
+  sandbox: SandboxInSetup | SandboxReady | null
 }
 
 type CreateWorkerViewParams = {
@@ -51,8 +66,13 @@ type CreateWorkerViewParams = {
 function phaseOf({
   activity,
   isQueued,
-  pendingWaits
-}: Pick<WorkerFacts, 'activity' | 'isQueued' | 'pendingWaits'>) {
+  pendingWaits,
+  sandbox
+}: Omit<WorkerFacts, 'worker' | 'spentUsd'>) {
+  if (sandbox?.state === 'setup') {
+    return 'setup'
+  }
+
   if (activity !== undefined) {
     return isQueued ? 'queued' : activity.phase
   }
@@ -62,6 +82,31 @@ function phaseOf({
   })
     ? 'waiting'
     : 'idle'
+}
+
+function sandboxViewOf(sandbox: WorkerFacts['sandbox']): WorkerView['sandbox'] {
+  if (sandbox === null) {
+    return undefined
+  }
+
+  if (sandbox.state === 'setup') {
+    return {
+      state: 'setup',
+      id: sandbox.id,
+      step: sandbox.step,
+      commands: 'commands' in sandbox ? sandbox.commands : undefined,
+      elapsedMs: sandbox.elapsedMs
+    }
+  }
+
+  return {
+    state: 'ready',
+    id: sandbox.id,
+    diff: sandbox.diff,
+    untrackedFiles: sandbox.untrackedFiles,
+    memoryBytes: sandbox.memoryBytes,
+    memoryMaxBytes: sandbox.memoryMaxBytes
+  }
 }
 
 export function workerViewOf(facts: WorkerFacts): WorkerView {
@@ -76,16 +121,11 @@ export function workerViewOf(facts: WorkerFacts): WorkerView {
     command: activity?.command,
     turnUsd: activity?.turnUsd,
     spentUsd,
-    branch: sandbox?.branch ?? worker.branch,
-    sandbox:
-      sandbox === null
-        ? undefined
-        : {
-            diff: sandbox.diff,
-            untrackedFiles: sandbox.untrackedFiles,
-            memoryBytes: sandbox.memoryBytes,
-            memoryMaxBytes: sandbox.memoryMaxBytes
-          }
+    branch:
+      (sandbox?.state === 'ready' ? sandbox.branch : undefined) ??
+      worker.branch,
+    startupMs: worker.startupMs,
+    sandbox: sandboxViewOf(sandbox)
   }
 }
 

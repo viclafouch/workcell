@@ -14,7 +14,11 @@ import {
 } from '@tanstack/ai-sandbox'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { followCurrent, type SandboxBackend } from '#/sandbox/follow-current.ts'
-import { readSandboxFacts, WORKSPACE_ROOT } from '#/sandbox/sandbox-facts.ts'
+import {
+  readSandboxFacts,
+  WORKSPACE_ROOT,
+  type SandboxFacts
+} from '#/sandbox/sandbox-facts.ts'
 import type { ListSandboxes } from '#/sandbox/sandboxes-under-keys.ts'
 import {
   captureChanges,
@@ -47,7 +51,15 @@ type StepLog = ReturnType<WorkerLogger['child']>
 
 type RunningStep = { step: WorkerSandboxStep; startedAt: number }
 
-type SetupProgress = { running?: RunningStep }
+type RunningSteps = Map<string, RunningStep>
+
+export type SandboxInSetup = WorkerSandboxStep & {
+  state: 'setup'
+  id: string | undefined
+  elapsedMs: number
+}
+
+export type SandboxReady = SandboxFacts & { state: 'ready'; id: string }
 
 type OpenedSandbox = {
   handle: SandboxHandle
@@ -83,12 +95,22 @@ function durationSince(startedAt: number) {
   return Math.round(performance.now() - startedAt)
 }
 
-function setupSteps(log: StepLog, emitSetup: EmitSetup) {
-  const current: SetupProgress = {}
+type SetupStepsParams = {
+  threadId: string
+  runningSteps: RunningSteps
+  log: StepLog
+  emitSetup: EmitSetup
+}
 
+function setupSteps({
+  threadId,
+  runningSteps,
+  log,
+  emitSetup
+}: SetupStepsParams) {
   const takeRunning = () => {
-    const { running } = current
-    current.running = undefined
+    const running = runningSteps.get(threadId)
+    runningSteps.delete(threadId)
 
     return running
   }
@@ -106,7 +128,7 @@ function setupSteps(log: StepLog, emitSetup: EmitSetup) {
 
   const start = (step: WorkerSandboxStep) => {
     end()
-    current.running = { step, startedAt: performance.now() }
+    runningSteps.set(threadId, { step, startedAt: performance.now() })
     log.info({ ...step }, 'sandbox step started')
     emitSetup(step)
   }
@@ -142,6 +164,7 @@ export function createWorkerSandbox({
 }: CreateWorkerSandboxParams) {
   const opened = new Map<string, OpenedSandbox>()
   const setupEmitters = new Map<string, EmitSetup>()
+  const runningSteps: RunningSteps = new Map()
 
   const logOf = ({ threadId, name }: NamedWorker) => {
     return logger.child({ module: 'agents', threadId, name })
@@ -219,7 +242,12 @@ export function createWorkerSandbox({
 
   const open = async (sandbox: SandboxDefinition, run: RunContext) => {
     const emitSetup = emitSetupOf(run.threadId)
-    const steps = setupSteps(logOf(run), emitSetup)
+    const steps = setupSteps({
+      threadId: run.threadId,
+      runningSteps,
+      log: logOf(run),
+      emitSetup
+    })
     const { live, backend } = await openWithSteps(sandbox, run, steps)
       .catch((error: unknown) => {
         steps.fail(error)
@@ -308,7 +336,33 @@ export function createWorkerSandbox({
     }
   }
 
-  const inspect = async (threadId: string) => {
+  const inspectSetup = async (
+    threadId: string,
+    { step, startedAt }: RunningStep
+  ): Promise<SandboxInSetup> => {
+    const sandbox = await sandboxOf(threadId)
+    const key = sandbox.key({ threadId, runId: threadId })
+    const listed = await listSandboxes()
+
+    return {
+      state: 'setup',
+      id: listed.find((listedSandbox) => {
+        return listedSandbox.key === key
+      })?.id,
+      ...step,
+      elapsedMs: durationSince(startedAt)
+    }
+  }
+
+  const inspect = async (
+    threadId: string
+  ): Promise<SandboxInSetup | SandboxReady | null> => {
+    const running = runningSteps.get(threadId)
+
+    if (running !== undefined) {
+      return inspectSetup(threadId, running)
+    }
+
     const current = opened.get(threadId)
 
     if (current === undefined) {
@@ -325,10 +379,12 @@ export function createWorkerSandbox({
     }
 
     try {
-      return await readSandboxFacts(
+      const facts = await readSandboxFacts(
         current.handle,
         cloneRefOf(current.sandbox) ?? 'HEAD'
       )
+
+      return { state: 'ready', id: current.handle.id, ...facts }
     } catch (error) {
       logger
         .child({ module: 'agents', threadId })
@@ -377,7 +433,9 @@ export function createWorkerSandbox({
     const current = opened.get(threadId)
 
     if (current === undefined) {
-      throw new Error(`The worker of the thread ${threadId} has no open sandbox.`)
+      throw new Error(
+        `The worker of the thread ${threadId} has no open sandbox.`
+      )
     }
 
     return current.backend.readFile(posix.resolve(WORKSPACE_ROOT, path))
