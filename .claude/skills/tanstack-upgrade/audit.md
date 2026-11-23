@@ -63,6 +63,10 @@ The three patches came back on the new versions: the bare directory imports of t
 - `core/sandbox/library-sandbox.ts` and `core/workers/worker-sandbox.ts` liveness: a listed but stopped container counts as live, because the list uses `all: true`. `SandboxDefinition.ensureExisting` decides it.
 - `core/sandbox/proxied-docker-sandbox.ts`: `ProxiedDockerHandle` reports `DOCKER_CAPS` (fork and snapshots `true`) while the provider reports them `false`. Override `capabilities`. Only `withSandbox` reads the handle value, so it is a wrong claim, not a live bug.
 
+### not adopted
+
+- The mid-conversation channels of `ai-anthropic` and `ai-openai` behind a gateway (`midConversationChannels: true`, #52). A custom `baseURL` turns them off. The traces of a real orchestrator turn and of a worker turn with a todo list show each model call reading the whole earlier request from the cache: no Workcell turn adds a tool or a system prompt mid-run, so the channels have nothing to keep. A live probe through one gateway also showed it does not pass them. Adopt the switch the day a plugin adds a tool or a prompt during a turn.
+
 ### keep
 
 - `core/workers/lifecycle.ts`, the pause branch of `onChunk`: the 1.4.1 rule runs `onFinish` at a pause, but only after the paused stream drains. The changes of a turn that stops at its budget must be saved at the pause chunk, or a host restart before `onFinish` loses them (`worker-budget.test.ts`, "saves the changes of a turn that stops at its budget").
@@ -107,6 +111,8 @@ Open before this run:
 - TanStack/ai#2127 `boundToolOutput(): set the bound per tool`. Add: export `boundText`.
 - TanStack/ai#2126 `mcp(): let a server mark its tools safe to replay after a host restart`.
 - TanStack/ai#2173 `Published .d.ts files import bare directories`. Still unfixed in 0.4.0 and 1.8.0.
+
+Filed by this run: drafts 17, 19 and 20 as TanStack/ai#2235, #2236 and #2237, draft 18 as TanStack/pacer#312. Draft 21 waits: check first that `sbx secret` serves any host.
 
 Drafted, waiting for the go (1 to 16 from the first run, each checked again in today's source):
 
