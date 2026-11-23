@@ -71,75 +71,154 @@ async function addOwnerRow(query: TransactionQuery, logId: string) {
   )
 }
 
+const EMPTY_LOG_HEAD = 0
+
+const APPEND_QUERY = `WITH owner AS (
+  SELECT FROM log_owner WHERE log_id = $1
+),
+pending AS (
+  SELECT input_id FROM log_offers
+  WHERE log_id = $1 AND input_id = ANY($5::text[]) AND NOT consumed
+  FOR UPDATE
+),
+moved AS (
+  INSERT INTO log_owner (log_id, head)
+  SELECT $1, $3::bigint + $4::bigint - 1
+  WHERE (SELECT count(*) FROM pending) = cardinality($5::text[])
+    AND (EXISTS (SELECT FROM owner) OR ($2::bigint = $9::bigint AND $3::bigint = 1))
+  ON CONFLICT (log_id) DO UPDATE SET head = EXCLUDED.head
+  WHERE log_owner.epoch = $2::bigint
+    AND NOT log_owner.released
+    AND log_owner.head = $3::bigint - 1
+  RETURNING head
+),
+inserted AS (
+  INSERT INTO log_records (log_id, seq, record)
+  SELECT $1, $3::bigint + position - 1, record
+  FROM moved CROSS JOIN unnest($6::text[]) WITH ORDINALITY AS batch(record, position)
+),
+consumed AS (
+  UPDATE log_offers SET consumed = TRUE
+  WHERE log_id = $1 AND input_id IN (SELECT input_id FROM pending)
+    AND EXISTS (SELECT FROM moved)
+),
+notified AS (
+  SELECT pg_notify($7, $8) FROM moved
+)
+SELECT count(*) AS moved FROM notified`
+
+const APPEND_STATE_QUERY = `SELECT
+  (SELECT epoch FROM log_owner WHERE log_id = $1) AS epoch,
+  (SELECT released FROM log_owner WHERE log_id = $1) AS released,
+  (SELECT head FROM log_owner WHERE log_id = $1) AS head,
+  (SELECT count(*) FROM log_offers
+   WHERE log_id = $1 AND input_id = ANY($2::text[]) AND NOT consumed) AS pending`
+
+type AppendState = {
+  epoch: number | null
+  released: boolean | null
+  head: number | null
+  pending: number
+}
+
+type AppendBatch = Parameters<LogStore['append']>[0]
+
+type PendingAppend = AppendBatch & { pendingIds: string[] }
+
+function appendRefusal(
+  context: LogStoreContext,
+  { logId, epoch, seq, consumes, pendingIds }: PendingAppend,
+  state: AppendState | undefined
+) {
+  const ownerEpoch = state?.epoch ?? null
+  const isFenced =
+    ownerEpoch === null
+      ? epoch !== NO_OWNER_EPOCH
+      : ownerEpoch !== epoch || state?.released === true
+
+  if (isFenced) {
+    return loseOwnership(context, { logId, epoch })
+  }
+
+  if ((state?.head ?? EMPTY_LOG_HEAD) !== seq - 1) {
+    return new LogConflictError(logId, seq)
+  }
+
+  if ((state?.pending ?? 0) < pendingIds.length) {
+    return new TypeError(
+      `An input of ${JSON.stringify(consumes)} is not a pending offer of log ${JSON.stringify(logId)}.`
+    )
+  }
+
+  return null
+}
+
 function recordMethods(context: LogStoreContext) {
   const { database, listeners } = context
 
+  const readRefusal = async (append: PendingAppend) => {
+    const [state] = await database.query<AppendState>(
+      'read the state of a refused append',
+      APPEND_STATE_QUERY,
+      [append.logId, append.pendingIds]
+    )
+
+    return appendRefusal(context, append, state)
+  }
+
+  const serializeRecords = async (append: PendingAppend) => {
+    try {
+      return append.records.map((record) => {
+        return JSON.stringify(record)
+      })
+    } catch (error) {
+      const refusal = await readRefusal(append)
+
+      if (refusal) {
+        throw refusal
+      }
+
+      throw error
+    }
+  }
+
   return {
-    append: async ({
-      logId,
-      seq,
-      epoch,
-      records,
-      consumes = []
-    }: Parameters<LogStore['append']>[0]) => {
-      if (records.length === 0 && consumes.length === 0) {
+    append: async ({ consumes = [], ...batch }: AppendBatch) => {
+      if (batch.records.length === 0 && consumes.length === 0) {
         return
       }
 
-      await database.transaction('append to a log', async (query) => {
-        await addOwnerRow(query, logId)
-        const moved = await query(
-          `UPDATE log_owner SET head = $3::bigint + $4::bigint - 1
-           WHERE log_id = $1 AND epoch = $2 AND NOT released AND head = $3::bigint - 1
-           RETURNING head`,
-          [logId, epoch, seq, records.length]
+      const append = {
+        ...batch,
+        consumes,
+        pendingIds: [...new Set(consumes)]
+      }
+      const texts = await serializeRecords(append)
+      const { channel, payload } = listeners.notificationOf(append.logId)
+      const [outcome] = await database.query<{ moved: number }>(
+        'append to a log',
+        APPEND_QUERY,
+        [
+          append.logId,
+          append.epoch,
+          append.seq,
+          append.records.length,
+          append.pendingIds,
+          texts,
+          channel,
+          payload,
+          NO_OWNER_EPOCH
+        ]
+      )
+
+      if (!outcome?.moved) {
+        throw (
+          (await readRefusal(append)) ??
+          new LogConflictError(append.logId, append.seq)
         )
+      }
 
-        if (moved.length === 0) {
-          const [owner] = await query<{ epoch: number; released: boolean }>(
-            'SELECT epoch, released FROM log_owner WHERE log_id = $1',
-            [logId]
-          )
-          const isFenced =
-            owner === undefined || owner.epoch !== epoch || owner.released
-
-          throw isFenced
-            ? loseOwnership(context, { logId, epoch })
-            : new LogConflictError(logId, seq)
-        }
-
-        const pendingIds = [...new Set(consumes)]
-
-        if (pendingIds.length > 0) {
-          const consumed = await query(
-            `UPDATE log_offers SET consumed = TRUE
-             WHERE log_id = $1 AND input_id = ANY($2::text[]) AND NOT consumed
-             RETURNING input_id`,
-            [logId, pendingIds]
-          )
-
-          if (consumed.length < pendingIds.length) {
-            throw new TypeError(
-              `An input of ${JSON.stringify(consumes)} is not a pending offer of log ${JSON.stringify(logId)}.`
-            )
-          }
-        }
-
-        await query(
-          `INSERT INTO log_records (log_id, seq, record)
-           SELECT $1, $2::bigint + position - 1, record
-           FROM unnest($3::text[]) WITH ORDINALITY AS batch(record, position)`,
-          [
-            logId,
-            seq,
-            records.map((record) => {
-              return JSON.stringify(record)
-            })
-          ]
-        )
-        await listeners.notify(query, logId)
-      })
-      listeners.call(logId)
+      listeners.call(append.logId)
     },
     read: async ({
       logId,
