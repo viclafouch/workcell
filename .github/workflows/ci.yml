@@ -22,7 +22,7 @@ env:
 jobs:
   lint:
     name: Lint (oxlint)
-    runs-on: &runner ubuntu-24.04
+    runs-on: &runner ubuntu-24.04-arm
     timeout-minutes: 10
     steps:
       - &full-checkout
