@@ -7,6 +7,7 @@ export const workerMetadataSchema = z.looseObject({
   repository: z.string(),
   subject: z.string().optional(),
   branch: z.string().optional(),
+  pullRequest: z.string().optional(),
   inputId: z.string().optional(),
   report: z.string().optional(),
   startupMs: z.number().optional()

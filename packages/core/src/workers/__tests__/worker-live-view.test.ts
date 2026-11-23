@@ -4,8 +4,18 @@ import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import { TEST_STARTER } from '#/testing/test-doubles.ts'
-import { createOrigin, REPOSITORY } from './worker-fixtures.ts'
+import type { WorkerView } from '#/workers/worker-view.ts'
 import {
+  callTool,
+  createOrigin,
+  holdTwoTurns,
+  REPOSITORY,
+  routedResponses,
+  TICKET_START,
+  toolResultsOf
+} from './worker-fixtures.ts'
+import {
+  askOrchestrator,
   closeWorkerTestbed,
   openWorkers,
   openWorkerTestbed,
@@ -15,17 +25,28 @@ import {
 
 const SETUP_HOLD_MS = 300
 
-async function viewOf(agent: OpenedWorkers, threadId: string) {
-  const views = await agent.viewWorkers(await agent.workers.listWorkers())
+const TWO_NAMES = ['Alpha', 'Beta']
+
+const PULL_REQUEST = 'https://example.com/acme/app/pull/7'
+
+function viewOn(views: readonly WorkerView[], threadId: string) {
   const view = views.find((worker) => {
     return worker.threadId === threadId
   })
 
   if (view === undefined) {
-    throw new Error(`The live view shows no worker on ${threadId}.`)
+    throw new Error(`The view shows no worker on ${threadId}.`)
   }
 
   return view
+}
+
+async function viewOf(agent: OpenedWorkers, threadId: string) {
+  return viewOn(await agent.inspectWorkers(), threadId)
+}
+
+async function sharedViewOf(agent: OpenedWorkers, threadId: string) {
+  return viewOn(await agent.viewWorkers(), threadId)
 }
 
 async function setupOf(agent: OpenedWorkers, threadId: string) {
@@ -165,5 +186,106 @@ describe('the live view of a worker', () => {
 
     expect(before.startupMs).toBeGreaterThanOrEqual(0)
     expect(after.startupMs).toBe(before.startupMs)
+  })
+
+  it('shows a worker in setup in the view that list_workers reads, with no sandbox in it', async () => {
+    const url = await createMigratedDatabase()
+    await using held = await holdSetup()
+    await using agent = await openWorkers(url, [{ text: 'Done.' }], {
+      originUrl: origin.url,
+      setup: [held.command]
+    })
+    const worker = await agent.workers.startWorker({
+      starter: TEST_STARTER,
+      repository: REPOSITORY,
+      task: 'Say done.'
+    })
+
+    try {
+      await expect
+        .poll(async () => {
+          const view = await sharedViewOf(agent, worker.threadId)
+
+          return view.phase
+        })
+        .toBe('setup')
+      const view = await sharedViewOf(agent, worker.threadId)
+
+      expect(view.sandbox).toBeUndefined()
+    } finally {
+      await held.release()
+    }
+
+    await worker.firstTurn
+  })
+
+  it('shows a worker that waits for a free turn as queued in the view that list_workers reads', async () => {
+    const url = await createMigratedDatabase()
+    const released = Promise.withResolvers<null>()
+    await using agent = await openWorkers(
+      url,
+      [...holdTwoTurns(released.promise), { text: 'Done.' }],
+      { workerNames: TWO_NAMES, maxRunningTurns: 1 }
+    )
+    const startTask = (task: string) => {
+      return agent.workers.startWorker({
+        starter: TEST_STARTER,
+        repository: REPOSITORY,
+        task
+      })
+    }
+
+    const running = await startTask('Task 0')
+    await expect
+      .poll(async () => {
+        const view = await sharedViewOf(agent, running.threadId)
+
+        return view.phase
+      })
+      .toBe('model')
+    const queued = await startTask('Task 1')
+    await expect
+      .poll(async () => {
+        const view = await sharedViewOf(agent, queued.threadId)
+
+        return view.phase
+      })
+      .toBe('queued')
+    released.resolve(null)
+    await Promise.all([running.firstTurn, queued.firstTurn])
+  })
+
+  it('shows the pull request and the budget of a worker in the live view and in the line of list_workers', async () => {
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses(
+        [callTool('list_workers'), { text: 'Alpha has a pull request.' }],
+        [{ text: 'On it.' }]
+      )
+    )
+    const worker = await agent.workers.startWorker(TICKET_START)
+    await worker.firstTurn
+    await agent.workers.updateWorker({
+      threadId: worker.threadId,
+      metadata: { pullRequest: PULL_REQUEST }
+    })
+
+    const shared = await sharedViewOf(agent, worker.threadId)
+    const live = await viewOf(agent, worker.threadId)
+    const answer = await askOrchestrator(agent)
+
+    expect(shared).toMatchObject({
+      name: 'Alpha',
+      topic: 'TASK-7',
+      phase: 'idle',
+      budgetUsd: 100,
+      pullRequest: PULL_REQUEST,
+      waits: []
+    })
+    expect(live).toMatchObject(shared)
+    expect(toolResultsOf(answer.events).join('\n')).toContain(
+      `Alpha on TASK-7 in ${REPOSITORY}: sleeps, spent $0.00 of $100.00, pull request ${PULL_REQUEST}`
+    )
   })
 })

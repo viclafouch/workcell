@@ -40,7 +40,26 @@ type StopFacts = {
   maxCostUsd: number
 }
 
-function dollars(amount: number) {
+const budgetStateSchema = z.object({
+  spentAtLastAnswerUsd: z.number(),
+  summaryUsd: z.number(),
+  summaryCalls: z.number(),
+  capUsd: z.number().optional()
+})
+
+type BudgetState = z.infer<typeof budgetStateSchema>
+
+const NOTHING_SPENT: BudgetState = {
+  spentAtLastAnswerUsd: 0,
+  summaryUsd: 0,
+  summaryCalls: 0
+}
+
+export function budgetStateOf(plugins: Record<string, unknown>) {
+  return budgetStateSchema.safeParse(plugins[BUDGET_PLUGIN]).data
+}
+
+export function dollars(amount: number) {
   return `$${amount.toFixed(2)}`
 }
 
@@ -98,11 +117,7 @@ export function workerBudget({
     metadataSchema: agentMetadataSchema,
     setup: (setupContext) => {
       const { threadId } = setupContext.session
-      const saved = setupContext.state({
-        spentAtLastAnswerUsd: 0,
-        summaryUsd: 0,
-        summaryCalls: 0
-      })
+      const saved = setupContext.state(NOTHING_SPENT)
       let metadata: AgentMetadata = {}
       let limits: BudgetLimits = defaultLimits
       let loggedUsd = 0
@@ -272,7 +287,11 @@ export function workerBudget({
               pricing.costOfUsage(setupContext.session.snapshot().usage) +
               summaryUsd
             await saved.update((current) => {
-              return { ...current, spentAtLastAnswerUsd }
+              return {
+                ...current,
+                spentAtLastAnswerUsd,
+                capUsd: spentAtLastAnswerUsd + limits.maxCostUsd
+              }
             })
 
             return
@@ -316,6 +335,11 @@ export function workerBudget({
             setupContext.collect(EntrySkillLimits).findLast((item) => {
               return item.entrySkill === metadata.entrySkill
             })?.limits ?? defaultLimits
+          await saved.update((current) => {
+            const capUsd = current.spentAtLastAnswerUsd + limits.maxCostUsd
+
+            return current.capUsd === capUsd ? current : { ...current, capUsd }
+          })
         },
         middleware: [budget],
         contribute: [SummaryMiddleware.item(countSummary)]

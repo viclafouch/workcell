@@ -308,6 +308,15 @@ export async function openWorkcell({
     readMessage: messageReaderOf(models.worker),
     onWorkerStart
   })
+  const { viewWorkers, inspectWorkers } = createWorkerView({
+    host,
+    harness,
+    readWorkers: workers.readWorkers,
+    lifecycle,
+    activity,
+    workerSandbox,
+    pricing
+  })
   const orchestratorHarness = defineOrchestratorHarness({
     ...orchestratorOptions,
     plugins: [
@@ -320,6 +329,7 @@ export async function openWorkcell({
     compactionAdapter: models.compaction,
     library,
     workers,
+    viewWorkers,
     isStarter,
     repositories,
     pricing,
@@ -338,14 +348,8 @@ export async function openWorkcell({
       harness: orchestratorHarness,
       readMessage: messageReaderOf(models.orchestrator)
     }),
-    viewWorkers: createWorkerView({
-      host,
-      harness,
-      lifecycle,
-      activity,
-      workerSandbox,
-      pricing
-    }),
+    viewWorkers,
+    inspectWorkers,
     [Symbol.asyncDispose]: async () => {
       await host.close({ recoverable: true })
       await lifecycle.stopIdleTimers()

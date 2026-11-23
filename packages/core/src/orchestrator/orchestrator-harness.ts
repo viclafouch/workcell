@@ -32,6 +32,7 @@ import {
   type WorkerObservability
 } from '#/telemetry/worker-telemetry.ts'
 import { WEB_FETCH_RULE } from '#/workers/permission-rules.ts'
+import type { ViewWorkers } from '#/workers/worker-view.ts'
 import type { Workers } from '#/workers/workers.ts'
 import { orchestratorTools } from './orchestrator-tools.ts'
 import { starterOnlyGuard } from './starter-only-tools.ts'
@@ -50,6 +51,7 @@ type DefineOrchestratorHarnessParams = {
   compactionAdapter: AnyTextAdapter
   library: OrchestratorLibrary
   workers: Workers
+  viewWorkers: ViewWorkers
   isStarter: IsStarter
   repositories: readonly string[]
   pricing: ModelPricing
@@ -82,6 +84,7 @@ export function defineOrchestratorHarness({
   compactionAdapter,
   library,
   workers,
+  viewWorkers,
   isStarter,
   repositories,
   pricing,
@@ -115,7 +118,12 @@ export function defineOrchestratorHarness({
         workspaceTools({ workspace: library.workspace }),
         boundToolOutput(),
         libraryMap(library.map),
-        orchestratorTools({ workers, isStarter, repositories }),
+        orchestratorTools({
+          workers,
+          viewWorkers,
+          isStarter,
+          repositories
+        }),
         starterOnlyGuard(isStarter),
         orchestratorSkills,
         usage({ model: pricing.modelCost }),

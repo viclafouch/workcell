@@ -146,7 +146,9 @@ describe('the orchestrator', () => {
     const answer = await askOrchestrator(agent)
 
     expect(answer).toMatchObject({ ownsTurn: true, outcome: 'completed' })
-    expect(toolResultsOf(answer.events).join('\n')).toContain('"name":"Alpha"')
+    expect(toolResultsOf(answer.events).join('\n')).toContain(
+      `Alpha on TASK-7 in ${REPOSITORY}: sleeps, spent $0.00 of $100.00`
+    )
     expect(textOf(answer.events)).toBe('Alpha works on TASK-7.')
   })
 

@@ -7,12 +7,15 @@ const WORKER_VIEW: WorkerView = {
   threadId: 'live-thread',
   name: 'Alpha',
   repository: 'acme/app',
-  subject: 'TASK-7',
+  topic: 'TASK-7',
   phase: 'tool',
   command: 'pnpm test',
   turnUsd: 0.4,
   spentUsd: 1.5,
-  branch: 'task-7-fix'
+  budgetUsd: 5,
+  branch: 'task-7-fix',
+  pullRequest: 'https://example.com/acme/app/pull/7',
+  waits: []
 }
 
 const silentLogger = createLogger({ level: 'silent' })

@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import type { HarnessHost, PendingWait } from '@tanstack/ai-harness'
-import type { ModelPricing } from '#/budget/budget.ts'
+import type { HarnessHost, PendingWait, WaitKind } from '@tanstack/ai-harness'
+import { budgetStateOf, type ModelPricing } from '#/budget/budget.ts'
 import type { WorkerHarness } from './harness.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
 import type { ListedWorker } from './live-workers.ts'
@@ -15,12 +15,19 @@ export const workerViewSchema = z.object({
   threadId: z.string(),
   name: z.string(),
   repository: z.string(),
-  subject: z.string().optional(),
+  topic: z.string(),
   phase: z.enum(['setup', 'queued', 'model', 'tool', 'waiting', 'idle']),
   command: z.string().optional(),
   turnUsd: z.number().optional(),
   spentUsd: z.number(),
+  budgetUsd: z.number().optional(),
   branch: z.string().optional(),
+  pullRequest: z.string().optional(),
+  waits: z.array(
+    z.custom<WaitKind>((value) => {
+      return typeof value === 'string'
+    })
+  ),
   startupMs: z.number().optional(),
   sandbox: z
     .discriminatedUnion('state', [
@@ -45,36 +52,48 @@ export const workerViewSchema = z.object({
 
 export type WorkerView = z.infer<typeof workerViewSchema>
 
+type InspectedSandbox = SandboxInSetup | SandboxReady | null
+
 type WorkerFacts = {
   worker: ListedWorker
   activity: TurnActivity | undefined
   isQueued: boolean
-  pendingWaits: readonly Pick<PendingWait, 'turn'>[]
+  isInSetup: boolean
+  pendingWaits: readonly Pick<PendingWait, 'turn' | 'kind'>[]
   spentUsd: number
-  sandbox: SandboxInSetup | SandboxReady | null
+  budgetUsd: number | undefined
 }
 
 type CreateWorkerViewParams = {
   host: HarnessHost
   harness: WorkerHarness
+  readWorkers: () => Promise<ListedWorker[]>
   lifecycle: Pick<WorkerLifecycle, 'isQueued'>
   activity: Pick<WorkerActivity, 'activityOf'>
-  workerSandbox: Pick<WorkerSandbox, 'inspect'>
+  workerSandbox: Pick<WorkerSandbox, 'isInSetup' | 'inspect'>
   pricing: Pick<ModelPricing, 'costOfUsage'>
+}
+
+export function firstLine(text: string) {
+  return text.split('\n')[0] ?? text
 }
 
 function phaseOf({
   activity,
   isQueued,
-  pendingWaits,
-  sandbox
-}: Omit<WorkerFacts, 'worker' | 'spentUsd'>) {
-  if (sandbox?.state === 'setup') {
+  isInSetup,
+  pendingWaits
+}: WorkerFacts): WorkerView['phase'] {
+  if (isInSetup) {
     return 'setup'
   }
 
+  if (isQueued) {
+    return 'queued'
+  }
+
   if (activity !== undefined) {
-    return isQueued ? 'queued' : activity.phase
+    return activity.phase
   }
 
   return pendingWaits.some(({ turn }) => {
@@ -84,7 +103,7 @@ function phaseOf({
     : 'idle'
 }
 
-function sandboxViewOf(sandbox: WorkerFacts['sandbox']): WorkerView['sandbox'] {
+function sandboxViewOf(sandbox: InspectedSandbox): WorkerView['sandbox'] {
   if (sandbox === null) {
     return undefined
   }
@@ -110,21 +129,33 @@ function sandboxViewOf(sandbox: WorkerFacts['sandbox']): WorkerView['sandbox'] {
 }
 
 export function workerViewOf(facts: WorkerFacts): WorkerView {
-  const { worker, activity, spentUsd, sandbox } = facts
+  const { worker, activity, pendingWaits, spentUsd, budgetUsd } = facts
 
   return {
     threadId: worker.threadId,
     name: worker.name,
     repository: worker.repository,
-    subject: worker.subject,
+    topic: worker.subject ?? firstLine(worker.task),
     phase: phaseOf(facts),
     command: activity?.command,
     turnUsd: activity?.turnUsd,
     spentUsd,
-    branch:
-      (sandbox?.state === 'ready' ? sandbox.branch : undefined) ??
-      worker.branch,
-    startupMs: worker.startupMs,
+    budgetUsd,
+    branch: worker.branch,
+    pullRequest: worker.pullRequest,
+    waits: pendingWaits.map(({ kind }) => {
+      return kind
+    }),
+    startupMs: worker.startupMs
+  }
+}
+
+export function withSandboxView(
+  view: WorkerView,
+  sandbox: InspectedSandbox
+): WorkerView {
+  return {
+    ...view,
     sandbox: sandboxViewOf(sandbox)
   }
 }
@@ -132,6 +163,7 @@ export function workerViewOf(facts: WorkerFacts): WorkerView {
 export function createWorkerView({
   host,
   harness,
+  readWorkers,
   lifecycle,
   activity,
   workerSandbox,
@@ -140,23 +172,37 @@ export function createWorkerView({
   const viewOf = async (worker: ListedWorker) => {
     const { threadId } = worker
     const observed = await host.observe(harness, { threadId })
-    const [{ pendingWaits }, usage, sandbox] = await Promise.all([
-      observed.snapshot(),
-      observed.usage(),
-      workerSandbox.inspect(threadId)
-    ])
+    const { pendingWaits, plugins, usage } = await observed.snapshot()
+    const budget = budgetStateOf(plugins)
 
     return workerViewOf({
       worker,
       activity: activity.activityOf(threadId),
       isQueued: lifecycle.isQueued(threadId),
+      isInSetup: workerSandbox.isInSetup(threadId),
       pendingWaits,
-      spentUsd: pricing.costOfUsage(usage),
-      sandbox
+      spentUsd: pricing.costOfUsage(usage) + (budget?.summaryUsd ?? 0),
+      budgetUsd: budget?.capUsd
     })
   }
 
-  return async (workers: readonly ListedWorker[]) => {
+  const viewWorkers = async () => {
+    const workers = await readWorkers()
+
     return Promise.all(workers.map(viewOf))
   }
+
+  const inspectWorkers = async () => {
+    const views = await viewWorkers()
+
+    return Promise.all(
+      views.map(async (view) => {
+        return withSandboxView(view, await workerSandbox.inspect(view.threadId))
+      })
+    )
+  }
+
+  return { viewWorkers, inspectWorkers }
 }
+
+export type ViewWorkers = ReturnType<typeof createWorkerView>['viewWorkers']

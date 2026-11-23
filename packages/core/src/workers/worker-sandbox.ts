@@ -153,6 +153,21 @@ function setupSteps({
 
 type SetupSteps = ReturnType<typeof setupSteps>
 
+function setupViewOf(
+  key: string,
+  listed: Awaited<ReturnType<ListSandboxes>>,
+  { step, startedAt }: RunningStep
+): SandboxInSetup {
+  return {
+    state: 'setup',
+    id: listed.find((listedSandbox) => {
+      return listedSandbox.key === key
+    })?.id,
+    ...step,
+    elapsedMs: durationSince(startedAt)
+  }
+}
+
 export function createWorkerSandbox({
   sandboxes,
   repositoryOf,
@@ -336,22 +351,8 @@ export function createWorkerSandbox({
     }
   }
 
-  const inspectSetup = async (
-    threadId: string,
-    { step, startedAt }: RunningStep
-  ): Promise<SandboxInSetup> => {
-    const sandbox = await sandboxOf(threadId)
-    const key = sandbox.key({ threadId, runId: threadId })
-    const listed = await listSandboxes()
-
-    return {
-      state: 'setup',
-      id: listed.find((listedSandbox) => {
-        return listedSandbox.key === key
-      })?.id,
-      ...step,
-      elapsedMs: durationSince(startedAt)
-    }
+  const isInSetup = (threadId: string) => {
+    return runningSteps.has(threadId)
   }
 
   const inspect = async (
@@ -360,7 +361,13 @@ export function createWorkerSandbox({
     const running = runningSteps.get(threadId)
 
     if (running !== undefined) {
-      return inspectSetup(threadId, running)
+      const sandbox = await sandboxOf(threadId)
+
+      return setupViewOf(
+        sandbox.key({ threadId, runId: threadId }),
+        await listSandboxes(),
+        running
+      )
     }
 
     const current = opened.get(threadId)
@@ -441,7 +448,16 @@ export function createWorkerSandbox({
     return current.backend.readFile(posix.resolve(WORKSPACE_ROOT, path))
   }
 
-  return { workspace, plugin, rebind, save, inspect, forget, readFile }
+  return {
+    workspace,
+    plugin,
+    rebind,
+    save,
+    isInSetup,
+    inspect,
+    forget,
+    readFile
+  }
 }
 
 export type WorkerSandbox = ReturnType<typeof createWorkerSandbox>

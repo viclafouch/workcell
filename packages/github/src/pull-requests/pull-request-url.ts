@@ -1,11 +1,6 @@
-import { z } from 'zod'
 import { workerMetadataSchema, type WorkerMetadata } from '@workcell/core'
 
 const GITHUB_WEB_URL = 'https://github.com'
-
-export const taskPullRequestSchema = workerMetadataSchema.extend({
-  pullRequest: z.string().optional()
-})
 
 type BranchPullRequestsUrlParams = { repository: string; branch: string }
 
@@ -18,7 +13,7 @@ function branchPullRequestsUrl({
 
 export function pullRequestUrlOf(metadata: WorkerMetadata) {
   const { repository, branch, pullRequest } =
-    taskPullRequestSchema.parse(metadata)
+    workerMetadataSchema.parse(metadata)
 
   if (pullRequest !== undefined) {
     return pullRequest

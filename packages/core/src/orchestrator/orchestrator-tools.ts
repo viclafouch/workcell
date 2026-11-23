@@ -7,11 +7,14 @@ import {
 } from '@tanstack/ai-harness'
 import type { IsStarter } from '#/host/allowed-senders.ts'
 import {
+  NO_LIVE_WORKER,
   ORCHESTRATOR_TOOLS_TEXT,
   repositoryChoice,
   senderPrompt,
-  STARTER_RULE
+  STARTER_RULE,
+  workerLine
 } from '#/prompts/orchestrator.ts'
+import type { ViewWorkers } from '#/workers/worker-view.ts'
 import type { Workers } from '#/workers/workers.ts'
 
 const TOOLS_PLUGIN = 'workcell/orchestrator-tools'
@@ -22,19 +25,12 @@ const WORKER_ACTIONS = ['start_worker', 'message_worker', 'stop_worker']
 
 type OrchestratorToolsParams = {
   workers: Workers
+  viewWorkers: ViewWorkers
   isStarter: IsStarter
   repositories: readonly string[]
 }
 
 type LiveWorkers = Awaited<ReturnType<Workers['listWorkers']>>
-
-function firstLine(text: string) {
-  return text.split('\n')[0] ?? text
-}
-
-function topicOf({ subject, branch, task }: LiveWorkers[number]) {
-  return subject ?? branch ?? firstLine(task)
-}
 
 function busyLine(workers: LiveWorkers, subject: string | undefined) {
   const busy = workers.find((worker) => {
@@ -52,6 +48,7 @@ function starterOnlyRefusal(action: string) {
 
 export function orchestratorTools({
   workers,
+  viewWorkers,
   isStarter,
   repositories
 }: OrchestratorToolsParams) {
@@ -79,21 +76,11 @@ export function orchestratorTools({
         replay: 'safe',
         inputSchema: z.object({})
       }).server(async () => {
-        const live = await workers.listWorkers()
+        const views = await viewWorkers()
 
-        return live.map((worker) => {
-          return {
-            name: worker.name,
-            topic: topicOf(worker),
-            task: worker.task,
-            repository: worker.repository,
-            branch: worker.branch,
-            status: worker.liveStatus,
-            updatedAt: Temporal.Instant.fromEpochMilliseconds(
-              worker.updatedAt
-            ).toString({ smallestUnit: 'millisecond' })
-          }
-        })
+        return views.length === 0
+          ? NO_LIVE_WORKER
+          : views.map(workerLine).join('\n')
       })
 
       const startWorker = toolDefinition({

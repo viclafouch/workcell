@@ -1,16 +1,15 @@
 import { definePlugin } from '@tanstack/ai-harness'
-import { TaskFacts } from '@workcell/core'
+import { TaskFacts, workerMetadataSchema } from '@workcell/core'
 import { pullRequestFact } from '#/prompts/github.ts'
-import { taskPullRequestSchema } from '#/pull-requests/pull-request-url.ts'
 
 export const taskPullRequest = definePlugin({
   name: 'workcell/github-task-pull-request',
-  metadataSchema: taskPullRequestSchema,
+  metadataSchema: workerMetadataSchema,
   setup: () => {
     return {
       contribute: [
         TaskFacts.item((metadata) => {
-          const { pullRequest } = taskPullRequestSchema.parse(metadata)
+          const { pullRequest } = workerMetadataSchema.parse(metadata)
 
           return pullRequest === undefined
             ? undefined

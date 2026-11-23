@@ -602,6 +602,7 @@ export function createWorkers({
 
   return {
     startWorker,
+    readWorkers,
     listWorkers,
     trackLiveWorkers,
     wakeWorker,
