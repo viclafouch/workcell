@@ -218,7 +218,8 @@ function followChanges({
 
     if (change.type === 'finished') {
       const identity = identityOf(change.worker.name)
-      const opening = openedThreadSchema.safeParse(change.worker).data?.chatOpening
+      const opening = openedThreadSchema.safeParse(change.worker).data
+        ?.chatOpening
 
       if (change.worker.report !== undefined) {
         await surface.post({

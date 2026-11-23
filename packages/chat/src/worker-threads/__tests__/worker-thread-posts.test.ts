@@ -25,7 +25,11 @@ describe('messageOfEvent', () => {
       cardEventValue(CARD),
       SENT_FILES
     )
-    const filePost = await messageOfEvent(SENT_FILE_EVENT, SENT_NOTES, SENT_FILES)
+    const filePost = await messageOfEvent(
+      SENT_FILE_EVENT,
+      SENT_NOTES,
+      SENT_FILES
+    )
 
     expect(cardPost).toStrictEqual({ card: CARD })
     expect(filePost).toMatchObject({
@@ -35,7 +39,6 @@ describe('messageOfEvent', () => {
   })
 
   it('posts nothing for another event or a bad value', async () => {
-
     expect(
       await Promise.all([
         messageOfEvent('workcell.other', {}, SENT_FILES),

@@ -6,8 +6,8 @@ import {
   mediaPart,
   mimeTypeOf
 } from '@tanstack/ai-harness/media'
-import type { LogLine } from '#/store/database.ts'
 import { MESSAGE_FILES_TEXT } from '#/prompts/message-files.ts'
+import type { LogLine } from '#/store/database.ts'
 
 const DEFAULT_MAX_BYTES = 5_242_880
 
@@ -227,7 +227,11 @@ export async function messageInput({
   }
   const readings = await Promise.all(
     files.map(async (file) => {
-      const info = { name: file.name, mimeType: resolvedMimeType(file), size: file.size }
+      const info = {
+        name: file.name,
+        mimeType: resolvedMimeType(file),
+        size: file.size
+      }
 
       return { info, reading: await readMessageFile(file, info, context) }
     })
@@ -237,7 +241,13 @@ export async function messageInput({
   })
   const notRead = readings.flatMap(({ info, reading }) => {
     return 'notRead' in reading
-      ? [MESSAGE_FILES_TEXT.notReadLine(info.name, info.mimeType, reading.notRead)]
+      ? [
+          MESSAGE_FILES_TEXT.notReadLine(
+            info.name,
+            info.mimeType,
+            reading.notRead
+          )
+        ]
       : []
   })
 
@@ -246,7 +256,12 @@ export async function messageInput({
     ...parts,
     ...(notRead.length === 0
       ? []
-      : [{ type: 'text' as const, content: MESSAGE_FILES_TEXT.notRead(notRead) }])
+      : [
+          {
+            type: 'text' as const,
+            content: MESSAGE_FILES_TEXT.notRead(notRead)
+          }
+        ])
   ]
 }
 

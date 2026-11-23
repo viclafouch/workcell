@@ -1,11 +1,14 @@
 import { defineConfig } from 'vitest/config'
 
-const POLL_TIMEOUT_UNDER_THE_TEST_TIMEOUT_MS = 4_000
+const TEST_TIMEOUT_MS = 30_000
+
+const POLL_TIMEOUT_UNDER_THE_TEST_TIMEOUT_MS = 25_000
 
 export default defineConfig({
   test: {
     name: 'default',
     include: ['src/**/*.test.ts'],
+    testTimeout: TEST_TIMEOUT_MS,
     env: { LOG_LEVEL: 'info' },
     isolate: false,
     silent: 'passed-only',

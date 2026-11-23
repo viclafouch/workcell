@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Modality } from '@tanstack/ai'
-import { fakeText } from '@tanstack/ai/testing'
 import { createHarnessHost, defineHarness } from '@tanstack/ai-harness'
 import { mediaIdOf } from '@tanstack/ai-harness/media'
 import { memoryPersistence } from '@tanstack/ai-persistence'
+import { fakeText } from '@tanstack/ai/testing'
 import {
   messageInput,
   type MessageFile,
@@ -11,11 +11,15 @@ import {
   type MessageFileOptions
 } from '#/inputs/message-files.ts'
 
-const IMAGE_AND_DOCUMENT_MODALITIES: readonly Modality[] = ['text', 'image', 'document']
+const IMAGE_AND_DOCUMENT_MODALITIES: readonly Modality[] = [
+  'text',
+  'image',
+  'document'
+]
 
 const IMAGE_BYTES = new TextEncoder().encode('image bytes')
 
-const INVALID_UTF8_BYTE = 0xFF
+const INVALID_UTF8_BYTE = 255
 
 const LONG_TEXT_LENGTH = 300_000
 
@@ -129,7 +133,8 @@ describe('messageInput', () => {
       },
       {
         type: 'text',
-        content: '<file name="config.json" type="application/json">\n{"a":1}\n</file>'
+        content:
+          '<file name="config.json" type="application/json">\n{"a":1}\n</file>'
       }
     ])
   })

@@ -15,7 +15,9 @@ export async function takeUploads(
     files.map(async ({ key, name }) => {
       const bytes = await sentFiles.take(key)
 
-      return bytes === null ? [] : [{ filename: name, data: Buffer.from(bytes) }]
+      return bytes === null
+        ? []
+        : [{ filename: name, data: Buffer.from(bytes) }]
     })
   )
 

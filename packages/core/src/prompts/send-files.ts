@@ -8,7 +8,8 @@ export const SEND_FILE_TEXT = {
     'Your text answer then says in one line what the file holds, and repeats none of it.'
   ].join('\n'),
   name: 'The file name the person gets, with its extension, such as deck.html or chart.png. No folder.',
-  content: 'The whole content of the file, as text. Leave it out when you give a path.',
+  content:
+    'The whole content of the file, as text. Leave it out when you give a path.',
   path: 'The path of the file, as your file tools read it. Leave it out when you give content.',
   oneSource: 'Give content or path, one of the two.',
   sent: (name: string) => {

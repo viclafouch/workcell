@@ -221,13 +221,7 @@ export function createOrchestratorThreads({
     return isHeld
   }
 
-  const answer = async ({
-    thread,
-    user,
-    text,
-    files,
-    inputId
-  }: ChatPrompt) => {
+  const answer = async ({ thread, user, text, files, inputId }: ChatPrompt) => {
     const turnLog = logger.child({ module: 'chat', threadId: thread.id })
     const reply = createReplyStream(thread, turnLog, surface.linked)
     const tasks = new Map<string, TaskUpdateChunk>()

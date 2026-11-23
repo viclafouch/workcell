@@ -48,7 +48,7 @@ const SENT_DECK = { key: 'sent-files/thread/deck', name: 'deck.html' }
 
 const SENT_FILES = {
   take: async (key: string) => {
-    return key === SENT_DECK.key ? new TextEncoder().encode('<h1>Q4</h1>') : null
+    return key === SENT_DECK.key ? Buffer.from('<h1>Q4</h1>') : null
   }
 }
 

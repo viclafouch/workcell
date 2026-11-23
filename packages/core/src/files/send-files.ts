@@ -54,7 +54,11 @@ function holdsSecret(bytes: Uint8Array, secretValues: readonly string[]) {
   })
 }
 
-export function sendFiles({ sentFiles, readFile, secretValues }: SendFilesParams) {
+export function sendFiles({
+  sentFiles,
+  readFile,
+  secretValues
+}: SendFilesParams) {
   return definePlugin({
     name: SEND_FILES_PLUGIN,
     setup: ({ session }) => {

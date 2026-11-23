@@ -9,9 +9,7 @@ type RecordRow = { record: ArtifactRecord }
 
 const SNAPSHOT_ORDER = 'ORDER BY created_at, artifact_id'
 
-export function createPostgresArtifactStore(
-  database: Database
-): ArtifactStore {
+export function createPostgresArtifactStore(database: Database): ArtifactStore {
   const listWhere = async (name: string, column: string, value: string) => {
     const rows = await database.query<RecordRow>(
       name,
