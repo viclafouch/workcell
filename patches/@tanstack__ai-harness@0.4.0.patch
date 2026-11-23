@@ -473,6 +473,83 @@ index 1cc96c2958abf4a93f54fc4320fa3e646a0b6166..b9a6a80aa5ccd2c6a237d95634676a32
   */
 -export declare const WorkspaceHooks: import('..').ExtensionPoint<WorkspaceHooks>;
 +export declare const WorkspaceHooks: import('../index.js').ExtensionPoint<WorkspaceHooks>;
+diff --git a/dist/esm/host.js b/dist/esm/host.js
+index 8a2ffe77006164e8057c17b53d12769fe0bb0e25..65c6d25d2fb99b69ef6f9310b38872430d4be581 100644
+--- a/dist/esm/host.js
++++ b/dist/esm/host.js
+@@ -449,7 +449,8 @@ function createHarnessHost(options = {}) {
+ 				onIdle: () => {
+ 					if (logs.get(logId) === loaded) logs.delete(logId);
+ 					if (resolved.get(logId)?.log === log) resolved.delete(logId);
+-				}
++				},
++				onReleased: () => takeOfferedLog(store, logId, harness)
+ 			});
+ 			resolved.set(logId, {
+ 				log,
+@@ -795,6 +796,22 @@ function createHarnessHost(options = {}) {
+ 		}
+ 		return session;
+ 	};
++	/**
++	* Take `logId` again when this host gave it up with offers that no
++	* session applied: an offer that lands while the owner gives the log up
++	* finds no owner to wake, and no sweep may run after the release.
++	*/
++	const takeOfferedLog = (store, logId, harness) => {
++		if (isClosed) return;
++		store.listOfferedInputs({ logId }).then((offers) => {
++			if (offers.length === 0 || isClosed) return;
++			return takeOver({
++				logId,
++				harness: harness.name,
++				reason: "offered"
++			}, harness, "whenIdle");
++		}).catch((error) => logger.error("[@tanstack/ai-harness] A log with offers did not open again.", { error }));
++	};
+ 	/** See {@link HostSweep.takeOver}. */
+ 	const takeOver = async (orphan, harness, close) => {
+ 		const { logId: storeLogId, harness: name } = orphan;
+diff --git a/dist/esm/log.d.ts b/dist/esm/log.d.ts
+index 95a6874209e22a6a02f82ddf3f748b03bba641ab..138e686de96a445d387012c0fd218fc9c30b61da 100644
+--- a/dist/esm/log.d.ts
++++ b/dist/esm/log.d.ts
+@@ -677,6 +677,7 @@ export declare class SharedLog<TState = unknown> {
+     private snapshotTimer;
+     private readonly coalesceMs;
+     private readonly onIdle;
++    private readonly onReleased;
+     private readonly ownership;
+     /** The harness name that the ownership record of the log keeps. */
+     private readonly harness;
+@@ -766,6 +767,7 @@ export declare class SharedLog<TState = unknown> {
+         logRecords?: LogRecordRetention;
+         /** Called when the last session closes, or when a write fails. */
+         onIdle?: () => void;
++        onReleased?: () => void;
+         /** Gets the warning of a `project` or `reduce` that throws. Default: the console. */
+         logger?: Logger;
+     });
+diff --git a/dist/esm/log.js b/dist/esm/log.js
+index 07ddf26c8794d2fca31f77e94123738017ba961c..32292056579dd3a100b8607c047b6d8b2db08f5c 100644
+--- a/dist/esm/log.js
++++ b/dist/esm/log.js
+@@ -1025,6 +1025,7 @@ var SharedLog = class {
+ 		this.coalesceMs = options.coalesceMs;
+ 		this.eventBytes = options.eventBytes;
+ 		this.onIdle = options.onIdle ?? (() => {});
++		this.onReleased = options.onReleased ?? (() => {});
+ 		this.fold = {
+ 			rootThread: options.rootThread,
+ 			...options.project ? { project: options.project.record } : {},
+@@ -1211,6 +1212,7 @@ var SharedLog = class {
+ 		if (epoch === void 0 || isBusy || this.pending.length > 0) return;
+ 		this.epoch = void 0;
+ 		await this.ownership.release(this.logId, epoch);
++		this.onReleased();
+ 	}
+ 	/**
+ 	* A store notification can be a new offer. The owner applies it. A host
 diff --git a/dist/esm/session/agents.d.ts b/dist/esm/session/agents.d.ts
 index 19dd06615f323ab55437255dbd0bae96fb8856d1..892883a80368a308230b16cf5d0904be516a4ebf 100644
 --- a/dist/esm/session/agents.d.ts

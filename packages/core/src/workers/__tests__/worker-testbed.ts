@@ -18,6 +18,7 @@ import {
 import type { ModelPricing } from '#/budget/budget.ts'
 import type { BudgetLimits } from '#/budget/limits.ts'
 import { workerMetadataSchema } from '#/session/metadata.ts'
+import type { Database } from '#/store/database.ts'
 import { createSandboxInstanceStore } from '#/store/sandbox-instance-store.ts'
 import { createWorkerChangesStore } from '#/store/worker-changes-store.ts'
 import type { WorkerObservability } from '#/telemetry/worker-telemetry.ts'
@@ -88,6 +89,43 @@ export async function closeWorkerTestbed() {
   await rm(skillDir, { recursive: true, force: true })
 }
 
+const RELEASE_OF_A_LOG = 'release a log'
+
+export function holdTheReleaseOfALog() {
+  const releaseStarts = Promise.withResolvers<null>()
+  const releaseGoesOn = Promise.withResolvers<null>()
+  let heldThreadId: string | null = null
+
+  return {
+    wrapDatabase: (database: Database): Database => {
+      return {
+        ...database,
+        query: async (name, text, values) => {
+          const isHeld =
+            name === RELEASE_OF_A_LOG &&
+            heldThreadId !== null &&
+            String(values?.[0]).includes(heldThreadId)
+
+          if (isHeld) {
+            releaseStarts.resolve(null)
+            await releaseGoesOn.promise
+          }
+
+          return database.query(name, text, values)
+        }
+      }
+    },
+    holdReleaseOf: (threadId: string) => {
+      heldThreadId = threadId
+
+      return releaseStarts.promise
+    },
+    letReleaseGoOn: () => {
+      releaseGoesOn.resolve(null)
+    }
+  }
+}
+
 export function tellToStop(agent: OpenedWorkers, threadId: string) {
   return agent.workers.messageWorker({
     threadId,
@@ -141,7 +179,10 @@ export async function openWorkers(
       NPM_TOKEN: SANDBOX_SECRETS.NPM_TOKEN,
       ASSETS_CDN_TOKEN: SANDBOX_SECRETS.ASSETS_CDN_TOKEN
     }),
-    librarySecrets
+    librarySecrets,
+    wrapDatabase = (database) => {
+      return database
+    }
   }: {
     idleSandboxMs?: number
     maxRunningTurns?: number
@@ -164,10 +205,11 @@ export async function openWorkers(
     onWorkerStart?: OnWorkerStart
     sandboxSecrets?: Secrets
     librarySecrets?: Secrets
+    wrapDatabase?: (database: Database) => Database
   } = {}
 ) {
   const testbed = openedWorkerTestbed()
-  const database = openTestDatabase(url)
+  const database = wrapDatabase(openTestDatabase(url))
   model.setResponses(responses)
   const sandbox = defineSandbox({
     id: 'worker-test',
