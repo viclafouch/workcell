@@ -1,26 +1,128 @@
 name: CI
 
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  AFFECTED: ${{ github.event_name == 'pull_request' && '--affected' || '' }}
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
+  lint:
+    name: Lint (oxlint)
+    runs-on: &runner ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7.0.1
-
-      - uses: pnpm/setup@v3.1.2
+      - &full-checkout
+        name: Check out the code with its history
+        uses: actions/checkout@v7.0.1
         with:
-          node-version-file: .nvmrc
-          cache: true
+          filter: blob:none
+          fetch-depth: 0
+      - name: Install Node, pnpm and the dependencies
+        uses: $/.github/actions/setup
+        with:
+          turbo-cache: lint
+      - name: Lint the packages that the change touches
+        run: pnpm turbo run lint lint:root --continue $AFFECTED | node scripts/github-annotations.ts
 
-      - run: pnpm check
+  typecheck:
+    name: Types (tsc)
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - *full-checkout
+      - name: Install Node, pnpm and the dependencies
+        uses: $/.github/actions/setup
+        with:
+          turbo-cache: typecheck
+      - name: Check the types of the packages that the change touches
+        run: pnpm turbo run typecheck typecheck:root --continue $AFFECTED | node scripts/github-annotations.ts
+
+  format:
+    name: Format (oxfmt)
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - &checkout
+        name: Check out the code
+        uses: actions/checkout@v7.0.1
+      - &setup
+        name: Install Node, pnpm and the dependencies
+        uses: $/.github/actions/setup
+      - name: Check that every file is formatted
+        run: |
+          pnpm exec oxfmt --list-different | while read -r file; do
+            echo "::error file=$file,title=Not formatted::Run pnpm format, then commit the result."
+          done
+
+  knip:
+    name: Unused code (knip)
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - *checkout
+      - *setup
+      - name: Find unused files, exports and dependencies
+        run: pnpm knip --reporter github-actions
+
+  boundaries:
+    name: Package boundaries (turbo)
+    runs-on: *runner
+    timeout-minutes: 10
+    steps:
+      - *checkout
+      - *setup
+      - name: Check that each package imports only what it declares
+        run: pnpm boundaries
+
+  test-part:
+    name: Unit tests (${{ matrix.part }})
+    runs-on: *runner
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: core 1/3
+            cache: test-core-1
+            filter: --filter=@workcell/core -- --shard=1/3
+          - part: core 2/3
+            cache: test-core-2
+            filter: --filter=@workcell/core -- --shard=2/3
+          - part: core 3/3
+            cache: test-core-3
+            filter: --filter=@workcell/core -- --shard=3/3
+          - part: other packages
+            cache: test-others
+            filter: --filter=!@workcell/core
+    steps:
+      - *full-checkout
+      - name: Install Node, pnpm and the dependencies
+        uses: $/.github/actions/setup
+        with:
+          turbo-cache: ${{ matrix.cache }}
+      - name: Run the unit tests of the packages that the change touches
+        run: pnpm turbo run test --continue $AFFECTED ${{ matrix.filter }} | node scripts/github-annotations.ts
+
+  test:
+    name: Unit tests
+    if: always()
+    needs: test-part
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    steps:
+      - name: Pass only when every part of the unit tests passed
+        run: test "${{ needs.test-part.result }}" = success

@@ -2,7 +2,7 @@
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "agentGuidance": true,
-  "globalDependencies": [".nvmrc"],
+  "globalDependencies": [".nvmrc", "tsconfig.base.json"],
   "globalPassThroughEnv": ["DOCKER_*", "TESTCONTAINERS_*"],
   "cacheMaxAge": "7d",
   "futureFlags": {
