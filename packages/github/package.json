@@ -1,7 +1,7 @@
 {
   "name": "@workcell/github",
   "private": true,
-  "description": "The GitHub integration: the pull request watch, the read tools, the review thread tools and the finish refusal of an open pull request.",
+  "description": "The GitHub integration: the pull request watch, the read tools, the review thread tools, the finish refusal of an open pull request and the feedback issues.",
   "license": "MIT",
   "repository": {
     "type": "git",

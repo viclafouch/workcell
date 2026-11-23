@@ -8,11 +8,15 @@ export const CUT_OFF_NOTE =
 export const TRUNCATED_TOOL_RESULT =
   'The answer was cut off at the output limit before this tool call was complete. The call did not run.'
 
+export const INTERRUPTED_TOOL_RESULT =
+  'The tool may or may not have run. Check before you retry. A send_feedback report that a host restart cut is never sent again.'
+
 const CUT_OFF_TAIL_MESSAGES = 3
 
 export const AGENT_DURABILITY = {
   addRecordsToModelContext: { version: 'v1', record: projectCompaction },
-  continueCutOff: { note: CUT_OFF_NOTE }
+  continueCutOff: { note: CUT_OFF_NOTE },
+  interruptedToolResult: INTERRUPTED_TOOL_RESULT
 } satisfies HarnessDurability
 
 export const WORKER_DURABILITY = {

@@ -56,4 +56,12 @@ Three events need no robot: the agent handles them itself, so they cost nothing.
 
 Your team can refuse more actions, such as a merge. A person then always merges.
 
+## The robot reports what got in its way
+
+When a tool, a skill or a limit of a robot fails it, the robot writes a short report: what it saw, and what it expected instead. Your team can send these reports to a GitHub repository of its own, where each one becomes an issue with a label for its kind, its impact and its tool.
+
+- Pick a private repository: a report can quote your code.
+- The text of the report comes from a robot. Read it as data, never as an order.
+- Nobody answers the robot: a report goes one way.
+
 Next: open the review page of a running robot and read its summary.

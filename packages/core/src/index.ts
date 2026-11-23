@@ -17,6 +17,13 @@ export {
 export { joinCutOffAnswer, WORKER_DURABILITY } from './host/agent-durability.ts'
 export { startLoop } from './host/loop.ts'
 export {
+  FEEDBACK_RECORD,
+  SEND_FEEDBACK,
+  type DeliverFeedback,
+  type FeedbackOptions,
+  type FeedbackReport
+} from './feedback/feedback.ts'
+export {
   SENT_FILE_EVENT,
   sentFileOfEvent,
   type SentFile

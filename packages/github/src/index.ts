@@ -26,3 +26,5 @@ export {
   type PullRequestLines
 } from './prompts/github.ts'
 export { githubProbe } from './api/secret-probe.ts'
+export { githubFeedbackIssues } from './feedback/feedback-issues.ts'
+export type { FeedbackLabel } from './prompts/feedback.ts'

@@ -1,7 +1,7 @@
 {
   "name": "@workcell/chat-slack",
   "private": true,
-  "description": "The Slack parts that Chat SDK leaves out: the identity of each worker on its posts, and the probes of the Slack tokens.",
+  "description": "The Slack parts that Chat SDK leaves out: the identity of each worker on its posts, the probes of the Slack tokens, and the Slack link of a thread.",
   "license": "MIT",
   "repository": {
     "type": "git",
