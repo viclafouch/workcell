@@ -7,6 +7,7 @@
   "cacheMaxAge": "7d",
   "futureFlags": {
     "affectedUsingTaskInputs": true,
+    "githubActionsRemoteBaseRefFallback": true,
     "filterUsingTasks": true,
     "strictTaskEntrypointSelection": true,
     "watchUsingTaskInputs": true
