@@ -122,13 +122,19 @@ export function createLogListeners(database: Database) {
     }
   }
 
+  const notificationOf = (logId: string) => {
+    return {
+      channel: LOG_CHANNEL,
+      payload: JSON.stringify({ logId, from: instanceId })
+    }
+  }
+
   return {
     call,
+    notificationOf,
     notify: async (query: TransactionQuery, logId: string) => {
-      await query('SELECT pg_notify($1, $2)', [
-        LOG_CHANNEL,
-        JSON.stringify({ logId, from: instanceId })
-      ])
+      const { channel, payload } = notificationOf(logId)
+      await query('SELECT pg_notify($1, $2)', [channel, payload])
     },
     subscribe: ({ logId, listener }: Parameters<LogStore['subscribe']>[0]) => {
       const logListeners = listeners.getOrInsertComputed(logId, () => {
