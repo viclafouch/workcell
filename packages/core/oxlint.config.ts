@@ -61,13 +61,6 @@ const MEMORY_PERSISTENCE_PATH = {
     'A memory store loses every thread on a restart. Take createHarnessPersistence() of src/store/harness-persistence.ts. A test can use memoryPersistence().'
 }
 
-const HARNESS_HOST_PATH = {
-  name: '@tanstack/ai-harness',
-  importNames: ['createHarnessHost'],
-  message:
-    'Take createAgentHost() of src/host/agent-host.ts. It sets the log retention of every host.'
-}
-
 const POSTGRES_CONTAINER_PATH = {
   name: '@testcontainers/postgresql',
   message:
@@ -83,7 +76,6 @@ const RESTRICTED_IMPORT_PATHS = [
   SHARED_RETRYER_PATH,
   SHARED_RESULT_LIMITER_PATH,
   MEMORY_PERSISTENCE_PATH,
-  HARNESS_HOST_PATH,
   POSTGRES_CONTAINER_PATH
 ]
 
@@ -190,16 +182,7 @@ export default defineConfig({
             ]
           }
         ],
-        'no-restricted-imports': restrictImportsExcept(
-          MEMORY_PERSISTENCE_PATH,
-          HARNESS_HOST_PATH
-        )
-      }
-    },
-    {
-      files: ['src/host/agent-host.ts'],
-      rules: {
-        'no-restricted-imports': restrictImportsExcept(HARNESS_HOST_PATH)
+        'no-restricted-imports': restrictImportsExcept(MEMORY_PERSISTENCE_PATH)
       }
     },
     {

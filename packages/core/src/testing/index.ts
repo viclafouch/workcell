@@ -1,4 +1,3 @@
-export { createAgentHost } from '#/host/agent-host.ts'
 export { isStarterIn } from '#/host/allowed-senders.ts'
 export { timersKeepingTheProcessAlive } from './live-timers.ts'
 export { readOnlyCredentials } from '#/host/read-only-credentials.ts'

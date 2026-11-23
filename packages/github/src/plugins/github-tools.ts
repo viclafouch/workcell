@@ -2,11 +2,7 @@ import { z } from 'zod'
 import { toolDefinition } from '@tanstack/ai'
 import { definePlugin, PermissionRules } from '@tanstack/ai-harness'
 import type { GithubReader } from '#/api/github-reader.ts'
-import {
-  GITHUB_TOOLS_TEXT,
-  githubPrompt,
-  outsideRepositoriesRefusal
-} from '#/prompts/github.ts'
+import { GITHUB_TOOLS_TEXT, githubPrompt } from '#/prompts/github.ts'
 
 const MAX_HISTORY_LIMIT = 30
 
@@ -23,25 +19,13 @@ type GithubToolsParams = {
 }
 
 export function githubTools({ reader, repositories }: GithubToolsParams) {
-  const repository = z
-    .string()
-    .describe(GITHUB_TOOLS_TEXT.repository(repositories))
+  const repository = z.enum(repositories).describe(GITHUB_TOOLS_TEXT.repository)
   const pullRequestNumber = z
     .number()
     .int()
     .positive()
     .describe(GITHUB_TOOLS_TEXT.number)
   const path = z.string().describe(GITHUB_TOOLS_TEXT.path)
-
-  const inRepositories = <Input extends { repository: string }, Output>(
-    read: (input: Input) => Promise<Output>
-  ) => {
-    return async (input: Input) => {
-      return repositories.includes(input.repository)
-        ? read(input)
-        : outsideRepositoriesRefusal(input.repository, repositories)
-    }
-  }
 
   const [readPullRequest, readPullRequestPatch, readFile, readFileHistory] =
     GITHUB_TOOL_NAMES
@@ -56,7 +40,7 @@ export function githubTools({ reader, repositories }: GithubToolsParams) {
             description: GITHUB_TOOLS_TEXT.readPullRequest,
             replay: 'safe',
             inputSchema: z.object({ repository, number: pullRequestNumber })
-          }).server(inRepositories(reader.readPullRequest)),
+          }).server(reader.readPullRequest),
           toolDefinition({
             name: readPullRequestPatch,
             description: GITHUB_TOOLS_TEXT.readPullRequestPatch,
@@ -66,7 +50,7 @@ export function githubTools({ reader, repositories }: GithubToolsParams) {
               number: pullRequestNumber,
               path
             })
-          }).server(inRepositories(reader.readPullRequestPatch)),
+          }).server(reader.readPullRequestPatch),
           toolDefinition({
             name: readFile,
             description: GITHUB_TOOLS_TEXT.readFile,
@@ -88,7 +72,7 @@ export function githubTools({ reader, repositories }: GithubToolsParams) {
                 .optional()
                 .describe(GITHUB_TOOLS_TEXT.lineLimit)
             })
-          }).server(inRepositories(reader.readFile)),
+          }).server(reader.readFile),
           toolDefinition({
             name: readFileHistory,
             description: GITHUB_TOOLS_TEXT.readFileHistory,
@@ -105,7 +89,7 @@ export function githubTools({ reader, repositories }: GithubToolsParams) {
                 .optional()
                 .describe(GITHUB_TOOLS_TEXT.limit)
             })
-          }).server(inRepositories(reader.readFileHistory))
+          }).server(reader.readFileHistory)
         ],
         prompts: [
           { id: 'workcell/github-tools', text: githubPrompt(repositories) }

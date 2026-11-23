@@ -14,7 +14,7 @@ index 018fcdbe4822eb44ea3162d08642b05bca794eb9..87247297eac3db1216e51ae51a0979f6
 +    onStep?: (step: SandboxSetupStep) => void | Promise<void>;
  }): Promise<BootstrapResult>;
 diff --git a/dist/esm/bootstrap.js b/dist/esm/bootstrap.js
-index bd7ee4555940d97efda2a80a19802a4063bf7f8d..d7ee0700f8780609f3453292c0850b92217651a6 100644
+index 315fa6529035f23e56fd890ded9c959702e6232d..c2c06c807b39211f661e5bd4381c75b3c0dbfcfb 100644
 --- a/dist/esm/bootstrap.js
 +++ b/dist/esm/bootstrap.js
 @@ -39,12 +39,16 @@ async function bootstrapWorkspace(handle, workspace, options = {}) {
@@ -97,7 +97,7 @@ index bd7ee4555940d97efda2a80a19802a4063bf7f8d..d7ee0700f8780609f3453292c0850b92
  		} finally {
  			await shell.dispose();
 diff --git a/dist/esm/contracts.d.ts b/dist/esm/contracts.d.ts
-index 375bca8de6e4a6d32102e4497c992ad49563c146..d60e76d096c14748d30e1c57fe3a8112e130a171 100644
+index 2a25396529d19f248271a8406f64f5ee0b0abc18..7017bbe92238dddb1f8cf080023812dc555b6d34 100644
 --- a/dist/esm/contracts.d.ts
 +++ b/dist/esm/contracts.d.ts
 @@ -153,6 +153,7 @@ export interface SandboxGit {
@@ -109,7 +109,7 @@ index 375bca8de6e4a6d32102e4497c992ad49563c146..d60e76d096c14748d30e1c57fe3a8112
      }) => Promise<void>;
      status: (dir?: string) => Promise<string>;
 diff --git a/dist/esm/git-exec.js b/dist/esm/git-exec.js
-index abbfcb06c2735e1132f9153b0ab06f5f17c14554..164bfed4bf7c8a7bcb6275162d308ac66bb1ca70 100644
+index 5329b6e499405e281acb396adc23fc96fbd90985..2feb95b56a2d83c771ce07d63fc9e5c83d4490af 100644
 --- a/dist/esm/git-exec.js
 +++ b/dist/esm/git-exec.js
 @@ -15,7 +15,7 @@ function createExecBackedGit(process, defaultRoot) {
@@ -145,7 +145,7 @@ index abbfcb06c2735e1132f9153b0ab06f5f17c14554..164bfed4bf7c8a7bcb6275162d308ac6
  		status: async (dir) => (await process.exec(`git -C ${at(dir)} status --porcelain`)).stdout,
  		add: async (paths, dir) => {
 diff --git a/dist/esm/index.d.ts b/dist/esm/index.d.ts
-index c114b4da8a1e6a24645158d7e727b78fb692b361..ad33a834ab84d4188a2431f44b7331c2502176d2 100644
+index 573bd95774572e51a1ca45d7d63df1881d59920f..585eaa3f5ac44060e0576cf6446f4fdd4e486b71 100644
 --- a/dist/esm/index.d.ts
 +++ b/dist/esm/index.d.ts
 @@ -19,7 +19,7 @@ export { withSandbox } from './middleware.js';
@@ -158,10 +158,10 @@ index c114b4da8a1e6a24645158d7e727b78fb692b361..ad33a834ab84d4188a2431f44b7331c2
  export type { WorkspaceDefinition, WorkspaceSource, WorkspaceSkill, PackageManager, McpConfig, } from './workspace.js';
  export { createSecrets, bearer, isSecretRef, resolveSecret, resolveBearer, resolveAllSecrets, } from './secrets.js';
 diff --git a/dist/esm/sandbox.d.ts b/dist/esm/sandbox.d.ts
-index 3b58ac9cd6c612040e43376a45baeddc25445c0c..9e239bf2191dba651b9b3d103cdcf40137885f9f 100644
+index 9df985c1285789f5fd4461a8f1ad802ea2c16400..b5cb04cc259ae44ddded91a24c57cf17f3e02816 100644
 --- a/dist/esm/sandbox.d.ts
 +++ b/dist/esm/sandbox.d.ts
-@@ -49,6 +49,19 @@ export interface SandboxConfig {
+@@ -50,6 +50,19 @@ export interface SandboxConfig {
          diff?: boolean;
      };
  }
@@ -181,10 +181,10 @@ index 3b58ac9cd6c612040e43376a45baeddc25445c0c..9e239bf2191dba651b9b3d103cdcf401
  /** Context passed to `ensure()` by `withSandbox` (or advanced callers). */
  export interface SandboxEnsureContext {
      threadId: string;
-@@ -64,6 +77,12 @@ export interface SandboxEnsureContext {
-     signal?: AbortSignal;
-     /** Harness adapter name (`grok-build`, `claude-code`, `codex`, `opencode`). Optional. */
-     adapterName?: string;
+@@ -70,6 +83,12 @@ export interface SandboxEnsureContext {
+      * passes the chat runtime's logger.
+      */
+     logger?: InternalLogger;
 +    /**
 +     * Called as each step of a new sandbox starts, before the step runs. A step
 +     * ends when the next one starts, or when `ensure()` returns or throws. Not
@@ -195,10 +195,10 @@ index 3b58ac9cd6c612040e43376a45baeddc25445c0c..9e239bf2191dba651b9b3d103cdcf401
  export interface SandboxDefinition {
      readonly id: string;
 diff --git a/dist/esm/sandbox.js b/dist/esm/sandbox.js
-index 3de62cc7e9b0408a384989941b3327af9d8610b7..54352a32c1dffadf9ae2405bbde5571c7946b4b4 100644
+index ba7099440905d9f8c7be202dc93743823844e801..76f9ce43389e3af127e813126059c15128a6f929 100644
 --- a/dist/esm/sandbox.js
 +++ b/dist/esm/sandbox.js
-@@ -123,6 +123,7 @@ function defineSandbox(config) {
+@@ -132,6 +132,7 @@ function defineSandbox(config) {
  					}
  				}
  			}
@@ -206,7 +206,7 @@ index 3de62cc7e9b0408a384989941b3327af9d8610b7..54352a32c1dffadf9ae2405bbde5571c
  			const created = await config.provider.create({
  				id: key,
  				workspace: config.workspace,
-@@ -132,7 +133,10 @@ function defineSandbox(config) {
+@@ -141,7 +142,10 @@ function defineSandbox(config) {
  				adapterName: ctx.adapterName
  			});
  			if (config.workspace) try {
@@ -247,7 +247,7 @@ index e1ed4af17e86354bcb763eb47a0503ae328da9f0..1001ef157b6c404ac8520027f04c9816
  export declare function localSource(path: string): WorkspaceSource;
  /**
 diff --git a/dist/esm/workspace.js b/dist/esm/workspace.js
-index f74cd29d0126b6471698924d30c01c1d1e8c90f9..aa22077f1ff1454da9d7c826b3aa60bb1b625ab2 100644
+index c77af53b029ea561f487b3284ac1b9292ddf3e4f..794b5c1b651de3bf20db94d96f90b3bb30042a10 100644
 --- a/dist/esm/workspace.js
 +++ b/dist/esm/workspace.js
 @@ -12,7 +12,8 @@ function githubRepo(input) {

@@ -170,7 +170,7 @@ index 10e88192aa799bb5a3b019742c7bb75415b914e6..ee737103895ffb5b9bd7b59c26f3604d
      } | undefined>;
  }>, Record<string, unknown>>;
 diff --git a/dist/esm/first-party/coding/workspace.d.ts b/dist/esm/first-party/coding/workspace.d.ts
-index d362b4339103dadb931bbc286349ade4617eae81..4059f6faabeab44880858b3a6ac68cb787578671 100644
+index 11f3a7a9628cc854250d7b8417e2d643d75c6f26..32eb3fb73ea759289ea70afdc82f90a855f9bd01 100644
 --- a/dist/esm/first-party/coding/workspace.d.ts
 +++ b/dist/esm/first-party/coding/workspace.d.ts
 @@ -492,20 +492,20 @@ export declare function createWorkspaceTools(options: WorkspaceToolsOptions, ses
@@ -345,10 +345,10 @@ index 32a31c13c0f6ae0a6cee1c877ff4a2f0ac8a04d4..688542fbad11d58b60c6a0fd19977680
              name: string;
              onInterruptBoundary: (ctx: import('@tanstack/ai').ChatMiddlewareContext<any> & {
 diff --git a/dist/esm/first-party/provider-keys.d.ts b/dist/esm/first-party/provider-keys.d.ts
-index 6dfa93e2346af83e21e627a26c199ea1bb7f2fbd..d294a4472481812bfffb650d163ee0ae7d3075cb 100644
+index d7b25b1b0b17143b4e57fcd884929dd2638017a6..2e1cb00603c9042f6f8a8d9077d71f7c8ed1227b 100644
 --- a/dist/esm/first-party/provider-keys.d.ts
 +++ b/dist/esm/first-party/provider-keys.d.ts
-@@ -61,9 +61,9 @@ export interface ProviderKeysState {
+@@ -95,9 +95,9 @@ export interface ProviderKeysState {
   */
  export declare function providerKeys(options: {
      providers: ReadonlyArray<KeyProvider>;
@@ -361,7 +361,7 @@ index 6dfa93e2346af83e21e627a26c199ea1bb7f2fbd..d294a4472481812bfffb650d163ee0ae
      }>;
  }>, Record<string, unknown>>;
 diff --git a/dist/esm/first-party/question.d.ts b/dist/esm/first-party/question.d.ts
-index 5acf6149c96db2efdaef51f15e4f8e92d370e648..f84e6c1a2d826574c9a0b91de2334e7c9db8e5fd 100644
+index 6b653ae5afad7abe6d8babd1822f63ef2e311cb9..955a7c5cb39ac624972a6cf79513f866aad90fe4 100644
 --- a/dist/esm/first-party/question.d.ts
 +++ b/dist/esm/first-party/question.d.ts
 @@ -13,7 +13,7 @@
@@ -439,7 +439,7 @@ index 32200a37897784674fb85edac661a58c35769d49..8b7355a69bff0ac10af7bc0c5003accd
              name: string;
              onConfig: (run: import('@tanstack/ai').ChatMiddlewareContext<HarnessRunContext>, config: import('@tanstack/ai').ChatMiddlewareConfig) => void;
 diff --git a/dist/esm/first-party/todos.d.ts b/dist/esm/first-party/todos.d.ts
-index 0fa0d0823f54ead688203430fe0213b30f577e9e..083f78c9c125fbd7f13cd948e47fcf9072fa1fc6 100644
+index dc7906c7d90e05602eb93ebdfc9ad7b8abbd7193..676affe6b3aeaadddca0f0e4dbe8905e9119a59e 100644
 --- a/dist/esm/first-party/todos.d.ts
 +++ b/dist/esm/first-party/todos.d.ts
 @@ -8,9 +8,9 @@ export declare function formatTodos(items: ReadonlyArray<Todo>): string;

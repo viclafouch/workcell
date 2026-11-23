@@ -7,9 +7,7 @@ export const GITHUB_TOOLS_TEXT = {
     'Read a file on a branch, a tag or a commit of a repository on GitHub. Use it for any ref other than the default branch: the library holds the default branch. A long file comes back a page at a time: use offset and limit to read other lines.',
   readFileHistory:
     'Read the latest commits that change a file on GitHub, newest first: the sha, date, author, message, and the pull request of each one.',
-  repository: (repositories: readonly string[]) => {
-    return `The repository, as owner/name: ${repositories.join(', ')}.`
-  },
+  repository: 'The repository, as owner/name.',
   number: 'The number of the pull request.',
   path: 'The path of the file from the repository root.',
   ref: 'A branch name, a tag or a commit sha.',
@@ -25,13 +23,6 @@ export function githubPrompt(repositories: readonly string[]) {
     `You read pull requests, the files of other branches and the history of a file on GitHub with the github_ tools, for ${repositories.join(', ')} only.`,
     'Answer "who changed this, and why" from the commits and their pull requests. You write nothing on GitHub.'
   ].join('\n')
-}
-
-export function outsideRepositoriesRefusal(
-  repository: string,
-  repositories: readonly string[]
-) {
-  return `I read only ${repositories.join(', ')} on GitHub, not ${repository}.`
 }
 
 export const REVIEW_THREADS_TOOL_NAME = 'github_read_review_threads'

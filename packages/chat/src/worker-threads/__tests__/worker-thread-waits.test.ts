@@ -29,43 +29,6 @@ const POSTS_OF_AN_APPROVED_TURN = 3
 
 const TANSTACK_PREVIEW_MAX_LENGTH = 300
 
-describe('the questions of a worker thread', () => {
-  it('shows the header of a question and the description of each option', async () => {
-    const { posts, surface } = recordSurface()
-    await using worker = await openWorkerSession(memoryPersistence(), surface, [
-      {
-        toolCalls: [
-          {
-            name: 'question',
-            input: {
-              questions: [
-                {
-                  header: 'Base',
-                  question: 'Which branch does the pull request target?',
-                  options: [
-                    { label: 'dev', description: 'the default branch' },
-                    { label: 'main' }
-                  ]
-                }
-              ]
-            }
-          }
-        ]
-      }
-    ])
-    await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
-    await worker.session.send('Do the task TASK-7.')
-
-    expect(posts[1]?.message).toStrictEqual({
-      markdown: [
-        'Base: Which branch does the pull request target?',
-        '1. dev - the default branch',
-        '2. main'
-      ].join('\n')
-    })
-  })
-})
-
 describe('the budget stop of a worker thread', () => {
   it('posts once the question of a turn that stops at its budget, on a wake after a restart', async () => {
     const persistence = memoryPersistence()

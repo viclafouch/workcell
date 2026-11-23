@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { defineHarness } from '@tanstack/ai-harness'
+import { createHarnessHost, defineHarness } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText, type FakeResponseStep } from '@tanstack/ai/testing'
-import { createAgentHost, SILENT_HOST_LOGGER } from '@workcell/core/testing'
+import { SILENT_HOST_LOGGER } from '@workcell/core/testing'
 import { SLACK_FORMATTING, slackFormatting } from '#/slack-formatting.ts'
 
 function promptText(prompt: string | { content: string }) {
@@ -22,7 +22,7 @@ describe('the Slack formatting', () => {
     const systemPrompts: string[] = []
     const model = fakeText()
     model.setResponses([recordSystemPrompts(systemPrompts)])
-    const host = createAgentHost({
+    const host = createHarnessHost({
       persistence: memoryPersistence(),
       logger: SILENT_HOST_LOGGER
     })

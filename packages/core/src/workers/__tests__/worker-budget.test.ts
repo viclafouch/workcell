@@ -424,7 +424,7 @@ describe('the traces of a worker', () => {
     await closeWorkerTestbed()
   })
 
-  it('traces its turn as one trace, with a span per model call and per tool call, each tagged with its name and its task', async () => {
+  it('traces its turn as one harness operation and one chat trace joined by its run, with a span per model call and per tool call, each tagged with its name and its task', async () => {
     const url = await createMigratedDatabase()
     const { observability, finishedSpans } = recordSpans()
     await using agent = await openWorkers(
@@ -436,8 +436,11 @@ describe('the traces of a worker', () => {
     const worker = await agent.workers.startWorker(TICKET_START)
     await worker.firstTurn
     const spans = finishedSpans()
+    const chatSpans = spans.filter(({ name }) => {
+      return name !== 'harness.operation'
+    })
     const traceIds = new Set(
-      spans.map((span) => {
+      chatSpans.map((span) => {
         return span.spanContext().traceId
       })
     )
@@ -452,12 +455,21 @@ describe('the traces of a worker', () => {
       'chat fake-model',
       'chat fake-model #0',
       'chat fake-model #1',
-      'execute_tool bash'
+      'execute_tool bash',
+      'harness.operation'
     ])
     expect(traceIds.size).toBe(1)
+    const operation = spanNamed(spans, 'harness.operation')
+    expect(operation.attributes).toMatchObject({
+      'harness.thread_id': worker.threadId,
+      'harness.operation.kind': 'chat',
+      'harness.operation.status': 'completed'
+    })
 
-    for (const span of spans) {
+    for (const span of chatSpans) {
       expect(span.attributes).toMatchObject({
+        'gen_ai.provider.name': 'fake',
+        'harness.run_id': operation.attributes['harness.run_id'],
         'gen_ai.agent.name': 'Alpha',
         'gen_ai.conversation.id': worker.threadId,
         'workcell.task.repository': REPOSITORY,

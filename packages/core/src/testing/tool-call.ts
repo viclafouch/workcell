@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { AnyTextAdapter, TextOptions } from '@tanstack/ai'
 import {
+  createHarnessHost,
   defineCommand,
   definePlugin,
   PermissionCallCapability,
@@ -12,7 +13,6 @@ import {
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { fakeText } from '@tanstack/ai/testing'
-import { createAgentHost } from '#/host/agent-host.ts'
 import { readOnlyCredentials } from '#/host/read-only-credentials.ts'
 import { WORKSPACE_ROOT } from '#/sandbox/sandbox-facts.ts'
 import type { WorkerMetadata } from '#/session/metadata.ts'
@@ -154,7 +154,7 @@ export async function runWorkerToolCall({
       return { text: 'Done.' }
     }
   ])
-  const host = createAgentHost({
+  const host = createHarnessHost({
     persistence: memoryPersistence(),
     logger: SILENT_HOST_LOGGER,
     credentials: readOnlyCredentials(secrets)
@@ -205,7 +205,7 @@ export async function decideWorkerToolCall({
   mode = 'acceptEdits',
   plugins = []
 }: Omit<ToolCallOptions, 'secrets' | 'metadata'>) {
-  const host = createAgentHost({
+  const host = createHarnessHost({
     persistence: memoryPersistence(),
     logger: SILENT_HOST_LOGGER
   })

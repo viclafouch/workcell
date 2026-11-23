@@ -2,11 +2,11 @@ import { http, HttpResponse } from 'msw/http'
 import { setupServer } from 'msw/node'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
+import { createHarnessHost } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText, type FakeResponseStep } from '@tanstack/ai/testing'
 import type { WorkerMetadata } from '@workcell/core'
 import {
-  createAgentHost,
   createHostFreeSandbox,
   decideWorkerToolCall,
   defineTestWorker,
@@ -37,6 +37,12 @@ const REPOSITORY = 'acme/app'
 const BRANCH = 'task-7-retry-only-network-failures'
 
 const PULL_REQUEST_NUMBER = 16_500
+
+const PULL_REQUEST_VARIABLES = {
+  owner: 'acme',
+  name: 'app',
+  number: PULL_REQUEST_NUMBER
+}
 
 const PULL_REQUEST_URL = `https://github.com/acme/app/pull/${PULL_REQUEST_NUMBER}`
 
@@ -274,7 +280,7 @@ function openWorker(
 ) {
   const model = fakeText()
   model.setResponses(responses)
-  const host = createAgentHost({ persistence, logger: SILENT_HOST_LOGGER })
+  const host = createHarnessHost({ persistence, logger: SILENT_HOST_LOGGER })
   const worker = defineTestWorker({
     host,
     model,
@@ -394,8 +400,6 @@ describe('the review threads tool of a worker', () => {
   it('reads every page of threads for the branch of the worker, and writes nothing on GitHub', async () => {
     await readReviewThreads()
 
-    const variables = { owner: 'acme', name: 'app', number: PULL_REQUEST_NUMBER }
-
     expect(githubRequests).toStrictEqual([
       `GET ${GITHUB_API}/repos/acme/app/pulls?state=open&head=acme%3A${BRANCH}&per_page=1`,
       `POST ${GITHUB_GRAPHQL_URL}`,
@@ -408,11 +412,11 @@ describe('the review threads tool of a worker', () => {
     ).toStrictEqual([
       {
         operation: 'query ReviewThreads',
-        variables
+        variables: PULL_REQUEST_VARIABLES
       },
       {
         operation: 'query ReviewThreads',
-        variables: { ...variables, cursor: SECOND_PAGE_CURSOR }
+        variables: { ...PULL_REQUEST_VARIABLES, cursor: SECOND_PAGE_CURSOR }
       }
     ])
   })

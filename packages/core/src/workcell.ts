@@ -1,5 +1,9 @@
 import type { AnyTextAdapter } from '@tanstack/ai'
-import type { HarnessPlugin, PermissionMode } from '@tanstack/ai-harness'
+import {
+  createHarnessHost,
+  type HarnessPlugin,
+  type PermissionMode
+} from '@tanstack/ai-harness'
 import {
   resolveAllSecrets,
   type SandboxDefinition,
@@ -7,7 +11,7 @@ import {
 } from '@tanstack/ai-sandbox'
 import type { ModelPricing } from './budget/budget.ts'
 import type { BudgetLimits } from './budget/limits.ts'
-import { createAgentHost } from './host/agent-host.ts'
+import { sendFiles, type ReadAgentFile } from './files/send-files.ts'
 import {
   acceptAllowedSenders,
   isStarterIn,
@@ -16,13 +20,11 @@ import {
 import { readOnlyCredentials } from './host/read-only-credentials.ts'
 import { toTanStackLogger, type LeveledLog } from './host/tanstack-logger.ts'
 import { waitUntilReady } from './host/wait-until-ready.ts'
-import { defineOrchestratorHarness } from './orchestrator/orchestrator-harness.ts'
-import type { SentFileStore } from './store/sent-file-store.ts'
 import {
   createMessageReader,
   type MessageFileOptions
 } from './inputs/message-files.ts'
-import { sendFiles, type ReadAgentFile } from './files/send-files.ts'
+import { defineOrchestratorHarness } from './orchestrator/orchestrator-harness.ts'
 import { createOrchestrator } from './orchestrator/orchestrator.ts'
 import {
   createLibrarySandbox,
@@ -32,8 +34,12 @@ import { workerMetadataSchema } from './session/metadata.ts'
 import type { Database } from './store/database.ts'
 import { createHarnessPersistence } from './store/harness-persistence.ts'
 import { createSandboxInstanceStore } from './store/sandbox-instance-store.ts'
+import type { SentFileStore } from './store/sent-file-store.ts'
 import { createWorkerChangesStore } from './store/worker-changes-store.ts'
-import type { WorkerObservability } from './telemetry/worker-telemetry.ts'
+import {
+  workcellTracer,
+  type WorkerObservability
+} from './telemetry/worker-telemetry.ts'
 import { defineWorkerHarness } from './workers/harness.ts'
 import type { WorkerIdentityEnvParams } from './workers/identity.ts'
 import {
@@ -227,9 +233,12 @@ export async function openWorkcell({
       : [sendFiles({ sentFiles, readFile, secretValues })]
   }
   const activity = createWorkerActivity({ pricing, secretValues })
-  const host = createAgentHost({
+  const host = createHarnessHost({
     acceptInput: acceptAllowedSenders(senders),
-    observability: { onOperation: activity.onOperation },
+    observability: {
+      tracer: workcellTracer(observability),
+      onOperation: activity.onOperation
+    },
     persistence: createHarnessPersistence({
       database,
       logger: logger.child({ module: 'store' })

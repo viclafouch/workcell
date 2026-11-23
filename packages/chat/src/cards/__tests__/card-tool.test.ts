@@ -2,10 +2,10 @@ import type { CardElement } from 'chat'
 import { describe, expect, it, onTestFinished } from 'vitest'
 import { z } from 'zod'
 import type { CardLimits } from '@json-render/chat'
-import { defineHarness } from '@tanstack/ai-harness'
+import { createHarnessHost, defineHarness } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText, type FakeResponseStep } from '@tanstack/ai/testing'
-import { createAgentHost, SILENT_HOST_LOGGER } from '@workcell/core/testing'
+import { SILENT_HOST_LOGGER } from '@workcell/core/testing'
 import { CARD_EVENT, cardOfEvent } from '#/cards/card-event.ts'
 import { chatCards, SHOW_CARD_TOOL } from '#/cards/card-tool.ts'
 
@@ -62,7 +62,7 @@ async function showCard({ spec, limits }: ShowCardParams) {
       return [chatCards({ limits })]
     }
   })
-  const host = createAgentHost({
+  const host = createHarnessHost({
     persistence: memoryPersistence(),
     logger: SILENT_HOST_LOGGER
   })

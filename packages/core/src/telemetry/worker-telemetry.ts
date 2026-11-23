@@ -59,12 +59,18 @@ function taskAttributes(
   )
 }
 
+export function workcellTracer({
+  tracerProvider = trace.getTracerProvider()
+}: WorkerObservability = {}) {
+  return tracerProvider.getTracer(INSTRUMENTATION_SCOPE)
+}
+
 export function workerTelemetry({
-  tracerProvider = trace.getTracerProvider(),
+  tracerProvider,
   meterProvider = metrics.getMeterProvider(),
   pricing
 }: WorkerTelemetryParams) {
-  const tracer = tracerProvider.getTracer(INSTRUMENTATION_SCOPE)
+  const tracer = workcellTracer({ tracerProvider })
   const meter = meterProvider.getMeter(INSTRUMENTATION_SCOPE)
 
   return definePlugin({
@@ -125,8 +131,12 @@ export function workerTelemetry({
       const traceRun = otelMiddleware({
         tracer,
         meter,
-        attributeEnricher: () => {
-          return attributes
+        attributeEnricher: ({ ctx: chat }) => {
+          return {
+            ...attributes,
+            'gen_ai.provider.name': chat.provider,
+            'harness.run_id': chat.runId
+          }
         },
         onSpanEnd: priceUnpricedSpan
       })

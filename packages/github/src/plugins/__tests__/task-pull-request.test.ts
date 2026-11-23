@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { createHarnessHost } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
 import type { WorkerMetadata } from '@workcell/core'
 import {
-  createAgentHost,
   createHostFreeSandbox,
   defineTestWorker,
   SILENT_HOST_LOGGER,
@@ -34,7 +34,7 @@ async function systemPromptOf(metadata: WorkerMetadata) {
       return { text: 'Waiting on review.' }
     }
   ])
-  const host = createAgentHost({
+  const host = createHarnessHost({
     persistence: memoryPersistence(),
     logger: SILENT_HOST_LOGGER
   })

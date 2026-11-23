@@ -13,13 +13,19 @@ export function readVoice(file: string) {
 export function chatVoice({ file }: ChatVoiceParams) {
   return definePlugin({
     name: VOICE_PLUGIN,
-    lifetime: 'turn',
-    setup: async () => {
+    setup: () => {
+      let voice = ''
+
       return {
+        onTurnStart: async () => {
+          voice = await readVoice(file)
+        },
         prompts: [
           {
             id: VOICE_PLUGIN,
-            text: `${CHAT_PRESENCE_RULE}\n\n${await readVoice(file)}`
+            text: () => {
+              return `${CHAT_PRESENCE_RULE}\n\n${voice}`
+            }
           }
         ]
       }

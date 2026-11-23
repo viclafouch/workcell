@@ -27,30 +27,7 @@ const approvalPayloadSchema = z.object({
   tool: z.string()
 })
 
-const questionPayloadSchema = z.object({
-  toolCallId: z.string(),
-  index: z.number()
-})
-
-const questionArgumentsSchema = jsonArgumentsSchema.pipe(
-  z.object({
-    questions: z.array(
-      z.object({
-        question: z.string(),
-        header: z.string().optional(),
-        options: z.array(
-          z.object({ label: z.string(), description: z.string().optional() })
-        )
-      })
-    )
-  })
-)
-
 type RunMessages = readonly ModelMessage[]
-
-type ShownQuestionParams = z.infer<
-  typeof questionArgumentsSchema
->['questions'][number]
 
 function callArguments(messages: RunMessages, toolCallId: string) {
   return messages
@@ -68,15 +45,6 @@ function shownCall(tool: string, args: string) {
   )
 }
 
-function shownQuestion({ header, question, options }: ShownQuestionParams) {
-  const title = header ? `${header}: ${question}` : question
-  const lines = options.map(({ label, description }, index) => {
-    return `${index + 1}. ${label}${description ? ` - ${description}` : ''}`
-  })
-
-  return [title, ...lines].join('\n')
-}
-
 function approvalText(payload: unknown, messages: RunMessages) {
   const approval = approvalPayloadSchema.safeParse(payload).data
   const args =
@@ -87,28 +55,6 @@ function approvalText(payload: unknown, messages: RunMessages) {
   return approval === undefined || args === undefined
     ? undefined
     : shownCall(approval.tool, args)
-}
-
-function questionText(payload: unknown, messages: RunMessages) {
-  const asked = questionPayloadSchema.safeParse(payload).data
-  const item =
-    asked === undefined
-      ? undefined
-      : questionArgumentsSchema.safeParse(
-          callArguments(messages, asked.toolCallId)
-        ).data?.questions[asked.index]
-
-  return item === undefined ? undefined : shownQuestion(item)
-}
-
-const WAIT_TEXT: Partial<
-  Record<
-    WaitKind,
-    (payload: unknown, messages: RunMessages) => string | undefined
-  >
-> = {
-  approval: approvalText,
-  question: questionText
 }
 
 export type PostedWait = { waitId: string; text: string }
@@ -125,7 +71,10 @@ export function stoppedWait(
   return {
     waitId: interrupt.id,
     kind,
-    text: WAIT_TEXT[kind]?.(payload, messages) ?? interrupt.message ?? ''
+    text:
+      (kind === 'approval' ? approvalText(payload, messages) : undefined) ??
+      interrupt.message ??
+      ''
   }
 }
 

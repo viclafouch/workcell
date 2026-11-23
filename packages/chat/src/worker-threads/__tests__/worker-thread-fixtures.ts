@@ -6,6 +6,7 @@ import {
   type ChatMiddleware
 } from '@tanstack/ai'
 import {
+  createHarnessHost,
   defineHarness,
   definePlugin,
   type HarnessPlugin,
@@ -28,7 +29,7 @@ import {
   type WorkerApproval,
   type WorkerMetadata
 } from '@workcell/core'
-import { createAgentHost, SILENT_HOST_LOGGER } from '@workcell/core/testing'
+import { SILENT_HOST_LOGGER } from '@workcell/core/testing'
 import { SILENT_CHAT_LOGGER } from '#/__tests__/test-doubles.ts'
 import type {
   ChatEditParams,
@@ -80,7 +81,8 @@ export const STARTED_WORKER: LiveWorker = {
 export const QUESTION_TEXT = [
   'Open the pull request as a draft or ready?',
   '1. Draft',
-  '2. Ready'
+  '2. Ready',
+  'Type a number or a label, or your own answer.'
 ].join('\n')
 
 export const STARTING_LINE = 'I take TASK-7. Setting up.'
@@ -441,7 +443,7 @@ export function workerSessionOpener({
         ]
       }
     })
-    const host = createAgentHost({ persistence, logger: SILENT_HOST_LOGGER })
+    const host = createHarnessHost({ persistence, logger: SILENT_HOST_LOGGER })
     const session = await host.open(harness, {
       threadId: STARTED_WORKER.threadId,
       user: { id: STARTER }

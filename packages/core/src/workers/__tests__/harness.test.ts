@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { ModelMessage } from '@tanstack/ai'
 import {
+  createHarnessHost,
   definePlugin,
   PermissionRules,
   type PermissionMode
@@ -8,7 +9,6 @@ import {
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
 import { CUT_OFF_NOTE, TRUNCATED_TOOL_RESULT } from '#/host/agent-durability.ts'
-import { createAgentHost } from '#/host/agent-host.ts'
 import { createHostFreeSandbox } from '#/testing/host-free-sandbox.ts'
 import {
   LONG_HOST_TOOL,
@@ -236,7 +236,7 @@ describe('the worker harness', () => {
       { error: OVERLOADED_MODEL_ERROR },
       { text: 'Done after the retry.' }
     ])
-    const host = createAgentHost({
+    const host = createHarnessHost({
       persistence: memoryPersistence(),
       logger: SILENT_HOST_LOGGER
     })
@@ -270,7 +270,7 @@ describe('the worker harness', () => {
       { toolCalls: [{ name: LONG_HOST_TOOL }], finishReason: 'length' },
       { text: 'Done after the cut.' }
     ])
-    const host = createAgentHost({
+    const host = createHarnessHost({
       persistence: memoryPersistence(),
       logger: SILENT_HOST_LOGGER
     })
@@ -320,7 +320,7 @@ describe('the worker harness', () => {
     ])
     const threadId = 'worker-cut-by-a-stop'
     const inputId = 'cut-by-a-stop'
-    const firstHost = createAgentHost({
+    const firstHost = createHarnessHost({
       persistence,
       logger: SILENT_HOST_LOGGER
     })
@@ -337,7 +337,7 @@ describe('the worker harness', () => {
     await streamed
     await firstHost.close({ recoverable: true })
 
-    const nextHost = createAgentHost({
+    const nextHost = createHarnessHost({
       persistence,
       logger: SILENT_HOST_LOGGER
     })

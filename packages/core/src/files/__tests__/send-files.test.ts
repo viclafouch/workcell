@@ -1,5 +1,5 @@
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { defineHarness } from '@tanstack/ai-harness'
+import { createHarnessHost, defineHarness } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
 import {
@@ -11,7 +11,6 @@ import {
   type ReadAgentFile,
   type SentFile
 } from '#/files/send-files.ts'
-import { createAgentHost } from '#/host/agent-host.ts'
 import { SILENT_HOST_LOGGER } from '#/testing/test-doubles.ts'
 
 const SECRET_VALUE = 'sk-live-secret-value'
@@ -51,7 +50,7 @@ async function sendFile({ input, readFile = vi.fn() }: SendFileParams) {
       ]
     }
   })
-  const host = createAgentHost({
+  const host = createHarnessHost({
     persistence: memoryPersistence(),
     logger: SILENT_HOST_LOGGER
   })

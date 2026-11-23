@@ -2,10 +2,9 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { defineHarness } from '@tanstack/ai-harness'
+import { createHarnessHost, defineHarness } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText, type FakeResponseStep } from '@tanstack/ai/testing'
-import { createAgentHost } from '#/host/agent-host.ts'
 import { instructionFiles } from '#/prompts/instruction-files.ts'
 import { SILENT_HOST_LOGGER } from '#/testing/test-doubles.ts'
 
@@ -30,7 +29,7 @@ async function openAgent(repository?: string) {
     return { text: 'Done.' }
   }
   model.setResponses([recordPrompts, recordPrompts])
-  const host = createAgentHost({
+  const host = createHarnessHost({
     persistence: memoryPersistence(),
     logger: SILENT_HOST_LOGGER
   })

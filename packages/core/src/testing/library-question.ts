@@ -1,4 +1,5 @@
 import {
+  createHarnessHost,
   defineHarness,
   type HarnessHost,
   type HarnessPersistence,
@@ -11,7 +12,6 @@ import {
 } from '@tanstack/ai-harness/plugins/coding'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
-import { createAgentHost } from '#/host/agent-host.ts'
 import { SILENT_HOST_LOGGER } from './test-doubles.ts'
 import type { ToolCall } from './tool-call.ts'
 
@@ -24,7 +24,7 @@ type LibraryQuestionOptions = {
 export function openQuestionHost(
   persistence: HarnessPersistence = memoryPersistence()
 ) {
-  return createAgentHost({ persistence, logger: SILENT_HOST_LOGGER })
+  return createHarnessHost({ persistence, logger: SILENT_HOST_LOGGER })
 }
 
 function defineQuestionHarness(

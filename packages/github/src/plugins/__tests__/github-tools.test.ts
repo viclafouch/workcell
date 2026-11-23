@@ -2,10 +2,10 @@ import { http, HttpResponse } from 'msw/http'
 import { setupServer } from 'msw/node'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
+import { createHarnessHost } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText, type FakeResponseStep } from '@tanstack/ai/testing'
 import {
-  createAgentHost,
   createHostFreeSandbox,
   defineTestWorker,
   runWorkerToolCall,
@@ -174,31 +174,28 @@ const network = setupServer(
           }
     })
   }),
-  http.get(
-    `${GITHUB_API}/repos/acme/api/contents/*`,
-    async ({ request }) => {
-      const url = new URL(request.url)
-      const pathname = decodeURIComponent(url.pathname)
-      const ref = url.searchParams.get('ref')
+  http.get(`${GITHUB_API}/repos/acme/api/contents/*`, async ({ request }) => {
+    const url = new URL(request.url)
+    const pathname = decodeURIComponent(url.pathname)
+    const ref = url.searchParams.get('ref')
 
-      if (pathname.endsWith('/apps/web/src/restart.ts') && ref === 'main') {
-        restartFileReads += 1
-        restartReadStarted.resolve(null)
-        await restartReadAnswer
+    if (pathname.endsWith('/apps/web/src/restart.ts') && ref === 'main') {
+      restartFileReads += 1
+      restartReadStarted.resolve(null)
+      await restartReadAnswer
 
-        return HttpResponse.text(RESTART_FILE_CONTENT)
-      }
-
-      if (pathname.endsWith('/apps/web/src/quotes.ts') && ref === 'main') {
-        return HttpResponse.text(LONG_FILE)
-      }
-
-      return pathname.endsWith('/apps/web/package.json') &&
-        ref === 'feature/login'
-        ? HttpResponse.text('{ "name": "web-on-feature" }')
-        : HttpResponse.json({ message: 'Not Found' }, { status: 404 })
+      return HttpResponse.text(RESTART_FILE_CONTENT)
     }
-  ),
+
+    if (pathname.endsWith('/apps/web/src/quotes.ts') && ref === 'main') {
+      return HttpResponse.text(LONG_FILE)
+    }
+
+    return pathname.endsWith('/apps/web/package.json') &&
+      ref === 'feature/login'
+      ? HttpResponse.text('{ "name": "web-on-feature" }')
+      : HttpResponse.json({ message: 'Not Found' }, { status: 404 })
+  }),
   http.post(`${GITHUB_API}/graphql`, async ({ request }) => {
     graphqlBodies.push(graphqlBodySchema.parse(await request.json()))
 
@@ -225,7 +222,7 @@ function openWorker(
 ) {
   const model = fakeText()
   model.setResponses(responses)
-  const host = createAgentHost({ persistence, logger: SILENT_HOST_LOGGER })
+  const host = createHarnessHost({ persistence, logger: SILENT_HOST_LOGGER })
   const worker = defineTestWorker({
     host,
     model,
@@ -467,15 +464,13 @@ describe('the GitHub read tools', () => {
     ).toStrictEqual(['query FileHistory'])
   })
 
-  it('refuses a repository outside its list in one plain sentence, with no GitHub call', async () => {
+  it('refuses a repository outside its list, with no GitHub call', async () => {
     const run = await runGithubTool({
       name: 'github_read_pull_request',
       input: { repository: 'acme/web', number: 42 }
     })
 
-    expect(run.result).toContain(
-      'I read only acme/app, acme/api on GitHub, not acme/web.'
-    )
+    expect(run.result).toContain('acme/app')
     expect(githubRequests).toStrictEqual([])
   })
 

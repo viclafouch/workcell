@@ -2,10 +2,10 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, onTestFinished } from 'vitest'
-import { defineHarness } from '@tanstack/ai-harness'
+import { createHarnessHost, defineHarness } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText, type FakeResponseStep } from '@tanstack/ai/testing'
-import { createAgentHost, SILENT_HOST_LOGGER } from '@workcell/core/testing'
+import { SILENT_HOST_LOGGER } from '@workcell/core/testing'
 import { chatVoice } from '#/plugins/voice.ts'
 import { CHAT_PRESENCE_RULE } from '#/prompts/voice.ts'
 
@@ -42,7 +42,7 @@ describe('the voice of the chat agents', () => {
         return [chatVoice({ file })]
       }
     })
-    const host = createAgentHost({
+    const host = createHarnessHost({
       persistence: memoryPersistence(),
       logger: SILENT_HOST_LOGGER
     })
