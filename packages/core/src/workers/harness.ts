@@ -24,6 +24,7 @@ import {
   type ModelPricing
 } from '#/budget/budget.ts'
 import type { BudgetLimits } from '#/budget/limits.ts'
+import { feedback, type FeedbackOptions } from '#/feedback/feedback.ts'
 import { WORKER_DURABILITY } from '#/host/agent-durability.ts'
 import { durableCompaction } from '#/host/durable-compaction.ts'
 import { repositoryRulesPrompt } from '#/prompts/worker.ts'
@@ -35,7 +36,11 @@ import {
 } from '#/telemetry/worker-telemetry.ts'
 import { denyGuard } from './deny-guard.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
-import { SANDBOX_PERMISSION_RULES, WEB_FETCH_RULE } from './permission-rules.ts'
+import {
+  SANDBOX_DENIALS,
+  SANDBOX_PERMISSION_RULES,
+  WEB_FETCH_RULE
+} from './permission-rules.ts'
 
 export const WORKER_HARNESS_NAME = 'workcell/worker'
 
@@ -49,6 +54,7 @@ type DefineWorkerHarnessParams = {
   pricing: ModelPricing
   defaultLimits: BudgetLimits
   plugins: readonly HarnessPlugin[]
+  feedback?: FeedbackOptions
   observability?: WorkerObservability
 }
 
@@ -77,6 +83,7 @@ export function defineWorkerHarness({
   pricing,
   defaultLimits,
   plugins,
+  feedback: feedbackOptions,
   observability
 }: DefineWorkerHarnessParams) {
   const workerSkills = skills({ dirs: skillDirs })
@@ -99,7 +106,7 @@ export function defineWorkerHarness({
           root: WORKSPACE_ROOT,
           rules: [...SANDBOX_PERMISSION_RULES, WEB_FETCH_RULE]
         }),
-        denyGuard(),
+        denyGuard(SANDBOX_DENIALS),
         workspaceTools({ workspace, outside: 'ask' }),
         boundToolOutput(),
         workerSkills,
@@ -108,6 +115,7 @@ export function defineWorkerHarness({
         todos(),
         usage({ model: pricing.modelCost }),
         workerBudget({ pricing, defaultLimits }),
+        feedback({ ...feedbackOptions, harness: WORKER_HARNESS_NAME }),
         ...plugins
       ]
     }

@@ -18,6 +18,7 @@ import {
   type ModelPricing
 } from '#/budget/budget.ts'
 import type { BudgetLimits } from '#/budget/limits.ts'
+import { feedback, type FeedbackOptions } from '#/feedback/feedback.ts'
 import { AGENT_DURABILITY } from '#/host/agent-durability.ts'
 import type { IsStarter } from '#/host/allowed-senders.ts'
 import { durableCompaction } from '#/host/durable-compaction.ts'
@@ -59,6 +60,7 @@ type DefineOrchestratorHarnessParams = {
   plugins: readonly HarnessPlugin[]
   scope?: string
   skillDirs?: readonly string[]
+  feedback?: FeedbackOptions
   observability?: WorkerObservability
 }
 
@@ -91,6 +93,7 @@ export function defineOrchestratorHarness({
   limits,
   plugins,
   skillDirs = [],
+  feedback: feedbackOptions,
   observability
 }: DefineOrchestratorHarnessParams) {
   const orchestratorSkills = skills({ dirs: skillDirs })
@@ -132,6 +135,11 @@ export function defineOrchestratorHarness({
           defaultLimits: limits,
           agentName: name,
           onLimit: 'end'
+        }),
+        feedback({
+          ...feedbackOptions,
+          harness: ORCHESTRATOR_HARNESS_NAME,
+          agentName: name
         }),
         ...plugins
       ]

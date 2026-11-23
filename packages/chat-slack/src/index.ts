@@ -5,3 +5,4 @@ export {
   slackPlatform
 } from './slack-platform.ts'
 export { SLACK_FORMATTING, slackFormatting } from './slack-formatting.ts'
+export { slackThreadLinks } from './slack-thread-links.ts'

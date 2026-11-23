@@ -1,5 +1,7 @@
-import type { ChatMiddleware } from '@tanstack/ai'
+import { z } from 'zod'
+import type { ChatMiddleware, ToolCall } from '@tanstack/ai'
 import {
+  decidePermission,
   definePlugin,
   PermissionDecisionCapability,
   PermissionResources,
@@ -7,12 +9,29 @@ import {
   type PermissionRule,
   type ToolResources
 } from '@tanstack/ai-harness'
+import type { CommandDenial } from './permission-rules.ts'
 
 const DENY_GUARD = 'workcell/deny-guard'
 
 const RULE_DENIAL = 'A permission rule denies this tool.'
 
+const ruleDenialSchema = z.object({ error: z.literal(RULE_DENIAL) })
+
 type DeclaredResources = Readonly<Record<string, ToolResources>>
+
+const commandCallSchema = z.object({ command: z.string() })
+
+type CommandCall = z.infer<typeof commandCallSchema>
+
+function commandCallOf({
+  function: { arguments: text }
+}: ToolCall): CommandCall | null {
+  try {
+    return commandCallSchema.parse(JSON.parse(text))
+  } catch {
+    return null
+  }
+}
 
 async function listed(
   entries: readonly ToolResources[],
@@ -65,7 +84,7 @@ function isHidden(rules: readonly PermissionRule[], tool: { name: string }) {
   return last?.decision === 'deny' && last.resource === undefined
 }
 
-export function denyGuard() {
+export function denyGuard(denials: readonly CommandDenial[]) {
   return definePlugin({
     name: DENY_GUARD,
     requires: [PermissionDecisionCapability],
@@ -84,12 +103,43 @@ export function denyGuard() {
         }
       }
 
+      const reasonOf = async (tool: string, input: unknown) => {
+        const resources = await resourcesOf(declared, tool, input)
+        const denial = denials.find(({ rules: denialRules }) => {
+          return (
+            decidePermission(denialRules, tool, 'default', { resources }) ===
+            'deny'
+          )
+        })
+
+        return denial?.reason
+      }
+
       const guard: ChatMiddleware = {
         name: DENY_GUARD,
         onGuardToolCall: async (_ctx, { toolName, args }) => {
           return (await isDenied(toolName, args))
-            ? { type: 'skip', result: RULE_DENIAL }
+            ? { type: 'skip', result: { error: RULE_DENIAL } }
             : undefined
+        },
+        onAfterToolCall: async (_ctx, { toolName, toolCall, result }) => {
+          const commandCall = commandCallOf(toolCall)
+
+          if (
+            commandCall === null ||
+            !ruleDenialSchema.safeParse(result).success
+          ) {
+            return
+          }
+
+          const reason = await reasonOf(toolName, commandCall)
+
+          return reason === undefined
+            ? undefined
+            : {
+                type: 'replaceResult',
+                result: { error: `${RULE_DENIAL} ${reason}` }
+              }
         }
       }
 

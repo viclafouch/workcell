@@ -13,6 +13,7 @@ import {
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { fakeText } from '@tanstack/ai/testing'
+import type { FeedbackOptions } from '#/feedback/feedback.ts'
 import { readOnlyCredentials } from '#/host/read-only-credentials.ts'
 import { WORKSPACE_ROOT } from '#/sandbox/sandbox-facts.ts'
 import type { WorkerMetadata } from '#/session/metadata.ts'
@@ -40,6 +41,7 @@ type DefineTestWorkerParams = {
   lifecycle?: WorkerLifecycle
   redactedSecretNames?: readonly string[]
   plugins?: readonly HarnessPlugin[]
+  feedback?: FeedbackOptions
 }
 
 type ToolCallOptions = {
@@ -106,7 +108,8 @@ export function defineTestWorker({
   hostFree,
   lifecycle = createHostFreeLifecycle(host, hostFree),
   redactedSecretNames = [],
-  plugins = []
+  plugins = [],
+  feedback
 }: DefineTestWorkerParams) {
   return defineWorkerHarness({
     adapter: model,
@@ -124,7 +127,8 @@ export function defineTestWorker({
     redactedSecretNames,
     pricing: FREE_MODEL_PRICING,
     defaultLimits: ROOMY_LIMITS,
-    plugins
+    plugins,
+    feedback
   })
 }
 

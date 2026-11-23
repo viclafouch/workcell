@@ -1,4 +1,5 @@
 import type { PermissionRule } from '@tanstack/ai-harness'
+import { PUSH_DENIAL_REASON, ROOT_DENIAL_REASON } from '#/prompts/worker.ts'
 
 const PROTECTED_BRANCHES = ['dev', 'main']
 
@@ -33,20 +34,31 @@ const RISKY_PUSHES = [
   'git -* push*'
 ]
 
-const DENIED_COMMANDS = [
-  'sudo',
-  'sudo *',
-  'docker',
-  'docker *',
-  ...PUSHES_TO_PROTECTED_BRANCHES,
-  ...RISKY_PUSHES
+export type CommandDenial = {
+  reason: string
+  rules: readonly PermissionRule[]
+}
+
+function denyCommands(reason: string, resources: readonly string[]) {
+  return {
+    reason,
+    rules: resources.map((resource): PermissionRule => {
+      return { tool: 'bash', resource, decision: 'deny', kind: 'execute' }
+    })
+  }
+}
+
+export const SANDBOX_DENIALS: readonly CommandDenial[] = [
+  denyCommands(ROOT_DENIAL_REASON, ['sudo', 'sudo *', 'docker', 'docker *']),
+  denyCommands(PUSH_DENIAL_REASON, [
+    ...PUSHES_TO_PROTECTED_BRANCHES,
+    ...RISKY_PUSHES
+  ])
 ]
 
-export const SANDBOX_PERMISSION_RULES: PermissionRule[] = DENIED_COMMANDS.map(
-  (resource) => {
-    return { tool: 'bash', resource, decision: 'deny', kind: 'execute' }
-  }
-)
+export const SANDBOX_PERMISSION_RULES = SANDBOX_DENIALS.flatMap(({ rules }) => {
+  return rules
+})
 
 export const WEB_FETCH_RULE: PermissionRule = {
   tool: 'webfetch',

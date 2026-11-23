@@ -1,5 +1,6 @@
 {
   "name": "@workcell/core",
+  "version": "0.1.0",
   "private": true,
   "description": "The host, the worker engine, the budget, the Postgres stores and the sandbox lifecycle.",
   "license": "MIT",

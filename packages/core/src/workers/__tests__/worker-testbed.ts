@@ -17,6 +17,7 @@ import {
 } from '@tanstack/ai/testing'
 import type { ModelPricing } from '#/budget/budget.ts'
 import type { BudgetLimits } from '#/budget/limits.ts'
+import type { FeedbackOptions } from '#/feedback/feedback.ts'
 import { workerMetadataSchema } from '#/session/metadata.ts'
 import type { Database } from '#/store/database.ts'
 import { createSandboxInstanceStore } from '#/store/sandbox-instance-store.ts'
@@ -180,6 +181,7 @@ export async function openWorkers(
       ASSETS_CDN_TOKEN: SANDBOX_SECRETS.ASSETS_CDN_TOKEN
     }),
     librarySecrets,
+    feedback,
     wrapDatabase = (database) => {
       return database
     }
@@ -205,6 +207,7 @@ export async function openWorkers(
     onWorkerStart?: OnWorkerStart
     sandboxSecrets?: Secrets
     librarySecrets?: Secrets
+    feedback?: FeedbackOptions
     wrapDatabase?: (database: Database) => Database
   } = {}
 ) {
@@ -302,7 +305,8 @@ export async function openWorkers(
       maxRunningTurns,
       idleSandboxMs,
       observability,
-      onWorkerStart
+      onWorkerStart,
+      feedback
     })
 
     return {

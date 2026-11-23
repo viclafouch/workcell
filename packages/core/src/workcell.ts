@@ -11,6 +11,7 @@ import {
 } from '@tanstack/ai-sandbox'
 import type { ModelPricing } from './budget/budget.ts'
 import type { BudgetLimits } from './budget/limits.ts'
+import type { FeedbackOptions } from './feedback/feedback.ts'
 import { sendFiles, type ReadAgentFile } from './files/send-files.ts'
 import {
   acceptAllowedSenders,
@@ -96,6 +97,7 @@ type OpenWorkcellParams = {
   onWorkerStart?: OnWorkerStart
   messageFiles?: MessageFileOptions
   sentFiles?: SentFileStore
+  feedback?: FeedbackOptions
 }
 
 export abstract class StartRefusalError extends Error {
@@ -204,7 +206,8 @@ export async function openWorkcell({
   observability,
   onWorkerStart,
   messageFiles,
-  sentFiles
+  sentFiles,
+  feedback
 }: OpenWorkcellParams) {
   requireOneSandboxPackage([
     ...Object.values(sandboxes),
@@ -293,6 +296,7 @@ export async function openWorkcell({
       ...sendFilesFrom(workerSandbox.readFile),
       ...plugins
     ],
+    feedback,
     observability
   })
   const repositories = Object.keys(sandboxes)
@@ -333,6 +337,7 @@ export async function openWorkcell({
     isStarter,
     repositories,
     pricing,
+    feedback,
     observability
   })
   await waitUntilReady('sandbox provider', sandboxProvider.list, startLog)
