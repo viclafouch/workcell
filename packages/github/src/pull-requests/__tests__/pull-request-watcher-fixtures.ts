@@ -47,6 +47,14 @@ const REVIEW_GATE: ReviewGate = {
 
 export const PULL_REQUEST_URL = 'https://github.com/acme/app/pull/42'
 
+export const EARLIER = '2026-11-20T09:00:00Z'
+
+export const LATER = '2026-11-20T11:00:00Z'
+
+export function lastCommitAt(committedDate: string) {
+  return { nodes: [{ commit: { committedDate, status: null } }] }
+}
+
 export const COLLEAGUE: Author = { __typename: 'User', login: 'colleague' }
 
 export const AI_REVIEW_BOT: Author = { __typename: 'Bot', login: 'review-bot' }
@@ -98,6 +106,7 @@ export function openPullRequest(
     number: 42,
     url: PULL_REQUEST_URL,
     merged: false,
+    closed: false,
     mergeable: 'MERGEABLE',
     headRefOid: 'head-1',
     mergeCommit: null,
@@ -145,7 +154,9 @@ export function rollup(
 export function checks(state: StatusState, ...contexts: StatusContext[]) {
   return {
     statusCheckRollup: rollup(state),
-    commits: { nodes: [{ commit: { status: { contexts } } }] }
+    commits: {
+      nodes: [{ commit: { committedDate: EARLIER, status: { contexts } } }]
+    }
   }
 }
 
@@ -206,14 +217,22 @@ function selectionOf(
   const repository = `${variables[`owner${index}`]}/${variables[`name${index}`]}`
   const branch = variables[`branch${index}`]
   const number = variables[`number${index}`]
-  const fake = githubFake.pullRequests.find((candidate) => {
-    return (
-      candidate.repository === repository &&
-      (branch === undefined
-        ? candidate.pullRequest.number === number
-        : candidate.branch === branch)
-    )
-  })
+  const fake = githubFake.pullRequests.find(
+    ({
+      repository: candidateRepository,
+      branch: candidateBranch,
+      pullRequest
+    }) => {
+      const isClosedUnmerged = pullRequest.closed && !pullRequest.merged
+
+      return (
+        candidateRepository === repository &&
+        (branch === undefined
+          ? pullRequest.number === number
+          : candidateBranch === branch && !isClosedUnmerged)
+      )
+    }
+  )
 
   if (number === undefined) {
     return {

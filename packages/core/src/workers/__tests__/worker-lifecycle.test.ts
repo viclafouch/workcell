@@ -181,7 +181,7 @@ describe('the worker lifecycle', () => {
     await using agent = await openWorkers(url, [
       bash('git init'),
       { text: 'Ready for review.' },
-      finishTask(report),
+      finishTask({ report }),
       ({ request }) => {
         callsAfterFinish.push(JSON.stringify(request.messages))
 
@@ -215,7 +215,7 @@ describe('the worker lifecycle', () => {
     const url = await createMigratedDatabase()
     await using agent = await openWorkers(url, [
       { text: 'Done, the chart is in the thread.' },
-      { toolCalls: [{ name: 'finish_task', input: {} }] }
+      finishTask({ report: undefined })
     ])
 
     const worker = await agent.workers.startWorker({

@@ -27,6 +27,9 @@ const PROJECT_LINES: PullRequestLines = {
   },
   mergeQueueEntry: (pullRequestUrl) => {
     return `queued ${pullRequestUrl}`
+  },
+  closed: ({ pullRequestUrl }) => {
+    return `dropped ${pullRequestUrl}`
   }
 }
 
@@ -37,6 +40,7 @@ function pullRequestWith(
     number: 42,
     url: PULL_REQUEST_URL,
     merged: false,
+    closed: false,
     mergeable: 'MERGEABLE',
     headRefOid: 'head-1',
     mergeCommit: null,
@@ -73,6 +77,7 @@ const WAITING_ON_AN_OWNER = pullRequestWith({
     nodes: [
       {
         commit: {
+          committedDate: '2026-11-20T09:00:00Z',
           status: {
             contexts: [
               {
@@ -132,6 +137,7 @@ const RED_CHECKS = pullRequestWith({
     nodes: [
       {
         commit: {
+          committedDate: '2026-11-20T09:00:00Z',
           status: {
             contexts: [redStatus('code/scan'), redStatus('Risk score')]
           }
@@ -252,7 +258,11 @@ describe('the events of a pull request', () => {
       {
         kind: 'merged',
         inputId: 'github:acme/app#42:merged:merge-1',
-        action: { type: 'finish', report: `Merged: ${PULL_REQUEST_URL}` }
+        action: {
+          type: 'finish',
+          report: `Merged: ${PULL_REQUEST_URL}`,
+          outcome: { value: 'success' }
+        }
       }
     ])
   })
@@ -266,7 +276,8 @@ describe('the events of a pull request', () => {
       { type: 'post', line: `queued ${PULL_REQUEST_URL}` },
       {
         type: 'finish',
-        report: `shipped ${PULL_REQUEST_URL} for https://tasks.example.com/TASK-7`
+        report: `shipped ${PULL_REQUEST_URL} for https://tasks.example.com/TASK-7`,
+        outcome: { value: 'success' }
       }
     ])
   })

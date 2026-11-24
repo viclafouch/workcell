@@ -187,8 +187,26 @@ export function bash(command: string): FakeResponse {
   return { toolCalls: [{ name: 'bash', input: { command } }] }
 }
 
-export function finishTask(report = 'Merged.'): FakeResponse {
-  return { toolCalls: [{ name: 'finish_task', input: { report } }] }
+const STOPPED_BY_A_PERSON = {
+  outcome: 'blocked',
+  cause: 'A person told it to stop.'
+} as const
+
+type FinishInput = {
+  report?: string
+  outcome: 'blocked' | 'manual'
+  cause: string
+}
+
+export function finishTask(input: Partial<FinishInput> = {}): FakeResponse {
+  return {
+    toolCalls: [
+      {
+        name: 'finish_task',
+        input: { report: 'Merged.', ...STOPPED_BY_A_PERSON, ...input }
+      }
+    ]
+  }
 }
 
 export const ASK_DRAFT_OR_READY: FakeResponse = {

@@ -46,6 +46,14 @@ type PullRequestWatcherParams = {
 
 type WorkerOnABranch = WatchedWorker & { branch: string }
 
+const PULL_REQUEST_PATH = /\/pull\/(?<number>\d+)$/u
+
+function recordedNumberOf(pullRequest: string | undefined) {
+  const number = pullRequest?.match(PULL_REQUEST_PATH)?.groups?.number
+
+  return number === undefined ? undefined : Number(number)
+}
+
 function matchIsOnABranch(worker: WatchedWorker): worker is WorkerOnABranch {
   return worker.branch !== undefined
 }
@@ -84,7 +92,11 @@ export function createPullRequestWatcher({
         return true
       }
       case 'finish': {
-        return finishWorker({ threadId, report: action.report })
+        return finishWorker({
+          threadId,
+          report: action.report,
+          outcome: action.outcome
+        })
       }
     }
   }
@@ -170,9 +182,14 @@ export function createPullRequestWatcher({
   const headOf = ({
     threadId,
     repository,
-    branch
+    branch,
+    pullRequest
   }: WorkerOnABranch): PullRequestHead => {
-    return { repository, branch, number: pullRequestNumbers.get(threadId) }
+    return {
+      repository,
+      branch,
+      number: pullRequestNumbers.get(threadId) ?? recordedNumberOf(pullRequest)
+    }
   }
 
   const pollOnce = async () => {

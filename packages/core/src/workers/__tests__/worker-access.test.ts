@@ -386,7 +386,7 @@ describe('a refused finish', () => {
       [
         { text: 'On it.' },
         bash(WORK_ON_A_BRANCH),
-        finishTask('Done.'),
+        finishTask({ report: 'Done.' }),
         ({ request }) => {
           answeredMessages.push(JSON.stringify(request.messages))
 
@@ -427,9 +427,9 @@ describe('a refused finish', () => {
       return { text: 'I ask first.' }
     }
     await using agent = await openWorkers(url, [
-      finishTask('Nothing to change.'),
+      finishTask({ report: 'Nothing to change.' }),
       readRefusal,
-      finishTask('Merged.'),
+      finishTask({ report: 'Merged.' }),
       readRefusal
     ])
 
@@ -470,7 +470,7 @@ describe('a refused finish', () => {
       subject: 'TASK-3'
     })
     await using restarted = await openWorkers(url, [
-      finishTask('Closed: dev already does it.')
+      finishTask({ report: 'Closed: dev already does it.' })
     ])
 
     await restarted.workers.messageWorker({
@@ -508,7 +508,7 @@ describe('a refused finish', () => {
       url,
       [
         { text: 'On it.' },
-        finishTask('Done.'),
+        finishTask({ report: 'Done.' }),
         ({ request }) => {
           answeredMessages.push(JSON.stringify(request.messages))
 

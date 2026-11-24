@@ -326,6 +326,7 @@ describe('the review threads tool of a worker', () => {
         number: 16_500,
         url: PULL_REQUEST_URL,
         merged: false,
+        closed: false,
         mergeable: 'MERGEABLE',
         headRefOid: 'head-1',
         mergeCommit: null,
@@ -343,6 +344,7 @@ describe('the review threads tool of a worker', () => {
                   {
                     id: 'finding-1',
                     url: FINDING_URL,
+                    createdAt: '2026-11-20T09:00:00Z',
                     author: { __typename: 'Bot', login: 'review-bot' }
                   }
                 ]

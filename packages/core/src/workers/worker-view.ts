@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import type { HarnessHost, PendingWait, WaitKind } from '@tanstack/ai-harness'
-import { budgetStateOf, type ModelPricing } from '#/budget/budget.ts'
+import {
+  budgetStateOf,
+  spentUsdOf,
+  type ModelPricing
+} from '#/budget/budget.ts'
+import { taskOutcomeSchema, type TaskOutcome } from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
 import type { ListedWorker } from './live-workers.ts'
@@ -16,7 +21,15 @@ export const workerViewSchema = z.object({
   name: z.string(),
   repository: z.string(),
   topic: z.string(),
-  phase: z.enum(['setup', 'queued', 'model', 'tool', 'waiting', 'idle']),
+  phase: z.enum([
+    'setup',
+    'queued',
+    'model',
+    'tool',
+    'waiting',
+    'idle',
+    'finished'
+  ]),
   command: z.string().optional(),
   turnUsd: z.number().optional(),
   spentUsd: z.number(),
@@ -29,6 +42,7 @@ export const workerViewSchema = z.object({
     })
   ),
   startupMs: z.number().optional(),
+  outcome: taskOutcomeSchema.omit({ costUsd: true }).optional(),
   sandbox: z
     .discriminatedUnion('state', [
       z.object({
@@ -64,10 +78,13 @@ type WorkerFacts = {
   budgetUsd: number | undefined
 }
 
+type FinishedWorker = ListedWorker & { outcome: TaskOutcome }
+
 type CreateWorkerViewParams = {
   host: HarnessHost
   harness: WorkerHarness
   readWorkers: () => Promise<ListedWorker[]>
+  readFinishedWorkers: () => Promise<FinishedWorker[]>
   lifecycle: Pick<WorkerLifecycle, 'isQueued'>
   activity: Pick<WorkerActivity, 'activityOf'>
   workerSandbox: Pick<WorkerSandbox, 'isInSetup' | 'inspect'>
@@ -150,6 +167,25 @@ export function workerViewOf(facts: WorkerFacts): WorkerView {
   }
 }
 
+export function finishedWorkerViewOf({
+  outcome: { costUsd, ...outcome },
+  ...worker
+}: FinishedWorker): WorkerView {
+  return {
+    threadId: worker.threadId,
+    name: worker.name,
+    repository: worker.repository,
+    topic: worker.subject ?? firstLine(worker.task),
+    phase: 'finished',
+    spentUsd: costUsd,
+    branch: worker.branch,
+    pullRequest: worker.pullRequest,
+    waits: [],
+    startupMs: worker.startupMs,
+    outcome
+  }
+}
+
 export function withSandboxView(
   view: WorkerView,
   sandbox: InspectedSandbox
@@ -164,6 +200,7 @@ export function createWorkerView({
   host,
   harness,
   readWorkers,
+  readFinishedWorkers,
   lifecycle,
   activity,
   workerSandbox,
@@ -181,25 +218,48 @@ export function createWorkerView({
       isQueued: lifecycle.isQueued(threadId),
       isInSetup: workerSandbox.isInSetup(threadId),
       pendingWaits,
-      spentUsd: pricing.costOfUsage(usage) + (budget?.summaryUsd ?? 0),
+      spentUsd: spentUsdOf(pricing, { usage, plugins }),
       budgetUsd: budget?.capUsd
     })
   }
 
-  const viewWorkers = async () => {
+  const viewLiveWorkers = async () => {
     const workers = await readWorkers()
 
     return Promise.all(workers.map(viewOf))
   }
 
-  const inspectWorkers = async () => {
-    const views = await viewWorkers()
+  const viewFinishedWorkers = async () => {
+    const workers = await readFinishedWorkers()
+
+    return workers.map(finishedWorkerViewOf)
+  }
+
+  const withFinishedWorkers = async (liveViews: Promise<WorkerView[]>) => {
+    const [live, finished] = await Promise.all([
+      liveViews,
+      viewFinishedWorkers()
+    ])
+
+    return [...live, ...finished]
+  }
+
+  const inspectLiveWorkers = async () => {
+    const views = await viewLiveWorkers()
 
     return Promise.all(
       views.map(async (view) => {
         return withSandboxView(view, await workerSandbox.inspect(view.threadId))
       })
     )
+  }
+
+  const viewWorkers = async () => {
+    return withFinishedWorkers(viewLiveWorkers())
+  }
+
+  const inspectWorkers = async () => {
+    return withFinishedWorkers(inspectLiveWorkers())
   }
 
   return { viewWorkers, inspectWorkers }

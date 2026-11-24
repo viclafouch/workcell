@@ -19,6 +19,7 @@ import {
   closeWorkerTestbed,
   openWorkers,
   openWorkerTestbed,
+  outcomeOf,
   testbedHostFree,
   type OpenedWorkers
 } from './worker-testbed.ts'
@@ -28,6 +29,8 @@ const SETUP_HOLD_MS = 300
 const TWO_NAMES = ['Alpha', 'Beta']
 
 const PULL_REQUEST = 'https://example.com/acme/app/pull/7'
+
+const DAYS_PAST_THE_WINDOW = 8
 
 function viewOn(views: readonly WorkerView[], threadId: string) {
   const view = views.find((worker) => {
@@ -286,6 +289,68 @@ describe('the live view of a worker', () => {
     expect(live).toMatchObject(shared)
     expect(toolResultsOf(answer.events).join('\n')).toContain(
       `Alpha on TASK-7 in ${REPOSITORY}: sleeps, spent $0.00 of $100.00, pull request ${PULL_REQUEST}`
+    )
+  })
+
+  it('shows the tasks that finished in the last seven days with their outcome and their cost, in the live view and in the line of list_workers', async () => {
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses(
+        [callTool('list_workers'), { text: 'The task merged.' }],
+        [{ text: 'On it.' }]
+      ),
+      { workerNames: TWO_NAMES }
+    )
+    const recent = await agent.workers.startWorker(TICKET_START)
+    await recent.firstTurn
+    const older = await agent.workers.startWorker({
+      ...TICKET_START,
+      subject: 'TASK-8',
+      inputId: 'TASK-8'
+    })
+    await older.firstTurn
+    await agent.workers.finishWorker({
+      threadId: recent.threadId,
+      report: 'Merged.',
+      outcome: { value: 'flawed' }
+    })
+    await agent.workers.finishWorker({
+      threadId: older.threadId,
+      report: 'Stopped.',
+      outcome: { value: 'blocked', cause: 'It used its budget.' }
+    })
+    await agent.workers.updateWorker({
+      threadId: older.threadId,
+      metadata: {
+        outcome: {
+          value: 'blocked',
+          costUsd: 0,
+          changedAt: Temporal.Now.zonedDateTimeISO('UTC').subtract({
+            days: DAYS_PAST_THE_WINDOW
+          }).epochMilliseconds
+        }
+      }
+    })
+
+    const outcome = await outcomeOf(agent, recent.threadId)
+
+    const views = await agent.viewWorkers()
+    const live = await agent.inspectWorkers()
+    const answer = await askOrchestrator(agent)
+
+    expect(views).toMatchObject([
+      {
+        threadId: recent.threadId,
+        name: recent.name,
+        phase: 'finished',
+        outcome: { value: 'flawed' },
+        spentUsd: outcome?.costUsd
+      }
+    ])
+    expect(live).toStrictEqual(views)
+    expect(toolResultsOf(answer.events).join('\n')).toContain(
+      `${recent.name} on TASK-7 in ${REPOSITORY}: finished flawed, spent $0.00`
     )
   })
 })

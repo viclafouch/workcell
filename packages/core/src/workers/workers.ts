@@ -12,7 +12,7 @@ import { refusalOf, type IsStarter } from '#/host/allowed-senders.ts'
 import { logMcpServerChanges } from '#/host/mcp-server-log.ts'
 import type { MessageFile, MessageReader } from '#/inputs/message-files.ts'
 import { FILES_ANSWER } from '#/prompts/worker.ts'
-import type { WorkerMetadata } from '#/session/metadata.ts'
+import type { TaskEnd, WorkerMetadata } from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
 import {
   personInputId,
@@ -68,7 +68,11 @@ export type WakeWorkerParams = {
   delivery: 'steer' | 'followUp'
 }
 
-export type WorkerFinish = { threadId: string; report: string }
+export type WorkerFinish = {
+  threadId: string
+  report: string
+  outcome: TaskEnd
+}
 
 export type UpdateWorkerParams = {
   threadId: string
@@ -314,10 +318,10 @@ async function finishIdleWorker(
     harness,
     lifecycle
   }: Pick<WorkersOptions, 'host' | 'harness' | 'lifecycle'>,
-  { threadId, report }: WorkerFinish
+  { threadId, report, outcome }: WorkerFinish
 ) {
   const view = await host.observe(harness, { threadId })
-  const { status } = await view.snapshot()
+  const { status, usage, plugins } = await view.snapshot()
 
   if (status === 'running' || lifecycle.isQueued(threadId)) {
     return false
@@ -333,8 +337,10 @@ async function finishIdleWorker(
   await lifecycle.finish({
     worker: { threadId, name: worker.name },
     report,
+    outcome,
+    spending: { usage, plugins },
     updateIndexEntry: async (update) => {
-      await host.sessions.update({ harness, threadId, update })
+      return host.sessions.update({ harness, threadId, update })
     }
   })
 
@@ -363,6 +369,24 @@ export function createWorkers({
 
     return entries.flatMap((entry) => {
       return listedWorkerOf(entry) ?? []
+    })
+  }
+
+  const readFinishedWorkers = async (since: Temporal.Instant) => {
+    const { entries } = await host.sessions.list({
+      harness: harness.name,
+      withArchived: true
+    })
+
+    return entries.flatMap((entry) => {
+      const worker = entry.archived === true ? listedWorkerOf(entry) : undefined
+      const outcome = worker?.outcome
+
+      return worker !== undefined &&
+        outcome !== undefined &&
+        outcome.changedAt >= since.epochMilliseconds
+        ? [{ ...worker, outcome }]
+        : []
     })
   }
 
@@ -603,6 +627,7 @@ export function createWorkers({
   return {
     startWorker,
     readWorkers,
+    readFinishedWorkers,
     listWorkers,
     trackLiveWorkers,
     wakeWorker,

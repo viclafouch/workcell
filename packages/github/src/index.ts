@@ -22,7 +22,7 @@ export { taskPullRequest } from './plugins/task-pull-request.ts'
 export { reviewThreadTools } from './plugins/review-threads.ts'
 export {
   PULL_REQUEST_LINES,
-  type MergedPullRequest,
+  type EndedPullRequest,
   type PullRequestLines
 } from './prompts/github.ts'
 export { githubProbe } from './api/secret-probe.ts'

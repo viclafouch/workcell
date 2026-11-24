@@ -1,4 +1,4 @@
-import type { WakeWorkerParams } from '@workcell/core'
+import type { TaskEnd, WakeWorkerParams } from '@workcell/core'
 import type {
   Author,
   FailedJob,
@@ -33,17 +33,23 @@ type PullRequestEventKind =
   | 'merge-queue-entry'
   | 'merge-queue-ejection'
   | 'merged'
+  | 'closed'
 
 type PullRequestAction =
   | { type: 'wake'; delivery: WakeWorkerParams['delivery']; message: string }
   | { type: 'post'; line: string }
-  | { type: 'finish'; report: string }
+  | { type: 'finish'; report: string; outcome: TaskEnd }
 
 export type PullRequestEvent = {
   kind: PullRequestEventKind
   inputId: string
   action: PullRequestAction
 }
+
+type IsAnAskParams = Pick<
+  WatchedPullRequest['reviews']['nodes'][number],
+  'state' | 'body'
+>
 
 type EventFacts = Pick<PullRequestEvent, 'kind' | 'action'> & { id: string }
 
@@ -274,13 +280,8 @@ function commentEvents(
       })
     })
   const reviewEvents = reviews.nodes
-    .filter(({ author, state, body }) => {
-      return (
-        !isOwnOrGhost(author, viewerLogin) &&
-        !isBot(author) &&
-        REVIEW_STATES_THAT_WAKE.has(state) &&
-        (state === 'CHANGES_REQUESTED' || body.trim() !== '')
-      )
+    .filter((review) => {
+      return isAPerson(review.author, viewerLogin) && isAnAsk(review)
     })
     .map(({ id, url: reviewUrl, author, state }) => {
       const verdict =
@@ -297,6 +298,46 @@ function commentEvents(
     })
 
   return [...threadEvents, ...conversationEvents, ...reviewEvents]
+}
+
+function isAPerson(author: Author, viewerLogin: string) {
+  return !isOwnOrGhost(author, viewerLogin) && !isBot(author)
+}
+
+function isAnAsk({ state, body }: IsAnAskParams) {
+  return (
+    REVIEW_STATES_THAT_WAKE.has(state) &&
+    (state === 'CHANGES_REQUESTED' || body.trim() !== '')
+  )
+}
+
+function mergeOutcome(
+  { commits, reviewThreads, comments, reviews }: WatchedPullRequest,
+  viewerLogin: string
+): TaskEnd {
+  const lastCommit = commits.nodes.at(-1)?.commit.committedDate
+
+  if (lastCommit === undefined) {
+    return { value: 'success' }
+  }
+
+  const lastCommitAt = Temporal.Instant.from(lastCommit)
+  const asks = [
+    ...reviewThreads.nodes.flatMap(({ comments: threadComments }) => {
+      return threadComments.nodes
+    }),
+    ...comments.nodes,
+    ...reviews.nodes.filter(isAnAsk)
+  ]
+  const isFixedAfterAnAsk = asks.some(({ author, createdAt }) => {
+    return (
+      isAPerson(author, viewerLogin) &&
+      Temporal.Instant.compare(Temporal.Instant.from(createdAt), lastCommitAt) <
+        0
+    )
+  })
+
+  return { value: isFixedAfterAnAsk ? 'flawed' : 'success' }
 }
 
 function mergeQueueEvents(
@@ -332,7 +373,7 @@ export function pullRequestEvents({
   failedJobs = [],
   personChecks = []
 }: PullRequestEventsParams): PullRequestEvent[] {
-  const { number, url, merged, mergeCommit, mergeable, headRefOid } =
+  const { number, url, merged, closed, mergeCommit, mergeable, headRefOid } =
     pullRequest
   const eventOf: EventOf = ({ kind, id, action }) => {
     return {
@@ -349,7 +390,25 @@ export function pullRequestEvents({
         id: mergeCommit?.oid ?? headRefOid,
         action: {
           type: 'finish',
-          report: lines.merged({ pullRequestUrl: url, subject })
+          report: lines.merged({ pullRequestUrl: url, subject }),
+          outcome: mergeOutcome(pullRequest, viewerLogin)
+        }
+      })
+    ]
+  }
+
+  if (closed) {
+    return [
+      eventOf({
+        kind: 'closed',
+        id: headRefOid,
+        action: {
+          type: 'finish',
+          report: lines.closed({ pullRequestUrl: url, subject }),
+          outcome: {
+            value: 'manual',
+            cause: 'A person closed the pull request unmerged.'
+          }
         }
       })
     ]
