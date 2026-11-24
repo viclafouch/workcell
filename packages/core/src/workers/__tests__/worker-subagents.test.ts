@@ -59,10 +59,18 @@ function tracedSubagentRunIds(spans: ReadableSpan[]) {
   return [...new Set(runIds)].toSorted(byText)
 }
 
-function reviewInTwoSubagents(childCalls: ModelMessage[][]): FakeResponseStep {
+function reviewInTwoSubagents(
+  childCalls: ModelMessage[][],
+  childTools: string[][] = []
+): FakeResponseStep {
   return ({ request }) => {
     if (!isWorkerCall(request)) {
       childCalls.push(request.messages)
+      childTools.push(
+        (request.tools ?? []).map(({ name }) => {
+          return String(name)
+        })
+      )
 
       return { text: 'No finding.' }
     }
@@ -89,7 +97,8 @@ describe('the subagents of a worker', () => {
 
   it('gives each subagent its task only, none of the session of the worker', async () => {
     const childCalls: ModelMessage[][] = []
-    const respond = reviewInTwoSubagents(childCalls)
+    const childTools: string[][] = []
+    const respond = reviewInTwoSubagents(childCalls, childTools)
     await using agent = await openWorkers(await createMigratedDatabase(), [
       respond,
       respond,
@@ -117,6 +126,16 @@ describe('the subagents of a worker', () => {
     ).toStrictEqual([
       JSON.stringify([{ role: 'user', content: STANDARDS_TASK }]),
       JSON.stringify([{ role: 'user', content: SPEC_TASK }])
+    ])
+    expect(
+      childTools.map((names) => {
+        return ['bash', 'finish_task', 'question'].map((name) => {
+          return names.includes(name)
+        })
+      })
+    ).toStrictEqual([
+      [true, false, false],
+      [true, false, false]
     ])
   })
 

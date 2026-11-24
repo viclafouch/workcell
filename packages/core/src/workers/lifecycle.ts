@@ -44,7 +44,7 @@ const IDLE_SANDBOX_MINUTES = 30
 
 const IDLE_SANDBOX_MS = IDLE_SANDBOX_MINUTES * MS_PER_MINUTE
 
-const FINISH_TASK = 'finish_task'
+export const FINISH_TASK = 'finish_task'
 
 const LIFECYCLE_PLUGIN = 'workcell/worker-lifecycle'
 
@@ -222,6 +222,10 @@ function createTurnQueue(maxRunningTurns: number) {
   }
 
   const waitForSlot = async (slot: TurnSlot, log: WorkerLog) => {
+    if (slot.signal.aborted) {
+      return
+    }
+
     turns.addItem(slot)
     restartToFillTheFreeSlots(turns)
 

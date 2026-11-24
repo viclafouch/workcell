@@ -193,32 +193,34 @@ function recordMethods(context: LogStoreContext) {
         consumes,
         pendingIds: [...new Set(consumes)]
       }
-      const texts = await serializeRecords(append)
-      const { channel, payload } = listeners.notificationOf(append.logId)
-      const [outcome] = await database.query<{ moved: number }>(
-        'append to a log',
-        APPEND_QUERY,
-        [
-          append.logId,
-          append.epoch,
-          append.seq,
-          append.records.length,
-          append.pendingIds,
-          texts,
-          channel,
-          payload,
-          NO_OWNER_EPOCH
-        ]
-      )
-
-      if (!outcome?.moved) {
-        throw (
-          (await readRefusal(append)) ??
-          new LogConflictError(append.logId, append.seq)
+      await listeners.writeLocally(append.logId, async () => {
+        const texts = await serializeRecords(append)
+        const { channel, payload } = listeners.notificationOf(append.logId)
+        const [outcome] = await database.query<{ moved: number }>(
+          'append to a log',
+          APPEND_QUERY,
+          [
+            append.logId,
+            append.epoch,
+            append.seq,
+            append.records.length,
+            append.pendingIds,
+            texts,
+            channel,
+            payload,
+            NO_OWNER_EPOCH
+          ]
         )
-      }
 
-      listeners.call(append.logId)
+        if (!outcome?.moved) {
+          throw (
+            (await readRefusal(append)) ??
+            new LogConflictError(append.logId, append.seq)
+          )
+        }
+
+        listeners.call(append.logId)
+      })
     },
     read: async ({
       logId,
@@ -488,47 +490,49 @@ function inputLaneMethods({ database, listeners }: LogStoreContext) {
     }: Parameters<LogStore['offerInput']>[0]) => {
       const encoded = JSON.stringify(record)
 
-      const result = await database.transaction(
-        'offer an input',
-        async (query) => {
-          await addOwnerRow(query, logId)
-          const [owner] = await query<{ deleted: boolean }>(
-            'SELECT deleted FROM log_owner WHERE log_id = $1 FOR SHARE',
-            [logId]
-          )
-
-          if (owner?.deleted) {
-            return 'deleted'
-          }
-
-          const offered = await query(
-            `INSERT INTO log_offers (log_id, input_id, harness, record)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (log_id, input_id) DO NOTHING
-             RETURNING id`,
-            [logId, inputId, harness, encoded]
-          )
-
-          if (offered.length === 0) {
-            const [previous] = await query<{ record: string }>(
-              'SELECT record FROM log_offers WHERE log_id = $1 AND input_id = $2',
-              [logId, inputId]
+      return listeners.writeLocally(logId, async () => {
+        const result = await database.transaction(
+          'offer an input',
+          async (query) => {
+            await addOwnerRow(query, logId)
+            const [owner] = await query<{ deleted: boolean }>(
+              'SELECT deleted FROM log_owner WHERE log_id = $1 FOR SHARE',
+              [logId]
             )
 
-            return previous?.record === encoded ? 'duplicate' : 'conflict'
+            if (owner?.deleted) {
+              return 'deleted'
+            }
+
+            const offered = await query(
+              `INSERT INTO log_offers (log_id, input_id, harness, record)
+               VALUES ($1, $2, $3, $4)
+               ON CONFLICT (log_id, input_id) DO NOTHING
+               RETURNING id`,
+              [logId, inputId, harness, encoded]
+            )
+
+            if (offered.length === 0) {
+              const [previous] = await query<{ record: string }>(
+                'SELECT record FROM log_offers WHERE log_id = $1 AND input_id = $2',
+                [logId, inputId]
+              )
+
+              return previous?.record === encoded ? 'duplicate' : 'conflict'
+            }
+
+            await listeners.notify(query, logId)
+
+            return 'offered'
           }
+        )
 
-          await listeners.notify(query, logId)
-
-          return 'offered'
+        if (result === 'offered') {
+          listeners.call(logId)
         }
-      )
 
-      if (result === 'offered') {
-        listeners.call(logId)
-      }
-
-      return result
+        return result
+      })
     },
     listOfferedInputs: async ({
       logId
@@ -651,22 +655,24 @@ function snapshotMethods(context: LogStoreContext) {
       })
     },
     deleteLog: async ({ logId }: Parameters<LogStore['deleteLog']>[0]) => {
-      await database.transaction('delete a log', async (query) => {
-        await addOwnerRow(query, logId)
-        await query(
-          `UPDATE log_owner
-           SET head = 0, first_seq = 1, released = TRUE, deleted = TRUE,
-             wake_at = NULL, affinity = NULL
-           WHERE log_id = $1`,
-          [logId]
-        )
-        await query('DELETE FROM log_records WHERE log_id = $1', [logId])
-        await query('DELETE FROM log_offers WHERE log_id = $1', [logId])
-        await query('DELETE FROM log_snapshots WHERE log_id = $1', [logId])
-        await listeners.notify(query, logId)
+      await listeners.writeLocally(logId, async () => {
+        await database.transaction('delete a log', async (query) => {
+          await addOwnerRow(query, logId)
+          await query(
+            `UPDATE log_owner
+             SET head = 0, first_seq = 1, released = TRUE, deleted = TRUE,
+               wake_at = NULL, affinity = NULL
+             WHERE log_id = $1`,
+            [logId]
+          )
+          await query('DELETE FROM log_records WHERE log_id = $1', [logId])
+          await query('DELETE FROM log_offers WHERE log_id = $1', [logId])
+          await query('DELETE FROM log_snapshots WHERE log_id = $1', [logId])
+          await listeners.notify(query, logId)
+        })
+        context.logger.info({ logId }, 'The host deleted a log.')
+        listeners.call(logId)
       })
-      context.logger.info({ logId }, 'The host deleted a log.')
-      listeners.call(logId)
     }
   }
 }

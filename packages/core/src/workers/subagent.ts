@@ -13,12 +13,15 @@ import {
 import { definePlugin } from '@tanstack/ai-harness'
 import type { ModelPricing } from '#/budget/budget.ts'
 import { SUBAGENT_TEXT } from '#/prompts/worker.ts'
+import { FINISH_TASK } from './lifecycle.ts'
 
 const SUBAGENT_PLUGIN = 'workcell/subagent'
 
 const SUBAGENT_TOOL_NAME = 'subagent'
 
 const MAX_SUBAGENT_MODEL_CALLS = 50
+
+const WORKER_ONLY_TOOLS = new Set<unknown>([FINISH_TASK, 'question'])
 
 const subagentRunSchema = z.object({
   toolCallId: z.string().optional(),
@@ -110,7 +113,6 @@ export function workerSubagent({ adapter, pricing }: WorkerSubagentParams) {
           }
 
           const run = openRun(subagentRunId)
-          run.model = model
           run.modelCalls += 1
           run.promptTokens += usage.promptTokens
           run.completionTokens += usage.completionTokens
@@ -155,7 +157,9 @@ export function workerSubagent({ adapter, pricing }: WorkerSubagentParams) {
 
       return {
         prepareTools: ({ tools }) => {
-          turnTools = tools
+          turnTools = tools.filter(({ name }) => {
+            return !WORKER_ONLY_TOOLS.has(name)
+          })
 
           return tools
         },
@@ -169,11 +173,11 @@ export function workerSubagent({ adapter, pricing }: WorkerSubagentParams) {
               task: z.string().describe(SUBAGENT_TEXT.task)
             }),
             run: (child) => {
+              openRun(child.subagentRunId).task = child.input.task
+
               if (turnTools === null) {
                 throw new Error(SUBAGENT_TEXT.noTurn)
               }
-
-              openRun(child.subagentRunId).task = child.input.task
 
               return child.chat({
                 adapter,

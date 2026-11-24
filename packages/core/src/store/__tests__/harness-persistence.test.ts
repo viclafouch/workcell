@@ -21,6 +21,12 @@ const CHAT_STORES = [
 
 const TWIN_LISTEN_TIMEOUT_MS = 10_000
 
+const LOG_VERSION_READ = 'read the version of a log'
+
+const LOG_DELETE = 'delete a log'
+
+const CATCH_UP_TIMEOUT_MS = 10_000
+
 let database: Database
 let twinDatabase: Database
 let stopTwinListener: () => void
@@ -60,6 +66,54 @@ async function listenOnTheTwin() {
   )
 
   return stopListening
+}
+
+function listenDuringTheDelete(opened: Database) {
+  const query = vi.spyOn(opened, 'query')
+  let becomeListening: (() => void) | null = null
+
+  const versionReads = () => {
+    return query.mock.calls.filter(([name], index) => {
+      return (
+        name === LOG_VERSION_READ &&
+        query.mock.settledResults[index]?.type === 'fulfilled'
+      )
+    }).length
+  }
+
+  const racedDatabase: Database = {
+    ...opened,
+    listen: (channel, listener) => {
+      becomeListening = () => {
+        listener({ kind: 'listening' })
+      }
+
+      return opened.listen(channel, (notice) => {
+        if (notice.kind !== 'listening') {
+          listener(notice)
+        }
+      })
+    },
+    transaction: async (name, work) => {
+      const result = await opened.transaction(name, work)
+
+      if (name === LOG_DELETE) {
+        becomeListening?.()
+        await vi.waitFor(
+          () => {
+            if (versionReads() < 2) {
+              throw new Error('The catch-up has read no version yet.')
+            }
+          },
+          { timeout: CATCH_UP_TIMEOUT_MS }
+        )
+      }
+
+      return result
+    }
+  }
+
+  return { database: racedDatabase, versionReads }
 }
 
 describe('createHarnessPersistence', () => {
@@ -107,6 +161,41 @@ describe('createHarnessPersistence', () => {
         return calls
       })
       .toBeGreaterThan(0)
+    stopListening()
+  })
+
+  it('calls a listener once for its own delete when its LISTEN becomes active as the delete commits', async () => {
+    const url = await createMigratedDatabase()
+    await using opened = openTestDatabase(url)
+    const raced = listenDuringTheDelete(opened)
+    const store = createPostgresLogStore({
+      database: raced.database,
+      logger: SILENT_LOGGER
+    })
+    const logId = `own-delete-${randomUUIDv7()}`
+    let calls = 0
+    await store.append({
+      logId,
+      seq: 1,
+      epoch: NO_OWNER_EPOCH,
+      records: [{ type: 'before' }]
+    })
+    const stopListening = store.subscribe({
+      logId,
+      listener: () => {
+        calls += 1
+      }
+    })
+    await vi.waitFor(
+      () => {
+        expect(raced.versionReads()).toBe(1)
+      },
+      { timeout: CATCH_UP_TIMEOUT_MS }
+    )
+
+    await store.deleteLog({ logId })
+
+    expect(calls).toBe(1)
     stopListening()
   })
 

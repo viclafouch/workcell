@@ -29,7 +29,7 @@ export const FINISH_TASK_TEXT = {
 
 export const SUBAGENT_TEXT = {
   description:
-    'Run one task in a fresh context, such as one axis of a review that a skill asks for: the subagent reads the task you write and nothing else of this conversation, works with your tools in your sandbox, and its answer comes back as the result. Call it several times in one turn to run tasks in parallel.',
+    'Run one task in a fresh context, such as one axis of a review that a skill asks for: the subagent reads the task you write and nothing else of this conversation, works with your tools in your sandbox, except finish_task and question, and its answer comes back as the result. Call it several times in one turn to run tasks in parallel.',
   task: 'The whole task, self-contained: what to do, the commands, files and rules it needs, and what to answer. The subagent sees only this text.',
   noTurn:
     'The subagent stopped: the host restarted, and the tools of your turn are gone. Call it again.'
