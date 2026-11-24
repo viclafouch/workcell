@@ -32,6 +32,10 @@ import {
   type LibraryRepositories
 } from './sandbox/library-sandbox.ts'
 import { workerMetadataSchema } from './session/metadata.ts'
+import {
+  mcpSkillSource,
+  type McpSkillServer
+} from './skills/mcp-skill-source.ts'
 import type { Database } from './store/database.ts'
 import { createHarnessPersistence } from './store/harness-persistence.ts'
 import { createSandboxInstanceStore } from './store/sandbox-instance-store.ts'
@@ -85,11 +89,14 @@ type OpenWorkcellParams = {
     limits: BudgetLimits
     plugins: readonly HarnessPlugin[]
     scope?: string
-    skillDirs?: readonly string[]
+    skills?: { dirs: readonly string[] }
   }
   gitIdentity: WorkerIdentityEnvParams
   workerNames: readonly string[]
-  skillDirs: readonly string[]
+  skills: {
+    dirs: readonly string[]
+    servers?: readonly McpSkillServer[]
+  }
   defaultLimits: BudgetLimits
   plugins: readonly HarnessPlugin[]
   maxRunningTurns: number
@@ -200,7 +207,7 @@ export async function openWorkcell({
   orchestrator: orchestratorOptions,
   gitIdentity,
   workerNames,
-  skillDirs,
+  skills,
   defaultLimits,
   plugins,
   permissionMode = 'acceptEdits',
@@ -240,6 +247,12 @@ export async function openWorkcell({
       : [sendFiles({ sentFiles, readFile, secretValues })]
   }
   const activity = createWorkerActivity({ pricing, secretValues })
+  const skillSources = (skills.servers ?? []).map((server) => {
+    return mcpSkillSource({
+      ...server,
+      log: logger.child({ module: 'skills' })
+    })
+  })
   const tracer = workcellTracer(observability)
   const host = createHarnessHost({
     acceptInput: acceptAllowedSenders(senders),
@@ -293,7 +306,7 @@ export async function openWorkcell({
     compactionAdapter: models.compaction,
     workspace: workerSandbox.workspace,
     lifecycle: lifecycle.plugin,
-    skillDirs,
+    skills: { dirs: skills.dirs, sources: skillSources },
     redactedSecretNames: Object.keys(secrets),
     pricing,
     defaultLimits,
@@ -371,6 +384,11 @@ export async function openWorkcell({
     inspectWorkers,
     [Symbol.asyncDispose]: async () => {
       await host.close({ recoverable: true })
+      await Promise.all(
+        skillSources.map((source) => {
+          return source[Symbol.asyncDispose]()
+        })
+      )
       await lifecycle.stopIdleTimers()
       await destroyEverySandbox(sandboxProvider, logger)
     }

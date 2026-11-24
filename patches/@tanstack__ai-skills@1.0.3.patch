@@ -1,0 +1,61 @@
+diff --git a/dist/esm/harness.d.ts b/dist/esm/harness.d.ts
+index 6c27edc..c9e5db6 100644
+--- a/dist/esm/harness.d.ts
++++ b/dist/esm/harness.d.ts
+@@ -1,6 +1,7 @@
+ import { AnyChatMiddleware } from '@tanstack/ai';
+ import { HostPluginContext, PluginSetupContext } from '@tanstack/ai-harness';
+ import { SkillsOptions } from './middleware.js';
++import { SkillSource } from './types.js';
+ export interface SkillsPluginOptions extends SkillsOptions {
+     /**
+      * The skill folders. Each folder holds skill folders with a `SKILL.md`.
+@@ -8,6 +9,13 @@ export interface SkillsPluginOptions extends SkillsOptions {
+      * A folder that does not exist yet is used once it exists.
+      */
+     dirs: ReadonlyArray<string>;
++    /**
++     * More skill sources, such as a registry or a server. Their skills join the
++     * model's list after the skills of `dirs`, and a folder skill wins on a
++     * name. They get no command. With a source, the model also gets
++     * `read_skill_resource`, which reads the files of every skill.
++     */
++    sources?: ReadonlyArray<SkillSource>;
+     /**
+      * Names that a UI handles itself, for example its own `/help`. A skill
+      * with one of these names gets the command `/skill:<name>`.
+diff --git a/dist/esm/harness.js b/dist/esm/harness.js
+index afe8e09..4ea4216 100644
+--- a/dist/esm/harness.js
++++ b/dist/esm/harness.js
+@@ -1,5 +1,7 @@
+ import { renderCatalog } from "./catalog.js";
+ import { estimateTokens, withSkills } from "./middleware.js";
++import { combineSources } from "./combinators.js";
++import { createResourceTool } from "./tools/read-resource.js";
+ import { skillDirectory } from "./node/index.js";
+ import { firstSentence } from "@tanstack/ai";
+ import { existsSync, watch } from "node:fs";
+@@ -152,7 +154,7 @@ async function sharedFolders(dirs, { resources, logger }) {
+ }
+ /** The part of {@link skills} that each session sets up. */
+ async function sessionPart(ctx, folders, options) {
+-	const { dirs, reserved = [], ...skillsOptions } = options;
++	const { dirs, sources = [], reserved = [], ...skillsOptions } = options;
+ 	const taken = /* @__PURE__ */ new Set(["skills", ...reserved]);
+ 	const mine = /* @__PURE__ */ new Map();
+ 	const called = /* @__PURE__ */ new Set();
+@@ -222,11 +224,12 @@ async function sessionPart(ctx, folders, options) {
+ 		middleware: [{
+ 			name: "tanstack/skills:sync",
+ 			setup: () => sync()
+-		}, withSkills(folders.source, {
++		}, withSkills([folders.source, ...sources], {
+ 			...skillsOptions,
+ 			...hasOwnCatalog ? {} : { renderCatalog: shortCatalog },
+ 			onLimitExceeded: skillsOptions.onLimitExceeded ?? keepEarlier
+ 		})],
++		tools: sources.length === 0 ? [] : [createResourceTool(combineSources([folders.source, ...sources]))],
+ 		commands: { skills: defineCommand({
+ 			description: "List the skills, their folders, and their commands",
+ 			run: async () => {

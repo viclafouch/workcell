@@ -16,6 +16,8 @@ catalog:
   '@chat-adapter/state-memory': 4.45.0
   '@json-render/chat': 0.23.1
   '@linear/sdk': 103.0.0
+  '@modelcontextprotocol/client': 2.4.0
+  '@modelcontextprotocol/server': 2.4.0
   '@octokit/core': ^7.0.8
   '@octokit/graphql-schema': ^15.26.1
   '@octokit/plugin-paginate-graphql': ^6.0.0
@@ -76,4 +78,5 @@ allowBuilds:
 patchedDependencies:
   '@tanstack/ai-harness@0.4.0': patches/@tanstack__ai-harness@0.4.0.patch
   '@tanstack/ai-sandbox@1.5.0': patches/@tanstack__ai-sandbox@1.5.0.patch
+  '@tanstack/ai-skills@1.0.3': patches/@tanstack__ai-skills@1.0.3.patch
   '@tanstack/ai@1.8.0': patches/@tanstack__ai@1.8.0.patch

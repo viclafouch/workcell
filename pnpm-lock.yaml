@@ -176,6 +176,12 @@ catalogs:
     '@linear/sdk':
       specifier: 103.0.0
       version: 103.0.0
+    '@modelcontextprotocol/client':
+      specifier: 2.4.0
+      version: 2.4.0
+    '@modelcontextprotocol/server':
+      specifier: 2.4.0
+      version: 2.4.0
     '@octokit/core':
       specifier: ^7.0.8
       version: 7.0.8
@@ -333,6 +339,7 @@ catalogs:
 patchedDependencies:
   '@tanstack/ai-harness@0.4.0': b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e
   '@tanstack/ai-sandbox@1.5.0': 4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974
+  '@tanstack/ai-skills@1.0.3': 6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e
   '@tanstack/ai@1.8.0': 1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e
 
 importers:
@@ -494,6 +501,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@modelcontextprotocol/client':
+        specifier: 'catalog:'
+        version: 2.4.0
       '@peculiar/x509':
         specifier: 'catalog:'
         version: 3.1.0(@peculiar/asn1-schema@3.1.0(asn1js@4.1.0))(asn1js@4.1.0)
@@ -516,6 +526,9 @@ importers:
         specifier: 'catalog:'
         version: 0.2.2
     devDependencies:
+      '@modelcontextprotocol/server':
+        specifier: 'catalog:'
+        version: 2.4.0
       '@opentelemetry/api':
         specifier: 'catalog:'
         version: 1.10.0
@@ -548,7 +561,7 @@ importers:
         version: 1.0.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf))
       '@tanstack/ai-skills':
         specifier: 'catalog:'
-        version: 1.0.3(b542e297e337a103ca0cecb811b78edf)
+        version: 1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(b542e297e337a103ca0cecb811b78edf)
       '@testcontainers/postgresql':
         specifier: 'catalog:'
         version: 12.2.1(bare-buffer@3.7.1)
@@ -5696,7 +5709,7 @@ snapshots:
     dependencies:
       '@modelcontextprotocol/server': 2.4.0
       '@tanstack/ai': 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
-      '@tanstack/ai-skills': 1.0.3(b542e297e337a103ca0cecb811b78edf)
+      '@tanstack/ai-skills': 1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(b542e297e337a103ca0cecb811b78edf)
       '@tanstack/ai-utils': 1.1.0
     optionalDependencies:
       '@tanstack/ai-harness': 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
@@ -5705,7 +5718,7 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
-  '@tanstack/ai-skills@1.0.3(b542e297e337a103ca0cecb811b78edf)':
+  '@tanstack/ai-skills@1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(b542e297e337a103ca0cecb811b78edf)':
     dependencies:
       '@tanstack/ai': 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       zod: 4.6.7
