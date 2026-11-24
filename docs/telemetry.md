@@ -10,6 +10,8 @@ Open the trace viewer of your team to see what each robot did and what it cost.
 
 Each turn shows its tokens and its cost in dollars. Add up the turns of a ticket to see what the ticket cost.
 
+A robot can hand one part of its work, such as one side of a review, to a helper that starts from a blank page. Each helper shows as its own steps, marked as a helper, with its own tokens and cost. Today a helper sits beside the turn that started it, not inside it.
+
 ## What a trace holds
 
 - **The robot**: its name, its ticket, its code project.

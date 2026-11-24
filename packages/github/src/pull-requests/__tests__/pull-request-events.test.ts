@@ -25,6 +25,9 @@ const PROJECT_LINES: PullRequestLines = {
   personCheck: ({ check }) => {
     return `cleared by a person: ${check}`
   },
+  redRoundCap: ({ rounds }) => {
+    return `red ${rounds} times`
+  },
   mergeQueueEntry: (pullRequestUrl) => {
     return `queued ${pullRequestUrl}`
   },

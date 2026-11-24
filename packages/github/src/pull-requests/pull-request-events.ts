@@ -23,6 +23,7 @@ const END_TURN = 'Then end your turn.'
 
 type PullRequestEventKind =
   | 'red-check'
+  | 'red-round-cap'
   | 'person-check'
   | 'green-check'
   | 'review-comment'
@@ -44,6 +45,7 @@ export type PullRequestEvent = {
   kind: PullRequestEventKind
   inputId: string
   action: PullRequestAction
+  redCommit?: string
 }
 
 type IsAnAskParams = Pick<
@@ -51,7 +53,9 @@ type IsAnAskParams = Pick<
   'state' | 'body'
 >
 
-type EventFacts = Pick<PullRequestEvent, 'kind' | 'action'> & { id: string }
+type EventFacts = Pick<PullRequestEvent, 'kind' | 'action' | 'redCommit'> & {
+  id: string
+}
 
 type EventOf = (facts: EventFacts) => PullRequestEvent
 
@@ -62,6 +66,11 @@ export type ReviewGate = {
 
 type RedCheck = { kind: 'status' | 'job'; name: string; url: string | null }
 
+export type RedCommits = {
+  max: number
+  recorded: readonly string[]
+}
+
 type PullRequestEventsParams = {
   repository: string
   pullRequest: WatchedPullRequest
@@ -71,6 +80,7 @@ type PullRequestEventsParams = {
   reviewGate?: ReviewGate
   failedJobs?: readonly FailedJob[]
   personChecks?: readonly string[]
+  redCommits?: RedCommits
 }
 
 type RedCheckParams = {
@@ -78,6 +88,7 @@ type RedCheckParams = {
   failedJobs: readonly FailedJob[]
   personChecks: readonly string[]
   lines: PullRequestLines
+  redCommits: RedCommits | undefined
 }
 
 function wake(
@@ -136,9 +147,46 @@ function redCheckText({ kind, name, url }: RedCheck) {
   return ` The ${kind} "${name}" failed: ${url ?? 'no link'}.`
 }
 
+function roundOf(headRefOid: string, { recorded }: RedCommits) {
+  const index = recorded.indexOf(headRefOid)
+
+  return (index === -1 ? recorded.length : index) + 1
+}
+
+type RedRoundEventParams = {
+  pullRequest: WatchedPullRequest
+  redCommits: RedCommits | undefined
+  lines: PullRequestLines
+  wakeEvent: () => PullRequestEvent
+  eventOf: EventOf
+}
+
+function redRoundEvent({
+  pullRequest: { headRefOid, url },
+  redCommits,
+  lines,
+  wakeEvent,
+  eventOf
+}: RedRoundEventParams) {
+  if (redCommits === undefined) {
+    return wakeEvent()
+  }
+
+  const round = roundOf(headRefOid, redCommits)
+
+  return round > redCommits.max
+    ? eventOf({
+        kind: 'red-round-cap',
+        id: headRefOid,
+        action: post(lines.redRoundCap({ pullRequestUrl: url, rounds: round })),
+        redCommit: headRefOid
+      })
+    : { ...wakeEvent(), redCommit: headRefOid }
+}
+
 function redCheckEvents(
   pullRequest: WatchedPullRequest,
-  { reviewGate, failedJobs, personChecks, lines }: RedCheckParams,
+  { reviewGate, failedJobs, personChecks, lines, redCommits }: RedCheckParams,
   eventOf: EventOf
 ) {
   const { statusCheckRollup, headRefOid, url } = pullRequest
@@ -159,21 +207,30 @@ function redCheckEvents(
   const workerChecks = redChecks.filter((check) => {
     return !clearedByAPerson(check)
   })
+  const wakeEvent = () => {
+    return eventOf({
+      kind: 'red-check',
+      id: `${headRefOid}:${workerChecks
+        .map(({ name }) => {
+          return name
+        })
+        .join(',')}`,
+      action: wake(
+        'steer',
+        `The pull request watcher sends this, not a person. The checks of the pull request ${url} failed on ${headRefOid}.${workerChecks.map(redCheckText).join('')} Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. ${END_TURN}`
+      )
+    })
+  }
   const wakeEvents =
     workerChecks.length === 0
       ? []
       : [
-          eventOf({
-            kind: 'red-check',
-            id: `${headRefOid}:${workerChecks
-              .map(({ name }) => {
-                return name
-              })
-              .join(',')}`,
-            action: wake(
-              'steer',
-              `The pull request watcher sends this, not a person. The checks of the pull request ${url} failed on ${headRefOid}.${workerChecks.map(redCheckText).join('')} Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. ${END_TURN}`
-            )
+          redRoundEvent({
+            pullRequest,
+            redCommits,
+            lines,
+            wakeEvent,
+            eventOf
           })
         ]
   const personEvents = redChecks
@@ -371,15 +428,17 @@ export function pullRequestEvents({
   lines = PULL_REQUEST_LINES,
   reviewGate,
   failedJobs = [],
-  personChecks = []
+  personChecks = [],
+  redCommits
 }: PullRequestEventsParams): PullRequestEvent[] {
   const { number, url, merged, closed, mergeCommit, mergeable, headRefOid } =
     pullRequest
-  const eventOf: EventOf = ({ kind, id, action }) => {
+  const eventOf: EventOf = ({ kind, id, action, redCommit }) => {
     return {
       kind,
       inputId: `github:${repository}#${number}:${kind}:${id}`,
-      action
+      action,
+      ...(redCommit === undefined ? {} : { redCommit })
     }
   }
 
@@ -431,7 +490,7 @@ export function pullRequestEvents({
   return [
     ...redCheckEvents(
       pullRequest,
-      { reviewGate, failedJobs, personChecks, lines },
+      { reviewGate, failedJobs, personChecks, lines, redCommits },
       eventOf
     ),
     ...greenCheckEvents(pullRequest, lines, eventOf),

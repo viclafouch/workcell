@@ -1,5 +1,6 @@
 export { createModelPricing, type ModelPriceTable } from './budget/pricing.ts'
 export { BUDGET_END_EVENT } from './budget/budget.ts'
+export { subagentRunsOf, type SubagentRun } from './workers/subagent.ts'
 export { EntrySkillLimits, type BudgetLimits } from './budget/limits.ts'
 export {
   bearer,

@@ -304,6 +304,7 @@ type OpenWatcherParams = {
   liveWorkers?: readonly WatchedWorker[]
   finishWorker?: (finish: WorkerFinish) => Promise<boolean>
   refusedUpdates?: number
+  maxRedRounds?: number
 }
 
 export function openWatcher({
@@ -311,7 +312,8 @@ export function openWatcher({
   finishWorker = async () => {
     return true
   },
-  refusedUpdates = 0
+  refusedUpdates = 0,
+  maxRedRounds
 }: OpenWatcherParams = {}) {
   let updatesToRefuse = refusedUpdates
   const workers = [...liveWorkers]
@@ -362,6 +364,7 @@ export function openWatcher({
     },
     reviewGate: REVIEW_GATE,
     personChecks: ['Validate risk'],
+    maxRedRounds,
     pollIntervalMs: 60_000,
     logger: { info: record, error: record }
   })

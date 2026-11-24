@@ -166,6 +166,7 @@ export async function openWorkers(
     orchestratorScope,
     model = fakeText(),
     compactionModel = model,
+    subagentModel,
     pricing = FAKE_MODEL_PRICING,
     starterIds = [TEST_STARTER.id],
     plugins = [],
@@ -197,6 +198,7 @@ export async function openWorkers(
     orchestratorScope?: string
     model?: FakeTextAdapter<string>
     compactionModel?: FakeTextAdapter<string>
+    subagentModel?: FakeTextAdapter<string>
     pricing?: ModelPricing
     starterIds?: readonly string[]
     plugins?: readonly HarnessPlugin[]
@@ -262,6 +264,7 @@ export async function openWorkers(
       models: {
         orchestrator: model,
         worker: model,
+        subagent: subagentModel,
         compaction: compactionModel
       },
       pricing,

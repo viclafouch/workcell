@@ -42,6 +42,7 @@ const LOG_VERSION_QUERY = `SELECT concat_ws(
 export function createLogListeners(database: Database) {
   const instanceId = randomUUIDv7()
   const listeners = new Map<string, Map<() => void, ListenerState>>()
+  const writesInFlight = new Map<string, number>()
   let stopListening: (() => void) | null = null
 
   const readVersion = async (logId: string) => {
@@ -96,7 +97,12 @@ export function createLogListeners(database: Database) {
       const isGone = !listeners.get(logId)?.has(listener)
       const hasMoved = current === null || current !== atSubscribe
 
-      if (!state.isCalled && !isGone && hasMoved) {
+      if (
+        !state.isCalled &&
+        !isGone &&
+        hasMoved &&
+        !writesInFlight.has(logId)
+      ) {
         callOne(listener, state)
       }
     }
@@ -129,8 +135,29 @@ export function createLogListeners(database: Database) {
     }
   }
 
+  const writeLocally = async <Result>(
+    logId: string,
+    write: () => Promise<Result>
+  ) => {
+    writesInFlight.set(logId, (writesInFlight.get(logId) ?? 0) + 1)
+
+    try {
+      return await write()
+    } finally {
+      const writesLeft = (writesInFlight.get(logId) ?? 1) - 1
+
+      if (writesLeft === 0) {
+        writesInFlight.delete(logId)
+        void catchUp(logId)
+      } else {
+        writesInFlight.set(logId, writesLeft)
+      }
+    }
+  }
+
   return {
     call,
+    writeLocally,
     notificationOf,
     notify: async (query: TransactionQuery, logId: string) => {
       const { channel, payload } = notificationOf(logId)
