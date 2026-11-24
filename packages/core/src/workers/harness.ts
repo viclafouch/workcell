@@ -42,6 +42,7 @@ import {
   SANDBOX_PERMISSION_RULES,
   WEB_FETCH_RULE
 } from './permission-rules.ts'
+import { workerSubagent } from './subagent.ts'
 
 export const WORKER_HARNESS_NAME = 'workcell/worker'
 
@@ -99,6 +100,7 @@ export function defineWorkerHarness({
     metadataSchema: workerMetadataSchema,
     middleware: [requireRedactedSecrets(redactedSecretNames)],
     durability: WORKER_DURABILITY,
+    subagents: { agents: [], background: false },
     plugins: () => {
       return [
         durableCompaction(compactionAdapter),
@@ -117,7 +119,8 @@ export function defineWorkerHarness({
         usage({ model: pricing.modelCost }),
         workerBudget({ pricing, defaultLimits }),
         feedback({ ...feedbackOptions, harness: WORKER_HARNESS_NAME }),
-        ...plugins
+        ...plugins,
+        workerSubagent(adapter)
       ]
     }
   })

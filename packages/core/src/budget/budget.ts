@@ -213,6 +213,15 @@ export function workerBudget({
         return true
       }
 
+      const countTurnCall: NonNullable<ChatMiddleware['onUsage']> = (
+        { model },
+        callUsage
+      ) => {
+        turnUsd += pricing.costOfCall(model, callUsage)
+        turnCalls += 1
+        turnTokens += callUsage.totalTokens
+      }
+
       const budget: ChatMiddleware<HarnessRunContext, typeof budgetStop> = {
         name: BUDGET_PLUGIN,
         provides: [budgetAnswer],
@@ -241,11 +250,7 @@ export function workerBudget({
             chat.abort(BUDGET_END_EVENT)
           }
         },
-        onUsage: ({ model }, callUsage) => {
-          turnUsd += pricing.costOfCall(model, callUsage)
-          turnCalls += 1
-          turnTokens += callUsage.totalTokens
-        },
+        onUsage: countTurnCall,
         onShouldContinue: async (chat) => {
           return !(await endsTurn(chat))
         },
@@ -354,6 +359,15 @@ export function workerBudget({
           })
         },
         middleware: [budget],
+        agentMiddleware: [
+          {
+            name: `${BUDGET_PLUGIN}/subagents`,
+            onUsage: countTurnCall,
+            onShouldContinue: async () => {
+              return (await reachedBudget()) === undefined
+            }
+          }
+        ],
         contribute: [SummaryMiddleware.item(countSummary)]
       }
     }

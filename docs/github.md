@@ -34,11 +34,12 @@ The agent looks at the review page of each robot at every check. Each event wake
 
 A comment on a spot of the change, from a person or a review bot, wakes the robot too. The robot reads the conversation of that spot: the file, the place in the file, who wrote it, and the answers below it. It answers in that conversation, under the name of the person who runs the agent, then marks the conversation resolved once its fix is on the page.
 
-Three events need no robot: the agent handles them itself, so they cost nothing.
+Four events need no robot: the agent handles them itself, so they cost nothing.
 
 - **All the checks of the page turn green**: the agent says so in the thread of the robot, with the link, once for each new version of the page. The page then waits for a person.
 - **The page enters the merge queue**: the agent says so in the thread of the robot, with the link.
 - **A person merges the page**: the agent posts a short report with the link of the page, and closes the box of the robot for good.
+- **The checks go red more times than your team allows**: the agent says so in the thread of the robot, for each new red version of the page, and lets the robot rest. The robot works on it again only when a person tells it to in the thread.
 
 ## What the robot skips
 

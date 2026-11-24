@@ -1,4 +1,5 @@
 import { setTimeout } from 'node:timers/promises'
+import { z } from 'zod'
 import {
   startLoop,
   type ThreadLine,
@@ -28,6 +29,7 @@ export type WatchedWorker = {
   subject?: string
   branch?: string
   pullRequest?: string
+  redCommits?: unknown
 }
 
 type PullRequestWatcherParams = {
@@ -42,9 +44,16 @@ type PullRequestWatcherParams = {
   lines?: PullRequestLines
   reviewGate?: ReviewGate
   personChecks?: readonly string[]
+  maxRedRounds?: number
 }
 
 type WorkerOnABranch = WatchedWorker & { branch: string }
+
+const redCommitsSchema = z.array(z.string())
+
+function redCommitsOf({ redCommits }: WatchedWorker) {
+  return redCommitsSchema.safeParse(redCommits).data ?? []
+}
 
 const PULL_REQUEST_PATH = /\/pull\/(?<number>\d+)$/u
 
@@ -69,7 +78,8 @@ export function createPullRequestWatcher({
   logger,
   lines,
   reviewGate,
-  personChecks
+  personChecks,
+  maxRedRounds
 }: PullRequestWatcherParams) {
   const pullRequestNumbers = new Map<string, number>()
   let sentInputIds = new Set<string>()
@@ -179,6 +189,34 @@ export function createPullRequestWatcher({
     }
   }
 
+  const recordRedCommit = async (
+    worker: WatchedWorker,
+    { redCommit }: PullRequestEvent
+  ) => {
+    const { threadId } = worker
+    const redCommits = redCommitsOf(worker)
+
+    if (redCommit === undefined || redCommits.includes(redCommit)) {
+      return true
+    }
+
+    try {
+      await updateWorker({
+        threadId,
+        metadata: { redCommits: [...redCommits, redCommit] }
+      })
+
+      return true
+    } catch (error) {
+      logger.error(
+        { threadId, redCommit, error },
+        'red commit not recorded: the next poll records it again'
+      )
+
+      return false
+    }
+  }
+
   const headOf = ({
     threadId,
     repository,
@@ -230,14 +268,23 @@ export function createPullRequestWatcher({
         reviewGate,
         // oxlint-disable-next-line no-await-in-loop -- the failed jobs read shares the paced budget of the poll
         failedJobs: await failedJobsOf(worker, pullRequest, redHeadsRead),
-        personChecks
+        personChecks,
+        redCommits:
+          maxRedRounds === undefined
+            ? undefined
+            : {
+                max: maxRedRounds,
+                recorded: redCommitsOf(worker)
+              }
       })
 
       for (const event of events) {
         const isSent =
           sentInputIds.has(event.inputId) ||
           // oxlint-disable-next-line no-await-in-loop -- the events of a pull request reach the worker in order
-          (await send(worker.threadId, pullRequest.url, event))
+          ((await recordRedCommit(worker, event)) &&
+            // oxlint-disable-next-line no-await-in-loop -- the red round is recorded before its event reaches the worker
+            (await send(worker.threadId, pullRequest.url, event)))
 
         if (isSent) {
           sentAndStillVisible.add(event.inputId)

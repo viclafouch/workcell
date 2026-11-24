@@ -22,6 +22,19 @@ import {
   lastCommitAt
 } from './pull-request-watcher-fixtures.ts'
 
+function redOn(headRefOid: string) {
+  return [
+    {
+      repository: REPOSITORY,
+      branch: WORKER.branch,
+      pullRequest: openPullRequest({
+        ...checks('FAILURE', status('code/scan', 'FAILURE')),
+        headRefOid
+      })
+    }
+  ]
+}
+
 describe('the pull request of a worker', () => {
   serveGithubPerTest()
 
@@ -544,6 +557,39 @@ describe('the red checks of a pull request', () => {
     expect(inputIdsAndDeliveries(wakes)).toStrictEqual([
       ['github:acme/app#42:red-check:head-1:code/scan', 'steer'],
       ['github:acme/app#42:red-check:head-1:code/scan,unit tests', 'steer']
+    ])
+  })
+
+  it('asks a person past its cap of red rounds instead of waking the worker, with the rounds it recorded before a restart', async () => {
+    githubFake.pullRequests = redOn('head-1')
+    const { watcher, wakes, posts, updates } = openWatcher({
+      liveWorkers: [{ ...WORKER, redCommits: ['head-0'] }],
+      maxRedRounds: 2
+    })
+
+    await pollTwice(watcher)
+    githubFake.pullRequests = redOn('head-2')
+    await pollTwice(watcher)
+
+    expect(inputIdsAndDeliveries(wakes)).toStrictEqual([
+      ['github:acme/app#42:red-check:head-1:code/scan', 'steer']
+    ])
+    expect(posts).toStrictEqual([
+      {
+        threadId: WORKER.threadId,
+        inputId: 'github:acme/app#42:red-round-cap:head-2',
+        line: `Checks failed 3 times on ${PULL_REQUEST_URL}: I stop fixing them until a person tells me to go on.`
+      }
+    ])
+    expect(updates.slice(1)).toStrictEqual([
+      {
+        threadId: WORKER.threadId,
+        metadata: { redCommits: ['head-0', 'head-1'] }
+      },
+      {
+        threadId: WORKER.threadId,
+        metadata: { redCommits: ['head-0', 'head-1', 'head-2'] }
+      }
     ])
   })
 

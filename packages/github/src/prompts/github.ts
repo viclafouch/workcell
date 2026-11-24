@@ -76,6 +76,11 @@ export type EndedPullRequest = {
   subject: string | undefined
 }
 
+type RedRoundCap = {
+  pullRequestUrl: string
+  rounds: number
+}
+
 type PersonCheck = {
   pullRequestUrl: string
   check: string
@@ -87,6 +92,7 @@ export type PullRequestLines = {
   closed: (end: EndedPullRequest) => string
   greenCheck: (pullRequestUrl: string) => string
   personCheck: (failure: PersonCheck) => string
+  redRoundCap: (cap: RedRoundCap) => string
   mergeQueueEntry: (pullRequestUrl: string) => string
 }
 
@@ -106,6 +112,9 @@ export const PULL_REQUEST_LINES: PullRequestLines = {
   },
   personCheck: ({ pullRequestUrl, check, checkUrl }) => {
     return `${check} failed on ${pullRequestUrl}, a person clears it: ${checkUrl ?? 'no link'}`
+  },
+  redRoundCap: ({ pullRequestUrl, rounds }) => {
+    return `Checks failed ${rounds} times on ${pullRequestUrl}: I stop fixing them until a person tells me to go on.`
   },
   mergeQueueEntry: (pullRequestUrl) => {
     return `In the merge queue: ${pullRequestUrl}`
