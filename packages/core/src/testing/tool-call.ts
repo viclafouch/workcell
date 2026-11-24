@@ -12,6 +12,7 @@ import {
 } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
+import type { SkillSource } from '@tanstack/ai-skills'
 import { fakeText } from '@tanstack/ai/testing'
 import type { FeedbackOptions } from '#/feedback/feedback.ts'
 import { readOnlyCredentials } from '#/host/read-only-credentials.ts'
@@ -41,6 +42,7 @@ type DefineTestWorkerParams = {
   lifecycle?: WorkerLifecycle
   redactedSecretNames?: readonly string[]
   plugins?: readonly HarnessPlugin[]
+  skillSources?: readonly SkillSource[]
   feedback?: FeedbackOptions
 }
 
@@ -51,6 +53,7 @@ type ToolCallOptions = {
   secrets?: Readonly<Record<string, string>>
   metadata?: WorkerMetadata
   plugins?: readonly HarnessPlugin[]
+  skillSources?: readonly SkillSource[]
   user?: HarnessUser
 }
 
@@ -109,6 +112,7 @@ export function defineTestWorker({
   lifecycle = createHostFreeLifecycle(host, hostFree),
   redactedSecretNames = [],
   plugins = [],
+  skillSources = [],
   feedback
 }: DefineTestWorkerParams) {
   return defineWorkerHarness({
@@ -123,7 +127,7 @@ export function defineTestWorker({
       }
     },
     lifecycle: lifecycle.plugin,
-    skillDirs: [],
+    skills: { dirs: [], sources: skillSources },
     redactedSecretNames,
     pricing: FREE_MODEL_PRICING,
     defaultLimits: ROOMY_LIMITS,
@@ -139,6 +143,7 @@ export async function runWorkerToolCall({
   secrets = {},
   metadata,
   plugins,
+  skillSources,
   user = TEST_STARTER
 }: ToolCallOptions) {
   const modelTools: string[] = []
@@ -168,7 +173,8 @@ export async function runWorkerToolCall({
     model,
     hostFree,
     redactedSecretNames: Object.keys(secrets),
-    plugins
+    plugins,
+    skillSources
   })
   const session = await host.open(worker, {
     threadId: 'worker-tool-call',

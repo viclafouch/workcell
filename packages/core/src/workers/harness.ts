@@ -16,6 +16,7 @@ import {
   type WorkspaceBinder
 } from '@tanstack/ai-harness/plugins/coding'
 import { boundToolOutput } from '@tanstack/ai-harness/plugins/node'
+import { renderCatalog, type SkillSource } from '@tanstack/ai-skills'
 import { skills } from '@tanstack/ai-skills/harness'
 import {
   budgetStop,
@@ -49,7 +50,7 @@ type DefineWorkerHarnessParams = {
   compactionAdapter: AnyTextAdapter
   workspace: WorkspaceBinder
   lifecycle: WorkerLifecycle['plugin']
-  skillDirs: readonly string[]
+  skills: { dirs: readonly string[]; sources: readonly SkillSource[] }
   redactedSecretNames: readonly string[]
   pricing: ModelPricing
   defaultLimits: BudgetLimits
@@ -78,7 +79,7 @@ export function defineWorkerHarness({
   compactionAdapter,
   workspace,
   lifecycle,
-  skillDirs,
+  skills: { dirs, sources },
   redactedSecretNames,
   pricing,
   defaultLimits,
@@ -86,7 +87,7 @@ export function defineWorkerHarness({
   feedback: feedbackOptions,
   observability
 }: DefineWorkerHarnessParams) {
-  const workerSkills = skills({ dirs: skillDirs })
+  const workerSkills = skills({ dirs, sources, renderCatalog })
 
   return defineHarness({
     name: WORKER_HARNESS_NAME,

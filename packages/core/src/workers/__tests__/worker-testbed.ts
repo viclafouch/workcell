@@ -295,11 +295,11 @@ export async function openWorkers(
         scope: orchestratorScope,
         limits: orchestratorLimits,
         plugins: orchestratorPlugins,
-        skillDirs: orchestratorSkillDirs
+        skills: { dirs: orchestratorSkillDirs ?? [] }
       },
       gitIdentity: HOST_GIT_IDENTITY,
       workerNames,
-      skillDirs: [testbed.skillDir],
+      skills: { dirs: [testbed.skillDir] },
       defaultLimits: limits,
       plugins: [holdSecondTurn, allowGit, ...plugins],
       maxRunningTurns,

@@ -65,6 +65,7 @@ export {
   type CredentialRule,
   type SandboxEgress
 } from './sandbox/egress/egress-policy.ts'
+export { mcpSkillSource } from './skills/mcp-skill-source.ts'
 export { workerRepo } from './sandbox/worker-repo.ts'
 export {
   DATABASE_SECRET_NAMES,
