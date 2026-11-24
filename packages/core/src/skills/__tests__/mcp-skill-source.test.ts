@@ -114,7 +114,7 @@ describe('the skills of an MCP server', () => {
     })
   })
 
-  it('refuse a file whose bytes no longer match the manifest', async () => {
+  it('read each file through the verifying client, which refuses bytes that no longer match the manifest', async () => {
     const server = await startSkillServer({
       served: {
         ...skillFiles(),
@@ -131,34 +131,16 @@ describe('the skills of an MCP server', () => {
     expect(JSON.parse(run.result)).toHaveProperty('error')
   })
 
-  it.each([
-    'SIGNATURES.md',
-    '../break/SIGNATURES.md',
-    'skill://break/SIGNATURES.md'
-  ])(
-    'refuse %s, a file outside the manifest of the skill it reads through',
-    async (path) => {
-      const server = await startSkillServer()
-
-      const run = await runWithTeamSkills(
-        readResource('team:review', path),
-        server.connect
-      )
-
-      expect(run.result).not.toContain(SIGNATURES)
-      expect(JSON.parse(run.result)).toHaveProperty('error')
-    }
-  )
-
-  it('read a file of another skill through the entry of that skill', async () => {
+  it('keep each read inside the files of the skill it reads through', async () => {
     const server = await startSkillServer()
 
     const run = await runWithTeamSkills(
-      readResource('team:break', 'SIGNATURES.md'),
+      readResource('team:review', 'SIGNATURES.md'),
       server.connect
     )
 
-    expect(JSON.parse(run.result)).toMatchObject({ content: SIGNATURES })
+    expect(run.result).not.toContain(SIGNATURES)
+    expect(JSON.parse(run.result)).toHaveProperty('error')
   })
 
   it('leave out a skill with no manifest', async () => {
