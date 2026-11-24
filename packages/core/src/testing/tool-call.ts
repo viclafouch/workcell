@@ -118,6 +118,7 @@ export function defineTestWorker({
   return defineWorkerHarness({
     adapter: model,
     compactionAdapter: model,
+    subagentAdapter: model,
     workspace: {
       bind: async () => {
         return {

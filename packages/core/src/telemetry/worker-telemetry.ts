@@ -59,6 +59,18 @@ export function taskAttributes(
   )
 }
 
+function subagentAttributes({
+  subagentRunId,
+  subagentName
+}: ChatMiddlewareContext): Attributes {
+  return subagentRunId === undefined
+    ? {}
+    : {
+        'workcell.subagent.run_id': subagentRunId,
+        'workcell.subagent.name': subagentName ?? ''
+      }
+}
+
 export function workcellTracer({
   tracerProvider = trace.getTracerProvider()
 }: WorkerObservability = {}) {
@@ -135,7 +147,8 @@ export function workerTelemetry({
           return {
             ...attributes,
             'gen_ai.provider.name': chat.provider,
-            'harness.run_id': chat.runId
+            'harness.run_id': chat.runId,
+            ...('subagentRunId' in chat ? subagentAttributes(chat) : {})
           }
         },
         onSpanEnd: priceUnpricedSpan

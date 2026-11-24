@@ -72,6 +72,7 @@ type OpenWorkcellParams = {
     orchestrator: AnyTextAdapter
     worker: AnyTextAdapter
     compaction: AnyTextAdapter
+    subagent?: AnyTextAdapter
   }
   pricing: ModelPricing
   secrets: Readonly<Record<string, string>>
@@ -226,10 +227,12 @@ export async function openWorkcell({
   ])
   const startLog = logger.child({ module: 'host' })
   await requireCurrentSchema(database, migrateCommand, startLog)
+  const subagentModel = models.subagent ?? models.worker
   pricing.requirePrices([
     models.orchestrator.model,
     models.worker.model,
-    models.compaction.model
+    models.compaction.model,
+    subagentModel.model
   ])
   const isStarter = isStarterIn(senders.starterIds)
   const filesLog = logger.child({ module: 'files' })
@@ -304,6 +307,7 @@ export async function openWorkcell({
   const harness = defineWorkerHarness({
     adapter: models.worker,
     compactionAdapter: models.compaction,
+    subagentAdapter: subagentModel,
     workspace: workerSandbox.workspace,
     lifecycle: lifecycle.plugin,
     skills: { dirs: skills.dirs, sources: skillSources },

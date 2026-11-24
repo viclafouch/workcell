@@ -49,6 +49,7 @@ export const WORKER_HARNESS_NAME = 'workcell/worker'
 type DefineWorkerHarnessParams = {
   adapter: AnyTextAdapter
   compactionAdapter: AnyTextAdapter
+  subagentAdapter: AnyTextAdapter
   workspace: WorkspaceBinder
   lifecycle: WorkerLifecycle['plugin']
   skills: { dirs: readonly string[]; sources: readonly SkillSource[] }
@@ -78,6 +79,7 @@ function requireRedactedSecrets(
 export function defineWorkerHarness({
   adapter,
   compactionAdapter,
+  subagentAdapter,
   workspace,
   lifecycle,
   skills: { dirs, sources },
@@ -120,7 +122,7 @@ export function defineWorkerHarness({
         workerBudget({ pricing, defaultLimits }),
         feedback({ ...feedbackOptions, harness: WORKER_HARNESS_NAME }),
         ...plugins,
-        workerSubagent(adapter)
+        workerSubagent({ adapter: subagentAdapter, pricing })
       ]
     }
   })
