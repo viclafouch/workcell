@@ -88,7 +88,11 @@ describe('the end of a worker from the host', () => {
     })
 
     await expect(
-      agent.workers.finishWorker({ threadId, report: 'Merged.' })
+      agent.workers.finishWorker({
+        threadId,
+        report: 'Merged.',
+        outcome: { value: 'success' }
+      })
     ).resolves.toBe(true)
 
     expect(agent.model.state.callCount).toBe(modelCalls)
@@ -104,7 +108,11 @@ describe('the end of a worker from the host', () => {
   it('ends once, after a host restart, a worker whose end stopped before its archive', async () => {
     const url = await createMigratedDatabase()
     const { threadId } = await workOnABranch(url, origin.url)
-    const finish = { threadId, report: 'Merged.' }
+    const finish = {
+      threadId,
+      report: 'Merged.',
+      outcome: { value: 'success' as const }
+    }
 
     {
       await using agent = await openWorkers(url, [], {
@@ -136,6 +144,7 @@ describe('the end of a worker from the host', () => {
       })
       .toStrictEqual(['finished Alpha Merged.'])
     expect(restarted.model.state.callCount).toBe(0)
+
     await expect(endStateOf(restarted, threadId)).resolves.toStrictEqual({
       archived: true,
       report: 'Merged.',
@@ -154,7 +163,11 @@ describe('the end of a worker from the host', () => {
       starter: TEST_STARTER,
       task: 'Run the long checks.'
     })
-    const finish = { threadId: worker.threadId, report: 'Merged.' }
+    const finish = {
+      threadId: worker.threadId,
+      report: 'Merged.',
+      outcome: { value: 'success' as const }
+    }
     await expect
       .poll(() => {
         return agent.workers.listWorkers()

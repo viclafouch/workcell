@@ -32,6 +32,11 @@ export type ModelPricing = {
   modelCost: NonNullable<UsagePluginOptions['model']>
 }
 
+export type TaskSpending = {
+  usage: SessionUsage
+  plugins: Record<string, unknown>
+}
+
 type StopFacts = {
   agent: string
   spentUsd: number
@@ -57,6 +62,13 @@ const NOTHING_SPENT: BudgetState = {
 
 export function budgetStateOf(plugins: Record<string, unknown>) {
   return budgetStateSchema.safeParse(plugins[BUDGET_PLUGIN]).data
+}
+
+export function spentUsdOf(
+  pricing: Pick<ModelPricing, 'costOfUsage'>,
+  { usage, plugins }: TaskSpending
+) {
+  return pricing.costOfUsage(usage) + (budgetStateOf(plugins)?.summaryUsd ?? 0)
 }
 
 export function dollars(amount: number) {

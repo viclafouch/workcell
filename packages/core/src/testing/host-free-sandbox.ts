@@ -9,8 +9,9 @@ import {
   type SandboxProvider
 } from '@tanstack/ai-sandbox'
 import { localProcessSandbox } from '@tanstack/ai-sandbox-local-process'
+import { workcellTracer } from '#/telemetry/worker-telemetry.ts'
 import { createWorkerLifecycle } from '#/workers/lifecycle.ts'
-import { TEST_MAX_RUNNING_TURNS } from './test-doubles.ts'
+import { FREE_MODEL_PRICING, TEST_MAX_RUNNING_TURNS } from './test-doubles.ts'
 
 const SILENT_WORKER_LOGGER = {
   child: () => {
@@ -137,6 +138,8 @@ export function createHostFreeLifecycle(
     workerSandbox: FIXED_WORKSPACE_SANDBOX,
     logger: SILENT_WORKER_LOGGER,
     secretValues: [],
-    maxRunningTurns: TEST_MAX_RUNNING_TURNS
+    maxRunningTurns: TEST_MAX_RUNNING_TURNS,
+    pricing: FREE_MODEL_PRICING,
+    tracer: workcellTracer()
   })
 }

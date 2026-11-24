@@ -40,7 +40,7 @@ type ChatUsages = {
   usageOfOpenSpan?: TokenUsage
 }
 
-function taskAttributes(
+export function taskAttributes(
   threadId: string,
   metadata?: AgentMetadata
 ): Attributes {

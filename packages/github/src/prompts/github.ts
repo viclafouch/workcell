@@ -71,7 +71,7 @@ export function pullRequestFact(pullRequest: string) {
   return `The pull request of this task: ${pullRequest}.`
 }
 
-export type MergedPullRequest = {
+export type EndedPullRequest = {
   pullRequestUrl: string
   subject: string | undefined
 }
@@ -83,7 +83,8 @@ type PersonCheck = {
 }
 
 export type PullRequestLines = {
-  merged: (merge: MergedPullRequest) => string
+  merged: (end: EndedPullRequest) => string
+  closed: (end: EndedPullRequest) => string
   greenCheck: (pullRequestUrl: string) => string
   personCheck: (failure: PersonCheck) => string
   mergeQueueEntry: (pullRequestUrl: string) => string
@@ -94,6 +95,11 @@ export const PULL_REQUEST_LINES: PullRequestLines = {
     const subjectLine = subject === undefined ? [] : [`Subject: ${subject}`]
 
     return [`Merged: ${pullRequestUrl}`, ...subjectLine].join('\n')
+  },
+  closed: ({ pullRequestUrl, subject }) => {
+    const subjectLine = subject === undefined ? [] : [`Subject: ${subject}`]
+
+    return [`Closed unmerged: ${pullRequestUrl}`, ...subjectLine].join('\n')
   },
   greenCheck: (pullRequestUrl) => {
     return `Checks green: ${pullRequestUrl}`

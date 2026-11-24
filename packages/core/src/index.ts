@@ -85,6 +85,8 @@ export {
 export {
   agentMetadataSchema,
   workerMetadataSchema,
+  type TaskEnd,
+  type TaskOutcome,
   type WorkerMetadata
 } from './session/metadata.ts'
 export type { ThreadLine } from './workers/thread-line.ts'

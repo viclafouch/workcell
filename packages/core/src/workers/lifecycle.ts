@@ -1,5 +1,6 @@
 import { once } from 'node:events'
 import { z } from 'zod'
+import type { Tracer } from '@opentelemetry/api'
 import {
   EventType,
   toolDefinition,
@@ -20,6 +21,7 @@ import {
 import type { SandboxDefinition, SandboxProvider } from '@tanstack/ai-sandbox'
 import { scrubSecrets } from '@tanstack/ai/byok'
 import { AsyncQueuer } from '@tanstack/pacer'
+import type { ModelPricing } from '#/budget/budget.ts'
 import type { LogLine } from '#/host/mcp-server-log.ts'
 import {
   branchFact,
@@ -33,6 +35,7 @@ import {
   workerMetadataSchema,
   type WorkerMetadata
 } from '#/session/metadata.ts'
+import { finishSteps, type WorkerEnd } from './finish-steps.ts'
 import type { WorkerSandbox } from './worker-sandbox.ts'
 
 const MS_PER_MINUTE = 60_000
@@ -63,7 +66,7 @@ export type ListedSandboxProvider = Pick<SandboxProvider, 'destroy'> & {
 
 export type RepositorySandboxes = Readonly<Record<string, SandboxDefinition>>
 
-type WorkerLog = { info: LogLine; warn: LogLine; error: LogLine }
+export type WorkerLog = { info: LogLine; warn: LogLine; error: LogLine }
 
 export type WorkerLogger = {
   child: (bindings: Record<string, unknown>) => WorkerLog
@@ -78,6 +81,8 @@ type CreateWorkerLifecycleParams = {
   logger: WorkerLogger
   secretValues: readonly string[]
   maxRunningTurns: number
+  pricing: Pick<ModelPricing, 'costOfUsage'>
+  tracer: Tracer
   idleSandboxMs?: number
 }
 
@@ -91,63 +96,6 @@ type TurnSlot = {
 export type NamedWorker = { threadId: string; name?: string }
 
 type SweptWorker = NamedWorker & { updatedAt: number }
-
-type IndexEntryUpdate = (current: { metadata?: WorkerMetadata }) => {
-  metadata?: WorkerMetadata
-}
-
-type WorkerEnd = {
-  worker: NamedWorker
-  report?: string
-  updateIndexEntry: (update: IndexEntryUpdate) => Promise<void>
-}
-
-type FinishStep = { name: string; run: () => Promise<void> }
-
-type FinishStepsParams = WorkerEnd & {
-  log: WorkerLog
-  destroySandbox: () => Promise<void>
-  workerSandbox: Pick<WorkerSandbox, 'forget'>
-  host: HarnessHost
-}
-
-function finishSteps({
-  worker,
-  report,
-  updateIndexEntry,
-  log,
-  destroySandbox,
-  workerSandbox,
-  host
-}: FinishStepsParams): FinishStep[] {
-  return [
-    {
-      name: 'report',
-      run: async () => {
-        log.info({ report }, 'worker report')
-        await updateIndexEntry((current) => {
-          return current.metadata === undefined
-            ? {}
-            : { metadata: { ...current.metadata, report } }
-        })
-      }
-    },
-    { name: 'destroy-sandbox', run: destroySandbox },
-    {
-      name: 'forget-changes',
-      run: async () => {
-        await workerSandbox.forget(worker)
-      }
-    },
-    {
-      name: 'archive',
-      run: async () => {
-        await host.sessions.archive({ threadId: worker.threadId })
-        log.info({}, 'worker finished')
-      }
-    }
-  ]
-}
 
 type TaskFact = (metadata: WorkerMetadata) => string | undefined
 
@@ -239,7 +187,9 @@ const finishTaskDefinition = toolDefinition({
   name: FINISH_TASK,
   description: FINISH_TASK_TEXT.description,
   inputSchema: z.object({
-    report: z.string().optional().describe(FINISH_TASK_TEXT.report)
+    report: z.string().optional().describe(FINISH_TASK_TEXT.report),
+    outcome: z.enum(['blocked', 'manual']).describe(FINISH_TASK_TEXT.outcome),
+    cause: z.string().describe(FINISH_TASK_TEXT.cause)
   })
 })
 
@@ -426,6 +376,8 @@ export function createWorkerLifecycle({
   logger,
   secretValues,
   maxRunningTurns,
+  pricing,
+  tracer,
   idleSandboxMs = IDLE_SANDBOX_MS
 }: CreateWorkerLifecycleParams) {
   const busyThreads = new Set<string>()
@@ -469,6 +421,8 @@ export function createWorkerLifecycle({
   const stepsOf = (end: WorkerEnd) => {
     return finishSteps({
       ...end,
+      pricing,
+      tracer,
       log: logOf(end.worker),
       destroySandbox: async () => {
         await idleTimers.stop(end.worker.threadId)
@@ -580,7 +534,7 @@ export function createWorkerLifecycle({
 
       const finishTask = durableTool(
         finishTaskDefinition,
-        async ({ report }, { step }) => {
+        async ({ report, outcome, cause }, { step }) => {
           if (!isPersonTurn) {
             throw new Error(FINISH_WITHOUT_STOP_REFUSAL)
           }
@@ -590,8 +544,10 @@ export function createWorkerLifecycle({
           const steps = stepsOf({
             worker,
             report,
+            outcome: { value: outcome, cause },
+            spending: setupContext.session.snapshot(),
             updateIndexEntry: async (update) => {
-              await setupContext.session.updateIndexEntry(update)
+              return setupContext.session.updateIndexEntry(update)
             }
           })
 

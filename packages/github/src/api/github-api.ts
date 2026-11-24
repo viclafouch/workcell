@@ -40,7 +40,11 @@ export type StatusContext = Pick<
   'id' | 'context' | 'state' | 'description'
 > & { targetUrl: string | null }
 
-type Comment = Pick<IssueComment, 'id'> & { url: string; author: Author }
+type Comment = Pick<IssueComment, 'id'> & {
+  url: string
+  createdAt: string
+  author: Author
+}
 
 type TimelineItem =
   | Required<Pick<AddedToMergeQueueEvent, '__typename' | 'id'>>
@@ -49,7 +53,7 @@ type TimelineItem =
 
 export type WatchedPullRequest = Pick<
   PullRequest,
-  'number' | 'merged' | 'mergeable'
+  'number' | 'merged' | 'closed' | 'mergeable'
 > & {
   url: string
   headRefOid: string
@@ -67,7 +71,12 @@ export type WatchedPullRequest = Pick<
     }
   >
   commits: {
-    nodes: { commit: { status: Maybe<{ contexts: StatusContext[] }> } }[]
+    nodes: {
+      commit: {
+        committedDate: string
+        status: Maybe<{ contexts: StatusContext[] }>
+      }
+    }[]
   }
   reviewThreads: {
     nodes: (Pick<PullRequestReviewThread, 'isResolved'> & {
@@ -113,17 +122,17 @@ export type PullRequestRead =
       pullRequest: WatchedPullRequest | undefined
     }
 
-const WATCHED_PULL_REQUEST_FIELDS = `number url merged mergeable headRefOid
+const WATCHED_PULL_REQUEST_FIELDS = `number url merged closed mergeable headRefOid
       mergeCommit { oid }
       statusCheckRollup { state contexts { checkRunCountsByState { state count } } }
       commits(last: 1) {
-        nodes { commit { status { contexts { id context state description targetUrl } } } }
+        nodes { commit { committedDate status { contexts { id context state description targetUrl } } } }
       }
       reviewThreads(last: 50) {
-        nodes { isResolved comments(last: 20) { nodes { id url author { __typename login } } } }
+        nodes { isResolved comments(last: 20) { nodes { id url createdAt author { __typename login } } } }
       }
-      comments(last: 50) { nodes { id url author { __typename login } } }
-      reviews(last: 30) { nodes { id url state body author { __typename login } } }
+      comments(last: 50) { nodes { id url createdAt author { __typename login } } }
+      reviews(last: 30) { nodes { id url createdAt state body author { __typename login } } }
       timelineItems(last: 20, itemTypes: [ADDED_TO_MERGE_QUEUE_EVENT, REMOVED_FROM_MERGE_QUEUE_EVENT]) {
         nodes {
           __typename

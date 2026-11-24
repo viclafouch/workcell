@@ -446,6 +446,12 @@ export async function endStateOf(agent: OpenedWorkers, threadId: string) {
   }
 }
 
+export async function outcomeOf(agent: OpenedWorkers, threadId: string) {
+  const entry = await agent.host.sessions.get({ threadId })
+
+  return workerMetadataSchema.parse(entry?.metadata).outcome
+}
+
 export async function askOrchestrator(
   agent: OpenedWorkers,
   {

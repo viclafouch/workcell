@@ -16,7 +16,10 @@ import {
   openWatcher,
   serveGithubPerTest,
   pollTwice,
-  inputIdsAndDeliveries
+  inputIdsAndDeliveries,
+  EARLIER,
+  LATER,
+  lastCommitAt
 } from './pull-request-watcher-fixtures.ts'
 
 describe('the pull request of a worker', () => {
@@ -148,11 +151,13 @@ describe('the events that wake a worker', () => {
                     {
                       id: 'finding-1',
                       url: `${PULL_REQUEST_URL}#thread-1`,
+                      createdAt: EARLIER,
                       author: AI_REVIEW_BOT
                     },
                     {
                       id: 'own-reply-1',
                       url: `${PULL_REQUEST_URL}#thread-2`,
+                      createdAt: EARLIER,
                       author: { __typename: 'User', login: VIEWER }
                     }
                   ]
@@ -165,6 +170,7 @@ describe('the events that wake a worker', () => {
                     {
                       id: 'resolved-1',
                       url: `${PULL_REQUEST_URL}#thread-3`,
+                      createdAt: EARLIER,
                       author: COLLEAGUE
                     }
                   ]
@@ -177,11 +183,13 @@ describe('the events that wake a worker', () => {
               {
                 id: 'comment-1',
                 url: `${PULL_REQUEST_URL}#c1`,
+                createdAt: EARLIER,
                 author: COLLEAGUE
               },
               {
                 id: 'risk-score-1',
                 url: `${PULL_REQUEST_URL}#c2`,
+                createdAt: EARLIER,
                 author: ACTIONS_BOT
               }
             ]
@@ -191,6 +199,7 @@ describe('the events that wake a worker', () => {
               {
                 id: 'review-1',
                 url: `${PULL_REQUEST_URL}#v1`,
+                createdAt: EARLIER,
                 author: COLLEAGUE,
                 state: 'CHANGES_REQUESTED',
                 body: ''
@@ -198,6 +207,7 @@ describe('the events that wake a worker', () => {
               {
                 id: 'summary-1',
                 url: `${PULL_REQUEST_URL}#v2`,
+                createdAt: EARLIER,
                 author: AI_REVIEW_BOT,
                 state: 'COMMENTED',
                 body: 'No finding.'
@@ -205,6 +215,7 @@ describe('the events that wake a worker', () => {
               {
                 id: 'approval-1',
                 url: `${PULL_REQUEST_URL}#v3`,
+                createdAt: EARLIER,
                 author: COLLEAGUE,
                 state: 'APPROVED',
                 body: 'Nice.'
@@ -271,8 +282,12 @@ describe('the events that wake a worker', () => {
       }
     ])
   })
+})
 
-  it('ends the worker of a merged pull request with a report that names the pull request and the subject, and wakes nothing', async () => {
+describe('the outcome of the task of a pull request', () => {
+  serveGithubPerTest()
+
+  it('ends the worker of a merged pull request as a success, with a report that names the pull request and the subject, and wakes nothing', async () => {
     githubFake.pullRequests = [
       {
         repository: REPOSITORY,
@@ -293,9 +308,142 @@ describe('the events that wake a worker', () => {
     expect(finishes).toStrictEqual([
       {
         threadId: WORKER.threadId,
-        report: `Merged: ${PULL_REQUEST_URL}\nSubject: TASK-1`
+        report: `Merged: ${PULL_REQUEST_URL}\nSubject: TASK-1`,
+        outcome: { value: 'success' }
       }
     ])
+  })
+
+  it('ends the worker of a merged pull request as flawed when it pushed a commit after a person asked for a change', async () => {
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: openPullRequest({
+          merged: true,
+          mergeCommit: { oid: 'merge-1' },
+          commits: lastCommitAt(LATER),
+          reviews: {
+            nodes: [
+              {
+                id: 'review-1',
+                url: `${PULL_REQUEST_URL}#v1`,
+                createdAt: EARLIER,
+                author: COLLEAGUE,
+                state: 'CHANGES_REQUESTED',
+                body: ''
+              }
+            ]
+          }
+        })
+      }
+    ]
+    const { watcher, finishes } = openWatcher()
+
+    await pollTwice(watcher)
+
+    expect(finishes).toMatchObject([{ outcome: { value: 'flawed' } }])
+  })
+
+  it('ends the worker of a merged pull request as a success when no commit follows the comment of a person, and a commit follows only an approval or a bot finding', async () => {
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: openPullRequest({
+          merged: true,
+          mergeCommit: { oid: 'merge-1' },
+          commits: lastCommitAt(EARLIER),
+          reviewThreads: {
+            nodes: [
+              {
+                isResolved: true,
+                comments: {
+                  nodes: [
+                    {
+                      id: 'finding-1',
+                      url: `${PULL_REQUEST_URL}#thread-1`,
+                      createdAt: '2026-11-20T08:00:00Z',
+                      author: AI_REVIEW_BOT
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          comments: {
+            nodes: [
+              {
+                id: 'comment-1',
+                url: `${PULL_REQUEST_URL}#c1`,
+                createdAt: LATER,
+                author: COLLEAGUE
+              }
+            ]
+          },
+          reviews: {
+            nodes: [
+              {
+                id: 'approval-1',
+                url: `${PULL_REQUEST_URL}#v1`,
+                createdAt: '2026-11-20T08:00:00Z',
+                author: COLLEAGUE,
+                state: 'APPROVED',
+                body: 'Nice.'
+              }
+            ]
+          }
+        })
+      }
+    ]
+    const { watcher, finishes } = openWatcher()
+
+    await pollTwice(watcher)
+
+    expect(finishes).toMatchObject([{ outcome: { value: 'success' } }])
+  })
+
+  it('ends the worker of the pull request it recorded as manual once a person closes it unmerged, and wakes nothing', async () => {
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: openPullRequest({ closed: true, ...checks('FAILURE') })
+      }
+    ]
+    const { watcher, wakes, finishes } = openWatcher({
+      liveWorkers: [{ ...WORKER, pullRequest: PULL_REQUEST_URL }]
+    })
+
+    await pollTwice(watcher)
+
+    expect(wakes).toStrictEqual([])
+    expect(finishes).toStrictEqual([
+      {
+        threadId: WORKER.threadId,
+        report: `Closed unmerged: ${PULL_REQUEST_URL}\nSubject: TASK-1`,
+        outcome: {
+          value: 'manual',
+          cause: 'A person closed the pull request unmerged.'
+        }
+      }
+    ])
+  })
+
+  it('ends no worker on an older pull request of its branch that a person closed before the worker recorded it', async () => {
+    githubFake.pullRequests = [
+      {
+        repository: REPOSITORY,
+        branch: WORKER.branch,
+        pullRequest: openPullRequest({ closed: true })
+      }
+    ]
+    const { watcher, updates, finishes } = openWatcher()
+
+    await pollTwice(watcher)
+
+    expect(updates).toStrictEqual([])
+    expect(finishes).toStrictEqual([])
   })
 })
 

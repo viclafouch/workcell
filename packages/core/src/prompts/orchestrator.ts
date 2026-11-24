@@ -64,7 +64,7 @@ export function libraryMapPrompt(map: string) {
 
 export const ORCHESTRATOR_TOOLS_TEXT = {
   listWorkers:
-    'List the live workers, read from the registry now: one line each, with the name, the topic, the repository, what it does now, its spend against its budget, its branch, its pull request and its open waits.',
+    'List the live workers and the tasks that finished in the last days, read from the registry now: one line each, with the name, the topic, the repository, what it does now or how its task ended, its spend against its budget, its branch, its pull request and its open waits.',
   startWorker:
     'Start a worker on a task that needs its own sandbox and its own context, such as a ticket to take to a pull request. The worker runs on its own, in its own thread, and outlives this conversation.',
   task: 'The task, in full: the worker reads nothing else.',
@@ -87,7 +87,8 @@ const PHASE_LINES: Record<WorkerView['phase'], string> = {
   model: 'thinks',
   tool: 'runs a tool',
   waiting: 'waits for a person',
-  idle: 'sleeps'
+  idle: 'sleeps',
+  finished: 'finished'
 }
 
 export function workerLine({
@@ -100,16 +101,21 @@ export function workerLine({
   budgetUsd,
   branch,
   pullRequest,
-  waits
+  waits,
+  outcome
 }: WorkerView) {
   const doing =
     phase === 'tool' && command !== undefined
       ? `runs ${firstLine(command)}`
       : PHASE_LINES[phase]
+  const ended =
+    outcome === undefined
+      ? ''
+      : ` ${outcome.value}${outcome.cause === undefined ? '' : ` (${outcome.cause})`}`
   const budget = budgetUsd === undefined ? '' : ` of ${dollars(budgetUsd)}`
 
   return [
-    `${name} on ${topic} in ${repository}: ${doing}`,
+    `${name} on ${topic} in ${repository}: ${doing}${ended}`,
     `spent ${dollars(spentUsd)}${budget}`,
     ...(branch === undefined ? [] : [`branch ${branch}`]),
     ...(pullRequest === undefined ? [] : [`pull request ${pullRequest}`]),

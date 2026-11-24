@@ -54,6 +54,8 @@ import { createWorkerSandbox } from './workers/worker-sandbox.ts'
 import { createWorkerView } from './workers/worker-view.ts'
 import { createWorkers, type OnWorkerStart } from './workers/workers.ts'
 
+const FINISHED_TASK_DAYS = 7
+
 type WorkcellLogger = {
   child: (bindings: Record<string, unknown>) => LeveledLog
 }
@@ -91,6 +93,7 @@ type OpenWorkcellParams = {
   defaultLimits: BudgetLimits
   plugins: readonly HarnessPlugin[]
   maxRunningTurns: number
+  finishedTaskDays?: number
   permissionMode?: PermissionMode
   idleSandboxMs?: number
   observability?: WorkerObservability
@@ -202,6 +205,7 @@ export async function openWorkcell({
   plugins,
   permissionMode = 'acceptEdits',
   maxRunningTurns,
+  finishedTaskDays = FINISHED_TASK_DAYS,
   idleSandboxMs,
   observability,
   onWorkerStart,
@@ -236,10 +240,11 @@ export async function openWorkcell({
       : [sendFiles({ sentFiles, readFile, secretValues })]
   }
   const activity = createWorkerActivity({ pricing, secretValues })
+  const tracer = workcellTracer(observability)
   const host = createHarnessHost({
     acceptInput: acceptAllowedSenders(senders),
     observability: {
-      tracer: workcellTracer(observability),
+      tracer,
       onOperation: activity.onOperation
     },
     persistence: createHarnessPersistence({
@@ -279,6 +284,8 @@ export async function openWorkcell({
     logger,
     secretValues,
     maxRunningTurns,
+    pricing,
+    tracer,
     idleSandboxMs
   })
   const harness = defineWorkerHarness({
@@ -316,6 +323,13 @@ export async function openWorkcell({
     host,
     harness,
     readWorkers: workers.readWorkers,
+    readFinishedWorkers: async () => {
+      return workers.readFinishedWorkers(
+        Temporal.Now.zonedDateTimeISO('UTC')
+          .subtract({ days: finishedTaskDays })
+          .toInstant()
+      )
+    },
     lifecycle,
     activity,
     workerSandbox,

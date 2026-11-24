@@ -10,6 +10,7 @@ import {
   BilledFailureFake,
   CHECK_THE_WORK,
   createOrigin,
+  finishTask,
   ENTRY_SKILL,
   loggedLines,
   PROVIDER_COST_USD,
@@ -33,8 +34,10 @@ import {
   liveSandboxKeys,
   openWorkers,
   openWorkerTestbed,
+  outcomeOf,
   runWorkerThenStop,
-  testbedHostFree
+  testbedHostFree,
+  waitForArchive
 } from './worker-testbed.ts'
 
 describe('the budget of a worker', () => {
@@ -413,6 +416,47 @@ describe('a worker stopped at its budget', () => {
     expect(answered).toContain('Alpha used its budget')
     expect(answered).toContain('The answer: non, on verra demain')
   })
+
+  it('ends its task blocked, with its budget as the cause, when its starter drops the task at the budget question', async () => {
+    const url = await createMigratedDatabase()
+    const answeredPrompts: string[] = []
+    await using agent = await openWorkers(
+      url,
+      [
+        bash('git init --quiet'),
+        ({ request }) => {
+          answeredPrompts.push(JSON.stringify(request.systemPrompts))
+
+          return finishTask({
+            report: undefined,
+            outcome: 'blocked',
+            cause: 'It used its budget.'
+          })
+        }
+      ],
+      { limits: SPENT_AFTER_ONE_CALL }
+    )
+    const worker = await agent.workers.startWorker({
+      repository: REPOSITORY,
+      starter: TEST_STARTER,
+      task: 'Start a repository.'
+    })
+    await worker.firstTurn
+
+    await agent.workers.messageWorker({
+      threadId: worker.threadId,
+      sender: TEST_STARTER,
+      inputId: 'slack:answer',
+      message: 'non, on laisse tomber'
+    })
+    await waitForArchive(agent, worker.threadId)
+
+    expect(answeredPrompts.join('\n')).toContain('finish_task')
+    await expect(outcomeOf(agent, worker.threadId)).resolves.toMatchObject({
+      value: 'blocked',
+      cause: 'It used its budget.'
+    })
+  })
 })
 
 describe('the traces of a worker', () => {
@@ -476,6 +520,37 @@ describe('the traces of a worker', () => {
         'workcell.task.subject': 'TASK-7'
       })
     }
+  })
+
+  it('traces the outcome of its task, with its cause, its cost and its task, when the host ends it after its last turn', async () => {
+    const url = await createMigratedDatabase()
+    const { observability, finishedSpans } = recordSpans()
+    await using agent = await openWorkers(
+      url,
+      [bash('git init --quiet'), { text: 'Done.' }],
+      { observability }
+    )
+    const worker = await agent.workers.startWorker(TICKET_START)
+    await worker.firstTurn
+
+    await agent.workers.finishWorker({
+      threadId: worker.threadId,
+      report: 'Closed.',
+      outcome: { value: 'manual', cause: 'A person closed the pull request.' }
+    })
+    const outcome = await outcomeOf(agent, worker.threadId)
+
+    expect(
+      spanNamed(finishedSpans(), 'workcell.task.outcome').attributes
+    ).toStrictEqual({
+      'gen_ai.conversation.id': worker.threadId,
+      'gen_ai.agent.name': 'Alpha',
+      'workcell.task.repository': REPOSITORY,
+      'workcell.task.subject': 'TASK-7',
+      'workcell.task.outcome': 'manual',
+      'workcell.task.outcome.cause': 'A person closed the pull request.',
+      'workcell.task.cost_usd': outcome?.costUsd
+    })
   })
 
   it('carries the tokens and the cost of its run, priced from the table when the provider reports no cost', async () => {
