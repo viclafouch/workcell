@@ -1,10 +1,15 @@
 import { afterAll, assert, beforeAll, describe, expect, it } from 'vitest'
 import type { createSecrets } from '@tanstack/ai-sandbox'
+import { startSkillServer } from '#/skills/__tests__/skill-server.ts'
 import {
   createDatabase,
   createMigratedDatabase
 } from '#/testing/test-database.ts'
-import { DuplicateSandboxPackageError, SchemaBehindError } from '#/workcell.ts'
+import {
+  DuplicateSandboxPackageError,
+  SchemaBehindError,
+  SkillPrefixConflictError
+} from '#/workcell.ts'
 import { MIGRATE_COMMAND } from './worker-fixtures.ts'
 import {
   closeWorkerTestbed,
@@ -84,5 +89,37 @@ describe('the start of a Workcell', () => {
 
     assert.instanceOf(refusal, DuplicateSandboxPackageError)
     expect(refusal.sandboxIds).toStrictEqual(['worker-test-library'])
+  })
+
+  it('refuses one skill prefix given to two different servers, and names the prefix', async () => {
+    const url = await createMigratedDatabase()
+    const workerServer = await startSkillServer()
+    const botServer = await startSkillServer()
+
+    const refusal = await openWorkers(url, [], {
+      skillServers: [{ prefix: 'team', server: workerServer.connect }],
+      orchestratorSkillServers: [{ prefix: 'team', server: botServer.connect }]
+    }).catch((error: unknown) => {
+      return error
+    })
+
+    assert.instanceOf(refusal, SkillPrefixConflictError)
+    expect(refusal.message).toContain('team')
+    expect(refusal.prefix).toBe('team')
+  })
+
+  it('opens with one skill prefix given twice to the same server at a URL', async () => {
+    const url = await createMigratedDatabase()
+
+    await using agent = await openWorkers(url, [], {
+      skillServers: [
+        { prefix: 'team', server: new URL('http://127.0.0.1:1/mcp') }
+      ],
+      orchestratorSkillServers: [
+        { prefix: 'team', server: new URL('http://127.0.0.1:1/mcp') }
+      ]
+    })
+
+    expect(agent.workers).toBeDefined()
   })
 })

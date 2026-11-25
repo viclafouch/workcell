@@ -8,6 +8,11 @@ import { definePlugin } from '@tanstack/ai-harness'
 import type { FakeResponseStep } from '@tanstack/ai/testing'
 import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
 import { StarterOnlyTools } from '#/orchestrator/starter-only-tools.ts'
+import {
+  REVIEW_BODY,
+  STANDARDS,
+  startSkillServer
+} from '#/skills/__tests__/skill-server.ts'
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import {
   LONG_HOST_TOOL,
@@ -63,6 +68,8 @@ const starterOnlyPublish = definePlugin({
     }
   }
 })
+
+const REVIEW_STEP = 'Read `STANDARDS.md`'
 
 const TEAM_SKILL = `---
 name: write-release-notes
@@ -489,36 +496,6 @@ describe('who the orchestrator works for', () => {
     )
   })
 
-  it('lists the skills of its skill folders, and loads one', async () => {
-    const systemPrompts: string[] = []
-    const skillDir = await mkdtemp(join(tmpdir(), 'orchestrator-skills-'))
-    await mkdir(join(skillDir, 'write-release-notes'))
-    await writeFile(
-      join(skillDir, 'write-release-notes', 'SKILL.md'),
-      TEAM_SKILL
-    )
-    const url = await createMigratedDatabase()
-    await using agent = await openWorkers(
-      url,
-      routedResponses([
-        recordSystemPromptsThen(
-          systemPrompts,
-          callTool('load_skill', { name: 'write-release-notes' })
-        ),
-        { text: 'Loaded.' }
-      ]),
-      { orchestratorSkillDirs: [skillDir] }
-    )
-
-    const answer = await askOrchestrator(agent, { message: 'Write the notes.' })
-    await rm(skillDir, { recursive: true, force: true })
-
-    expect(systemPrompts.join('\n')).toContain('write-release-notes')
-    expect(toolResultsOf(answer.events).join('\n')).toContain(
-      '# Write release notes'
-    )
-  })
-
   it('refuses the message of a colleague outside the colleague threads, and answers its starter there', async () => {
     const url = await createMigratedDatabase()
     await using agent = await openWorkers(
@@ -613,5 +590,106 @@ describe('who the orchestrator works for', () => {
       'may not start work'
     )
     await expect(agent.workers.listWorkers()).resolves.toStrictEqual([])
+  })
+})
+
+describe('the skills of the orchestrator', () => {
+  beforeAll(async () => {
+    await openWorkerTestbed()
+  })
+
+  afterAll(async () => {
+    await closeWorkerTestbed()
+  })
+
+  it('lists the skills of its skill folders, and loads one', async () => {
+    const systemPrompts: string[] = []
+    const skillDir = await mkdtemp(join(tmpdir(), 'orchestrator-skills-'))
+    await mkdir(join(skillDir, 'write-release-notes'))
+    await writeFile(
+      join(skillDir, 'write-release-notes', 'SKILL.md'),
+      TEAM_SKILL
+    )
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses([
+        recordSystemPromptsThen(
+          systemPrompts,
+          callTool('load_skill', { name: 'write-release-notes' })
+        ),
+        { text: 'Loaded.' }
+      ]),
+      { orchestratorSkillDirs: [skillDir] }
+    )
+
+    const answer = await askOrchestrator(agent, { message: 'Write the notes.' })
+    await rm(skillDir, { recursive: true, force: true })
+
+    expect(systemPrompts.join('\n')).toContain('write-release-notes')
+    expect(toolResultsOf(answer.events).join('\n')).toContain(
+      '# Write release notes'
+    )
+  })
+
+  it('lists the skills of an MCP server under their prefix, and loads one with its files', async () => {
+    const systemPrompts: string[] = []
+    const server = await startSkillServer()
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses([
+        recordSystemPromptsThen(
+          systemPrompts,
+          callTool('load_skill', { name: 'team:review' })
+        ),
+        callTool('read_skill_resource', {
+          skill: 'team:review',
+          path: 'STANDARDS.md'
+        }),
+        { text: 'Reviewed.' }
+      ]),
+      { orchestratorSkillServers: [{ prefix: 'team', server: server.connect }] }
+    )
+
+    const answer = await askOrchestrator(agent, { message: 'Review it.' })
+
+    expect(systemPrompts.join('\n')).toContain('team:review')
+    expect(systemPrompts.join('\n')).toContain(
+      'Review a diff in two fresh contexts. Use when a person asks for a review.'
+    )
+    expect(toolResultsOf(answer.events).join('\n')).toContain(
+      JSON.stringify(REVIEW_BODY.trimEnd())
+    )
+    expect(toolResultsOf(answer.events).join('\n')).toContain(
+      JSON.stringify(STANDARDS)
+    )
+  })
+
+  it('shares its connection to an MCP server with the workers that list the same prefix', async () => {
+    const server = await startSkillServer()
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses(
+        [callTool('load_skill', { name: 'team:review' }), { text: 'Loaded.' }],
+        [callTool('load_skill', { name: 'team:review' }), { text: 'Loaded.' }]
+      ),
+      {
+        skillServers: [{ prefix: 'team', server: server.connect }],
+        orchestratorSkillServers: [{ prefix: 'team', server: server.connect }]
+      }
+    )
+
+    const answer = await askOrchestrator(agent, { message: 'Review it.' })
+    const worker = await agent.workers.startWorker(TICKET_START)
+    await worker.firstTurn
+    const view = await agent.host.observe(agent.harness, {
+      threadId: worker.threadId
+    })
+
+    expect(toolResultsOf(answer.events).join('\n')).toContain(REVIEW_STEP)
+    expect(toolResults(await view.transcript())).toContain(REVIEW_STEP)
+    expect(server.connectionCount()).toBe(1)
   })
 })
