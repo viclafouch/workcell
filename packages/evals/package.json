@@ -1,0 +1,57 @@
+{
+  "name": "@workcell/evals",
+  "private": true,
+  "description": "The eval set: the real tasks a worker got wrong as Harbor cases, the worker harness and the judge for vitest-evals, and the pass^k report.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viclafouch/workcell.git",
+    "directory": "packages/evals"
+  },
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./cases": "./src/cases/index.ts",
+    "./reporter": "./src/report/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:changed": "vitest run --changed"
+  },
+  "dependencies": {
+    "smol-toml": "catalog:"
+  },
+  "devDependencies": {
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@tanstack/ai-sandbox": "catalog:",
+    "@types/node": "catalog:",
+    "@viclafouch/oxc-config": "catalog:",
+    "@workcell/core": "workspace:*",
+    "eslint-plugin-turbo": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "tinyrainbow": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "vitest-evals": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-harness": "catalog:",
+    "@tanstack/ai-sandbox": "catalog:",
+    "@workcell/core": "workspace:*",
+    "tinyrainbow": "catalog:",
+    "vitest": "catalog:",
+    "vitest-evals": "catalog:",
+    "zod": "catalog:"
+  }
+}

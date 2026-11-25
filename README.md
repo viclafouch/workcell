@@ -42,6 +42,7 @@ Each integration is its own package, and a project picks the ones it uses.
 | `@workcell/chat` | The chat of the workers and of the orchestrator bot on [Chat SDK](https://chat-sdk.dev), and `show_card`: tables, charts and key figures as native cards |
 | `@workcell/chat-slack` | What Slack adds on top of Chat SDK: the name and the picture of each worker, the session status, the card limits, the token checks and the Slack link of a thread in a feedback report |
 | `@workcell/host` | What the host process needs on a machine: the logger, the secret stores, the traces, the models, the login service, the live view and the machine check |
+| `@workcell/evals` | The eval set on [vitest-evals](https://vitest-evals.sentry.dev): the tasks a worker got wrong as Harbor task folders, a worker harness that reruns each one from its base commit with the remote out of reach, a `decide()` judge that compares the change to the one a person merged, and a report of pass^k, pass@k, cost and time per case, model beside model |
 
 ## License
 

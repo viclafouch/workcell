@@ -323,6 +323,12 @@ catalogs:
     reflect-metadata:
       specifier: ^0.2.2
       version: 0.2.2
+    smol-toml:
+      specifier: ^1.9.1
+      version: 1.9.1
+    tinyrainbow:
+      specifier: ^3.2.0
+      version: 3.2.0
     turbo:
       specifier: ^2.11.11
       version: 2.11.11
@@ -332,6 +338,9 @@ catalogs:
     vitest:
       specifier: ^5.1.0
       version: 5.1.0
+    vitest-evals:
+      specifier: 0.18.1
+      version: 0.18.1
     zod:
       specifier: ^4.6.7
       version: 4.6.7
@@ -592,6 +601,55 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+
+  packages/evals:
+    dependencies:
+      smol-toml:
+        specifier: 'catalog:'
+        version: 1.9.1
+    devDependencies:
+      '@tanstack/ai':
+        specifier: 'catalog:'
+        version: 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
+      '@tanstack/ai-harness':
+        specifier: 'catalog:'
+        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+      '@tanstack/ai-sandbox':
+        specifier: 'catalog:'
+        version: 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf)
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.6
+      '@viclafouch/oxc-config':
+        specifier: 'catalog:'
+        version: 3.0.0(eslint-plugin-turbo@2.11.11(eslint@10.14.0(jiti@2.7.0))(turbo@2.11.11))(oxfmt@0.78.0)(oxlint-tsgolint@7.0.2006)(oxlint@1.93.0(oxlint-tsgolint@7.0.2006))(typescript@7.0.2)
+      '@workcell/core':
+        specifier: workspace:*
+        version: link:../core
+      eslint-plugin-turbo:
+        specifier: 'catalog:'
+        version: 2.11.11(eslint@10.14.0(jiti@2.7.0))(turbo@2.11.11)
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.93.0(oxlint-tsgolint@7.0.2006)
+      oxlint-tsgolint:
+        specifier: 'catalog:'
+        version: 7.0.2006
+      tinyrainbow:
+        specifier: 'catalog:'
+        version: 3.2.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+      vitest-evals:
+        specifier: 'catalog:'
+        version: 0.18.1(tinyrainbow@3.2.0)(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(zod@4.6.7)
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -2519,6 +2577,12 @@ packages:
       oxfmt:
         optional: true
 
+  '@vitest-evals/core@0.18.1':
+    resolution: {integrity: sha512-xls3rsp2o1p3y230HJSDQK/Mk0T+UQw4dOuifM+KgJBb7i+9TIJYuXBU1zP1xqGbsV6jFcga7sTyRmEGUx9kbg==}
+
+  '@vitest-evals/report-ui@0.18.1':
+    resolution: {integrity: sha512-f0xyyyoUPHAl+aAwvNYPydlZmI0WVpuNT0IwtQppR0oXgSpX8dgMCuM3vY+iopGz/Eu5D0YdmyWN1mBvIckVsg==}
+
   '@vitest/mocker@5.1.0':
     resolution: {integrity: sha512-5umB9/jlWcqVS6fsrFmv5Gdnpu6wAUio/lEOwAmvB7v+lFo/IW2B9FhAD0p19GCULTgMzLCdUmuCDCnAzWgppQ==}
     peerDependencies:
@@ -4246,6 +4310,10 @@ packages:
     resolution: {integrity: sha512-jBrmx4lYmaC9k/mgPbylxs7kBUxHtD8256up+HjLaDFfXScKJQyil+SWXSvhAtT7XHo+yTVlpB81PGmHP8oLSQ==}
     engines: {node: ^20.0.0 || >=22.0.0}
 
+  tinyrainbow@3.2.0:
+    resolution: {integrity: sha512-LgO3D9yZJjApUiuUfl9iFAwrtaX4+lok3wJIqttGoKCHlWUqHqbQpnxCf82L8FjgKsh4iGo78hqJwgL8F6To2A==}
+    engines: {node: '>=14.0.0'}
+
   tldts-core@7.4.22:
     resolution: {integrity: sha512-NRyhrlvJcTwvoRibE0dEZvp6C5RwV4RxpsX1zbkI1k7Fk2pzIhmQ+MvswJEd5KKl3VRFRMDTipXse/ejh/ld/w==}
 
@@ -4390,6 +4458,20 @@ packages:
       tsx:
         optional: true
       yaml:
+        optional: true
+
+  vitest-evals@0.18.1:
+    resolution: {integrity: sha512-KlBlJ0SB6gpB4o1boCg55hOQre0SiWHZq1sW5IfNw7c389RPKoOC6ENdcOjvL7Q2xQjb15rPaviBf4am1r1Z4Q==}
+    hasBin: true
+    peerDependencies:
+      ai: '>=4 <7'
+      tinyrainbow: '>=2 <4'
+      vitest: '>=5 <6'
+      zod: '>=3 <5'
+    peerDependenciesMeta:
+      ai:
+        optional: true
+      zod:
         optional: true
 
   vitest@5.1.0:
@@ -5944,6 +6026,14 @@ snapshots:
     optionalDependencies:
       eslint-plugin-turbo: 2.11.11(eslint@10.14.0(jiti@2.7.0))(turbo@2.11.11)
       oxfmt: 0.78.0
+
+  '@vitest-evals/core@0.18.1':
+    dependencies:
+      zod: 4.6.7
+
+  '@vitest-evals/report-ui@0.18.1':
+    dependencies:
+      '@vitest-evals/core': 0.18.1
 
   '@vitest/mocker@5.1.0(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
@@ -7831,6 +7921,8 @@ snapshots:
 
   tinypool@2.2.0: {}
 
+  tinyrainbow@3.2.0: {}
+
   tldts-core@7.4.22: {}
 
   tldts@7.4.22:
@@ -7968,6 +8060,15 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       yaml: 2.9.1
+
+  vitest-evals@0.18.1(tinyrainbow@3.2.0)(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(zod@4.6.7):
+    dependencies:
+      '@vitest-evals/core': 0.18.1
+      '@vitest-evals/report-ui': 0.18.1
+      tinyrainbow: 3.2.0
+      vitest: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+    optionalDependencies:
+      zod: 4.6.7
 
   vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)):
     dependencies:

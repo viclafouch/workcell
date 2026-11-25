@@ -47,6 +47,12 @@ const MAX_COMMENT_CHARS = 20_000
 
 const DELETED_GITHUB_USER = 'ghost'
 
+const PULL_REQUEST_LINK = new URLPattern({
+  protocol: 'https',
+  hostname: 'github.com',
+  pathname: '/:owner/:repo/pull/:number'
+})
+
 const FILE_HISTORY_QUERY = `query FileHistory($owner: String!, $name: String!, $expression: String!, $path: String!, $first: Int!) {
   repository(owner: $owner, name: $name) {
     object(expression: $expression) {
@@ -440,9 +446,61 @@ export function createGithubReader(octokit: GithubOctokit) {
     }
   }
 
+  const readMergedChange = async (pullRequestUrl: string) => {
+    const link = PULL_REQUEST_LINK.exec(pullRequestUrl)?.pathname.groups
+
+    if (
+      link?.owner === undefined ||
+      link.repo === undefined ||
+      link.number === undefined
+    ) {
+      throw new Error(`${pullRequestUrl} names no GitHub pull request.`)
+    }
+
+    const { owner, repo } = link
+    const { data: pullRequest } = await octokit.request(
+      'GET /repos/{owner}/{repo}/pulls/{pull_number}',
+      { owner, repo, pull_number: Number(link.number) }
+    )
+
+    if (!pullRequest.merged || pullRequest.merge_commit_sha === null) {
+      return
+    }
+
+    const mergeCommit = pullRequest.merge_commit_sha
+    const { data: merged } = await octokit.request(
+      'GET /repos/{owner}/{repo}/commits/{ref}',
+      { owner, repo, ref: mergeCommit }
+    )
+    const [base] = merged.parents
+
+    if (base === undefined) {
+      throw new Error(`The merge commit ${mergeCommit} has no parent.`)
+    }
+
+    const { data: diff } = await octokit.request(
+      'GET /repos/{owner}/{repo}/compare/{basehead}',
+      {
+        owner,
+        repo,
+        basehead: `${base.sha}...${mergeCommit}`,
+        mediaType: { format: 'diff' }
+      }
+    )
+
+    if (typeof diff !== 'string') {
+      throw new TypeError(
+        `GitHub answered the compare of ${pullRequestUrl} with no diff.`
+      )
+    }
+
+    return { baseCommit: base.sha, diff }
+  }
+
   return {
     readPullRequest,
     readPullRequestPatch,
+    readMergedChange,
     openPullRequestUrl,
     readFile,
     readFileHistory,
