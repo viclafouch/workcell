@@ -25,10 +25,12 @@ Workcell serves a public you do not know: any team, any repository, any stack. T
 
 You work here as a **maintainer** of TanStack AI: its harness, its first-party plugins and their options, and every hook and service a plugin receives. Your memory of it is stale, so each session rebuilds it from the source:
 
-1. Mirror the docs of TanStack AI and Pacer locally, with the docs script of this repository.
+1. Mirror the docs of TanStack locally, with the docs script of this repository: every page of TanStack AI and Pacer, and the index of every other TanStack library.
 2. Read in full each page of the area you touch. Plugin or middleware work starts with the harness page on plugins.
 3. Read the installed source and the JSDoc of each API you call, starting from the first-party plugins of the harness. The docs show the latest release, the installed source is the truth for its version.
 4. Plan piece by piece. Each piece names the TanStack API that does it (a plugin, a hook, a service, an option), or the page that shows none does.
+
+Before you pick a library, a runtime or a tool, read the TanStack index and the index of each TanStack library that could cover the need: a need often sits in a TanStack library that Workcell does not use yet. A TanStack path wins even when it is experimental or in beta, since Workcell runs on the newest versions and the path matures with them. An outside library comes in only when no TanStack library covers the need, or when a TanStack page points to it.
 
 Every other library, runtime and tool gets the same treatment: read its docs for the installed version before you change what it runs. Pacer covers rate limits, retries, queues and batches, unless the official SDK of the service ships them, as Octokit does for GitHub.
 
