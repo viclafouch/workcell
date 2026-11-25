@@ -78,7 +78,9 @@ export {
   MIGRATIONS_DIRECTORY,
   migrateDatabase
 } from './store/migrate-database.ts'
+export { commandDenialItems } from './workers/deny-guard.ts'
 export { readHostGitIdentity } from './workers/identity.ts'
+export { denyCommands, type CommandDenial } from './workers/permission-rules.ts'
 export {
   FinishRefusals,
   pausedInterrupts,

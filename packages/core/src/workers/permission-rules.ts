@@ -39,7 +39,10 @@ export type CommandDenial = {
   rules: readonly PermissionRule[]
 }
 
-function denyCommands(reason: string, resources: readonly string[]) {
+export function denyCommands(
+  reason: string,
+  resources: readonly string[]
+): CommandDenial {
   return {
     reason,
     rules: resources.map((resource): PermissionRule => {
