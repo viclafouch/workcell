@@ -168,7 +168,7 @@ export function mcpSkillSource({
       } catch (error) {
         log.warn(
           { error, prefix },
-          'The skills server is unavailable: the workers run without its skills.'
+          'The skills server is unavailable: the agents run without its skills.'
         )
 
         return []
@@ -196,6 +196,34 @@ export function mcpSkillSource({
       if (opened.status === 'fulfilled') {
         await opened.value?.client.close()
       }
+    }
+  }
+}
+
+export function mcpSkillSources(
+  servers: readonly McpSkillServer[],
+  log: LeveledLog
+) {
+  const sources = new Map<string, SkillSource & AsyncDisposable>()
+
+  for (const server of servers) {
+    if (!sources.has(server.prefix)) {
+      sources.set(server.prefix, mcpSkillSource({ ...server, log }))
+    }
+  }
+
+  return {
+    of: (listed: readonly McpSkillServer[] = []) => {
+      return listed.flatMap(({ prefix }) => {
+        return sources.get(prefix) ?? []
+      })
+    },
+    [Symbol.asyncDispose]: async () => {
+      await Promise.all(
+        sources.values().map((source) => {
+          return source[Symbol.asyncDispose]()
+        })
+      )
     }
   }
 }

@@ -11,7 +11,7 @@ import {
   type WorkspaceBinder
 } from '@tanstack/ai-harness/plugins/coding'
 import { boundToolOutput } from '@tanstack/ai-harness/plugins/node'
-import { renderCatalog } from '@tanstack/ai-skills'
+import { renderCatalog, type SkillSource } from '@tanstack/ai-skills'
 import { skills } from '@tanstack/ai-skills/harness'
 import {
   untilABudgetStop,
@@ -59,8 +59,8 @@ type DefineOrchestratorHarnessParams = {
   pricing: ModelPricing
   limits: BudgetLimits
   plugins: readonly HarnessPlugin[]
+  skills: { dirs: readonly string[]; sources: readonly SkillSource[] }
   scope?: string
-  skills?: { dirs: readonly string[] }
   feedback?: FeedbackOptions
   observability?: WorkerObservability
 }
@@ -93,11 +93,11 @@ export function defineOrchestratorHarness({
   pricing,
   limits,
   plugins,
-  skills: { dirs } = { dirs: [] },
+  skills: { dirs, sources },
   feedback: feedbackOptions,
   observability
 }: DefineOrchestratorHarnessParams) {
-  const orchestratorSkills = skills({ dirs, renderCatalog })
+  const orchestratorSkills = skills({ dirs, sources, renderCatalog })
 
   return defineHarness({
     name: ORCHESTRATOR_HARNESS_NAME,

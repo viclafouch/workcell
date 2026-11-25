@@ -19,6 +19,7 @@ import type { ModelPricing } from '#/budget/budget.ts'
 import type { BudgetLimits } from '#/budget/limits.ts'
 import type { FeedbackOptions } from '#/feedback/feedback.ts'
 import { workerMetadataSchema } from '#/session/metadata.ts'
+import type { McpSkillServer } from '#/skills/mcp-skill-source.ts'
 import type { Database } from '#/store/database.ts'
 import { createSandboxInstanceStore } from '#/store/sandbox-instance-store.ts'
 import { createWorkerChangesStore } from '#/store/worker-changes-store.ts'
@@ -172,6 +173,8 @@ export async function openWorkers(
     plugins = [],
     orchestratorPlugins = [],
     orchestratorSkillDirs,
+    orchestratorSkillServers,
+    skillServers,
     workerNames = TEST_NAMES,
     maxRunningTurns = TEST_MAX_RUNNING_TURNS,
     observability,
@@ -204,6 +207,8 @@ export async function openWorkers(
     plugins?: readonly HarnessPlugin[]
     orchestratorPlugins?: readonly HarnessPlugin[]
     orchestratorSkillDirs?: readonly string[]
+    orchestratorSkillServers?: readonly McpSkillServer[]
+    skillServers?: readonly McpSkillServer[]
     workerNames?: readonly string[]
     observability?: WorkerObservability
     onWorkerStart?: OnWorkerStart
@@ -298,11 +303,14 @@ export async function openWorkers(
         scope: orchestratorScope,
         limits: orchestratorLimits,
         plugins: orchestratorPlugins,
-        skills: { dirs: orchestratorSkillDirs ?? [] }
+        skills: {
+          dirs: orchestratorSkillDirs ?? [],
+          servers: orchestratorSkillServers
+        }
       },
       gitIdentity: HOST_GIT_IDENTITY,
       workerNames,
-      skills: { dirs: [testbed.skillDir] },
+      skills: { dirs: [testbed.skillDir], servers: skillServers },
       defaultLimits: limits,
       plugins: [holdSecondTurn, allowGit, ...plugins],
       maxRunningTurns,

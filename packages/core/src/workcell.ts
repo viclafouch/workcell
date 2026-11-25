@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util'
 import type { AnyTextAdapter } from '@tanstack/ai'
 import {
   createHarnessHost,
@@ -33,7 +34,7 @@ import {
 } from './sandbox/library-sandbox.ts'
 import { workerMetadataSchema } from './session/metadata.ts'
 import {
-  mcpSkillSource,
+  mcpSkillSources,
   type McpSkillServer
 } from './skills/mcp-skill-source.ts'
 import type { Database } from './store/database.ts'
@@ -90,7 +91,10 @@ type OpenWorkcellParams = {
     limits: BudgetLimits
     plugins: readonly HarnessPlugin[]
     scope?: string
-    skills?: { dirs: readonly string[] }
+    skills?: {
+      dirs: readonly string[]
+      servers?: readonly McpSkillServer[]
+    }
   }
   gitIdentity: WorkerIdentityEnvParams
   workerNames: readonly string[]
@@ -149,6 +153,48 @@ export class DuplicateSandboxPackageError extends StartRefusalError {
 
   get details() {
     return { sandboxIds: this.sandboxIds }
+  }
+}
+
+export class SkillPrefixConflictError extends StartRefusalError {
+  readonly prefix: string
+
+  constructor(prefix: string) {
+    super(
+      `Two different skill servers share the prefix ${prefix}: give each prefix one server, or each server its own prefix.`
+    )
+    this.name = 'SkillPrefixConflictError'
+    this.prefix = prefix
+  }
+
+  get details() {
+    return { prefix: this.prefix }
+  }
+}
+
+function isSameSkillServer(
+  first: McpSkillServer['server'],
+  second: McpSkillServer['server']
+) {
+  if (first instanceof URL && second instanceof URL) {
+    return first.href === second.href
+  }
+
+  return isDeepStrictEqual(first, second)
+}
+
+function requireOneServerPerPrefix(servers: readonly McpSkillServer[]) {
+  const conflict = servers.find((server, index) => {
+    return servers.slice(0, index).some((earlier) => {
+      return (
+        earlier.prefix === server.prefix &&
+        !isSameSkillServer(earlier.server, server.server)
+      )
+    })
+  })
+
+  if (conflict !== undefined) {
+    throw new SkillPrefixConflictError(conflict.prefix)
   }
 }
 
@@ -225,6 +271,11 @@ export async function openWorkcell({
     ...Object.values(sandboxes),
     libraryOptions.sandbox
   ])
+  const skillServers = [
+    ...(skills.servers ?? []),
+    ...(orchestratorOptions.skills?.servers ?? [])
+  ]
+  requireOneServerPerPrefix(skillServers)
   const startLog = logger.child({ module: 'host' })
   await requireCurrentSchema(database, migrateCommand, startLog)
   const subagentModel = models.subagent ?? models.worker
@@ -250,12 +301,10 @@ export async function openWorkcell({
       : [sendFiles({ sentFiles, readFile, secretValues })]
   }
   const activity = createWorkerActivity({ pricing, secretValues })
-  const skillSources = (skills.servers ?? []).map((server) => {
-    return mcpSkillSource({
-      ...server,
-      log: logger.child({ module: 'skills' })
-    })
-  })
+  const skillSources = mcpSkillSources(
+    skillServers,
+    logger.child({ module: 'skills' })
+  )
   const tracer = workcellTracer(observability)
   const host = createHarnessHost({
     acceptInput: acceptAllowedSenders(senders),
@@ -310,7 +359,7 @@ export async function openWorkcell({
     subagentAdapter: subagentModel,
     workspace: workerSandbox.workspace,
     lifecycle: lifecycle.plugin,
-    skills: { dirs: skills.dirs, sources: skillSources },
+    skills: { dirs: skills.dirs, sources: skillSources.of(skills.servers) },
     redactedSecretNames: Object.keys(secrets),
     pricing,
     defaultLimits,
@@ -354,6 +403,10 @@ export async function openWorkcell({
   })
   const orchestratorHarness = defineOrchestratorHarness({
     ...orchestratorOptions,
+    skills: {
+      dirs: orchestratorOptions.skills?.dirs ?? [],
+      sources: skillSources.of(orchestratorOptions.skills?.servers)
+    },
     plugins: [
       ...orchestratorOptions.plugins,
       ...sendFilesFrom(async (_threadId, path) => {
@@ -388,11 +441,7 @@ export async function openWorkcell({
     inspectWorkers,
     [Symbol.asyncDispose]: async () => {
       await host.close({ recoverable: true })
-      await Promise.all(
-        skillSources.map((source) => {
-          return source[Symbol.asyncDispose]()
-        })
-      )
+      await skillSources[Symbol.asyncDispose]()
       await lifecycle.stopIdleTimers()
       await destroyEverySandbox(sandboxProvider, logger)
     }

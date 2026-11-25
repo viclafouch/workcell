@@ -235,7 +235,7 @@ describe('the skills of an MCP server', () => {
     expect(run.systemPrompt).not.toContain('team:review')
     expect(log.warn).toHaveBeenCalledWith(
       { error: new Error('The skills server is down.'), prefix: 'team' },
-      'The skills server is unavailable: the workers run without its skills.'
+      'The skills server is unavailable: the agents run without its skills.'
     )
   })
 
@@ -255,7 +255,7 @@ describe('the skills of an MCP server', () => {
         ),
         prefix: 'team'
       },
-      'The skills server is unavailable: the workers run without its skills.'
+      'The skills server is unavailable: the agents run without its skills.'
     )
   })
 })

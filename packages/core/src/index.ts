@@ -13,6 +13,7 @@ export {
   DuplicateSandboxPackageError,
   openWorkcell,
   SchemaBehindError,
+  SkillPrefixConflictError,
   StartRefusalError
 } from './workcell.ts'
 export { joinCutOffAnswer, WORKER_DURABILITY } from './host/agent-durability.ts'
