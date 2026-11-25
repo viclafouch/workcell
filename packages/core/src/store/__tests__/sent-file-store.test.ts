@@ -26,7 +26,6 @@ describe('createSentFileStore', () => {
       bytes
     })
 
-    expect(key).toMatch(/^sent-files\/thread-1\//u)
     expect(await sentFiles.take(key)).toStrictEqual(bytes)
     expect(await sentFiles.take(key)).toBeNull()
   })

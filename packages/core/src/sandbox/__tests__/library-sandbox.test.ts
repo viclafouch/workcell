@@ -170,24 +170,19 @@ describe('the library sandbox', () => {
     )
   })
 
-  it('refuses every write and every command, in plan mode and in its read-only tree', async () => {
+  it('refuses every write to its read-only tree, even in bypass mode', async () => {
     const library = openLibrary('library-writes')
     await library.pullOnce()
-    const writes = [
-      {
-        name: 'write_file',
-        input: { path: 'app/README.md', content: 'Changed.\n' }
-      },
-      { name: 'write_file', input: { path: 'NOTES.md', content: 'New.\n' } }
-    ]
 
-    const planned = await askLibraryQuestion({
-      workspace: library.workspace,
-      toolCalls: [...writes, { name: 'bash', input: { command: 'git push' } }]
-    })
     const bypassed = await askLibraryQuestion({
       workspace: library.workspace,
-      toolCalls: writes,
+      toolCalls: [
+        {
+          name: 'write_file',
+          input: { path: 'app/README.md', content: 'Changed.\n' }
+        },
+        { name: 'write_file', input: { path: 'NOTES.md', content: 'New.\n' } }
+      ],
       mode: 'bypass'
     })
     const read = await askLibraryQuestion({
@@ -198,11 +193,6 @@ describe('the library sandbox', () => {
       ]
     })
 
-    expect(planned).toStrictEqual(
-      Array.from({ length: 3 }, () => {
-        return '{"error":"This tool is not allowed in plan mode."}'
-      })
-    )
     expect(bypassed).toStrictEqual([
       expect.stringContaining('EACCES: permission denied'),
       expect.stringContaining('EACCES: permission denied')

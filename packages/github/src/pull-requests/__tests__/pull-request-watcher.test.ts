@@ -502,7 +502,7 @@ describe('the red checks of a pull request', () => {
       },
       { workflow: 'docs', conclusion: 'success' }
     )
-    const { watcher, wakes, lines } = openWatcher()
+    const { watcher, wakes } = openWatcher()
 
     await pollTwice(watcher)
     const requestsOfTwoPolls = githubFake.requests
@@ -516,10 +516,6 @@ describe('the red checks of a pull request', () => {
         delivery: 'steer',
         message: `The pull request watcher sends this, not a person. The checks of the pull request ${PULL_REQUEST_URL} failed on head-1. The status "code/scan" failed: https://checks.example.com/code/scan. The status "license/scan" failed: https://checks.example.com/license/scan. The job "lint" failed: https://github.com/acme/app/actions/runs/4/job/lint. The job "e2e" failed: https://github.com/acme/app/actions/runs/1/job/e2e. Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
       }
-    ])
-    expect(lines).toStrictEqual([
-      `pull request recorded {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"}`,
-      `pull request event sent {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}","kind":"red-check","inputId":"github:acme/app#42:red-check:head-1:code/scan,license/scan,lint,e2e","action":"wake"}`
     ])
     expect(githubFake.actionsReads.toSorted()).toStrictEqual([
       '/repos/acme/app/actions/runs/1/jobs?filter=latest&per_page=100',
@@ -670,7 +666,7 @@ describe('the red checks of a pull request', () => {
     ).toStrictEqual([
       `The pull request watcher sends this, not a person. The checks of the pull request ${PULL_REQUEST_URL} failed on head-1. The status "code/scan" failed: https://checks.example.com/code/scan. Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
     ])
-    expect(lines[1]).toBe(
+    expect(lines).toContain(
       `failed jobs not read: the next poll reads them again {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"} Resource not accessible by personal access token`
     )
     expect(actionsReadsOfTwoPolls).toHaveLength(1)

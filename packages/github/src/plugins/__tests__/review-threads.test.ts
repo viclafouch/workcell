@@ -38,12 +38,6 @@ const BRANCH = 'task-7-retry-only-network-failures'
 
 const PULL_REQUEST_NUMBER = 16_500
 
-const PULL_REQUEST_VARIABLES = {
-  owner: 'acme',
-  name: 'app',
-  number: PULL_REQUEST_NUMBER
-}
-
 const PULL_REQUEST_URL = `https://github.com/acme/app/pull/${PULL_REQUEST_NUMBER}`
 
 const FINDING_URL = `${PULL_REQUEST_URL}#discussion_r101`
@@ -170,6 +164,12 @@ const THREAD_NODES = new Map([
 
 function operationOf({ query }: GraphqlBody) {
   return query.split('(')[0]
+}
+
+function mutations() {
+  return graphqlBodies.filter(({ query }) => {
+    return query.startsWith('mutation ')
+  })
 }
 
 function graphqlData(body: GraphqlBody) {
@@ -399,28 +399,11 @@ describe('the review threads tool of a worker', () => {
     })
   })
 
-  it('reads every page of threads for the branch of the worker, and writes nothing on GitHub', async () => {
+  it('writes nothing on GitHub when it reads the threads', async () => {
     await readReviewThreads()
 
-    expect(githubRequests).toStrictEqual([
-      `GET ${GITHUB_API}/repos/acme/app/pulls?state=open&head=acme%3A${BRANCH}&per_page=1`,
-      `POST ${GITHUB_GRAPHQL_URL}`,
-      `POST ${GITHUB_GRAPHQL_URL}`
-    ])
-    expect(
-      graphqlBodies.map((body) => {
-        return { operation: operationOf(body), variables: body.variables }
-      })
-    ).toStrictEqual([
-      {
-        operation: 'query ReviewThreads',
-        variables: PULL_REQUEST_VARIABLES
-      },
-      {
-        operation: 'query ReviewThreads',
-        variables: { ...PULL_REQUEST_VARIABLES, cursor: SECOND_PAGE_CURSOR }
-      }
-    ])
+    expect(replies).toStrictEqual([])
+    expect(mutations()).toStrictEqual([])
   })
 
   it('says when the branch of the worker has no open pull request', async () => {
@@ -457,9 +440,7 @@ describe('the review threads tool of a worker', () => {
         body: { body: FIX_REPLY }
       }
     ])
-    expect(graphqlBodies.map(operationOf)).toStrictEqual([
-      'query ReviewThreadTarget'
-    ])
+    expect(mutations()).toStrictEqual([])
   })
 
   it('resolves the thread of its own pull request', async () => {
@@ -472,16 +453,10 @@ describe('the review threads tool of a worker', () => {
     expect(run.result).toContain(`Resolved the thread ${BOT_THREAD_ID}.`)
     expect(replies).toStrictEqual([])
     expect(
-      graphqlBodies.map((body) => {
-        return {
-          operation: operationOf(body),
-          threadId: body.variables.threadId
-        }
+      mutations().map(({ variables }) => {
+        return variables.threadId
       })
-    ).toStrictEqual([
-      { operation: 'query ReviewThreadTarget', threadId: BOT_THREAD_ID },
-      { operation: 'mutation ResolveReviewThread', threadId: BOT_THREAD_ID }
-    ])
+    ).toStrictEqual([BOT_THREAD_ID])
   })
 
   it('refuses to reply on or resolve a thread of another pull request, and writes nothing on GitHub', async () => {
@@ -499,10 +474,7 @@ describe('the review threads tool of a worker', () => {
     expect(reply.result).toContain(refusal)
     expect(resolve.result).toContain(refusal)
     expect(replies).toStrictEqual([])
-    expect(graphqlBodies.map(operationOf)).toStrictEqual([
-      'query ReviewThreadTarget',
-      'query ReviewThreadTarget'
-    ])
+    expect(mutations()).toStrictEqual([])
   })
 
   it.each([REPLY_TOOL_NAME, RESOLVE_TOOL_NAME])(

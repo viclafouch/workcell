@@ -333,13 +333,16 @@ describe('a worker stopped at its budget', () => {
         return view.snapshot()
       })
       .toMatchObject({ pendingWaits: [{ kind: 'human' }] })
-    const wakeLines = loggedLines.slice(linesBeforeWake).join('\n')
+    const wakeLines = loggedLines.slice(linesBeforeWake)
+    const bashCalls = wakeLines.filter((line) => {
+      return line.includes('"bash call"')
+    })
 
-    expect(wakeLines).toContain(
-      '"command":"git status --short --untracked-files=no"},"bash call"]'
+    expect(bashCalls.join('\n')).toContain(
+      '"command":"git status --short --untracked-files=no"'
     )
-    expect(wakeLines).toContain('"kind":"human"')
-    expect(wakeLines).toContain('worker waits for a person')
+    expect(wakeLines.join('\n')).toContain('"kind":"human"')
+    expect(wakeLines.join('\n')).toContain('worker waits for a person')
   })
 
   it('ends its turn with no model call on the stop button', async () => {

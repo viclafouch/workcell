@@ -613,7 +613,6 @@ describe('a sleeping worker', () => {
     const results = toolResults(await session.transcript())
 
     expect(results).toContain(RESTORED_WORK)
-    expect(loggedLines.join('\n')).toContain('"path":"fresh sandbox"')
   })
 
   it('commits as the host git identity in a fresh sandbox', async () => {

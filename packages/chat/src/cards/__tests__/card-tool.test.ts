@@ -86,20 +86,16 @@ describe('the show_card tool', () => {
   it('turns a valid spec into a card event of the turn, and tells the model the card is shown', async () => {
     const { cards, toolResults } = await showCard({ spec: DEPLOYS_SPEC })
 
-    expect(cards).toStrictEqual([
+    expect(cards).toMatchObject([
       {
         type: 'card',
         title: 'Weekly deploys',
-        subtitle: undefined,
-        imageUrl: undefined,
         children: [
-          { type: 'text', content: 'Deploys are up.', style: undefined },
+          { type: 'text', content: 'Deploys are up.' },
           {
             type: 'table',
             headers: ['Project', 'Deploys'],
-            rows: [['web', '412']],
-            align: undefined,
-            caption: undefined
+            rows: [['web', '412']]
           }
         ]
       }

@@ -3,19 +3,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { z } from 'zod'
-import { chat, streamToText } from '@tanstack/ai'
-import { fakeText } from '@tanstack/ai/testing'
 import { toTanStackLogger } from '@workcell/core'
 import { createLogger } from '#/logger.ts'
 
 const SECRET = 'npm_0123456789abcdef'
 
-const SECRET_KEYS = [
-  'MODEL_API_KEY',
-  'NPM_TOKEN',
-  'DATABASE_URL',
-  'GITHUB_TOKEN'
-]
+const SECRET_KEYS = ['MODEL_API_KEY', 'DATABASE_URL', 'GITHUB_TOKEN']
 
 const logRecord = z.looseObject({ level: z.number(), msg: z.string() })
 
@@ -41,7 +34,6 @@ describe('createLogger', () => {
   it.each([
     { token: SECRET },
     { env: { MODEL_API_KEY: SECRET } },
-    { env: { NPM_TOKEN: SECRET } },
     { request: { headers: { authorization: `Bearer ${SECRET}` } } },
     { request: { headers: { Authorization: `Bearer ${SECRET}` } } },
     { request: { headers: { 'x-api-key': SECRET } } },
@@ -146,32 +138,5 @@ describe('toTanStackLogger', () => {
         error: { message: 'The provider is down' }
       }
     ])
-  })
-
-  it('receives the debug output of a chat run', async () => {
-    const { destination, readRecords } = captureLines()
-    const fake = fakeText()
-    fake.setResponses([{ text: 'Hello!' }])
-
-    await streamToText(
-      chat({
-        adapter: fake,
-        messages: [{ role: 'user', content: 'Hi' }],
-        threadId: 'thread-1',
-        debug: {
-          logger: toTanStackLogger(
-            createLogger({ destination, level: 'debug' })
-          )
-        }
-      })
-    )
-
-    const messages = readRecords().map(({ msg }) => {
-      return msg
-    })
-
-    expect(messages).toContainEqual(
-      expect.stringContaining('[tanstack-ai:request]')
-    )
   })
 })

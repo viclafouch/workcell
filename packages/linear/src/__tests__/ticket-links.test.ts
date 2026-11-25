@@ -5,8 +5,8 @@ const PREFIX = 'https://linear.app/acme/issue/'
 
 const LINKS = ticketLinks({ teamKeys: ['ABC', 'XY'], ticketUrlPrefix: PREFIX })
 
-function linkPlain(text: string) {
-  return LINKS.reduce((linked, { pattern, toLink }) => {
+function linkPlain(text: string, links = LINKS) {
+  return links.reduce((linked, { pattern, toLink }) => {
     return linked.replace(pattern, toLink)
   }, text)
 }
@@ -27,9 +27,9 @@ describe('the ticket links', () => {
     expect(linkPlain(text)).toBe(linked)
   })
 
-  it('gives no rule when the workspace has no team', () => {
-    expect(
-      ticketLinks({ teamKeys: [], ticketUrlPrefix: PREFIX })
-    ).toStrictEqual([])
+  it('links nothing when the workspace has no team', () => {
+    const links = ticketLinks({ teamKeys: [], ticketUrlPrefix: PREFIX })
+
+    expect(linkPlain('ABC-12 et -3.', links)).toBe('ABC-12 et -3.')
   })
 })

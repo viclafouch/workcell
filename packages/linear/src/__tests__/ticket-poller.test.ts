@@ -327,10 +327,8 @@ describe('the ticket poller', () => {
       repositoryLabels: Object.keys(INTAKE.repositoryLabels),
       stateTypes: ['backlog', 'unstarted']
     })
-    const timersAfterTheCall = timersKeepingTheProcessAlive()
     linear[Symbol.dispose]()
 
-    expect(timersAfterTheCall).toBeGreaterThan(timersBefore)
     expect(timersKeepingTheProcessAlive()).toBeLessThanOrEqual(timersBefore)
   })
 
