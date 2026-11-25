@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { ChatMiddleware, ToolCall } from '@tanstack/ai'
 import {
+  createExtensionPoint,
   decidePermission,
   definePlugin,
   PermissionDecisionCapability,
@@ -12,6 +13,19 @@ import {
 import type { CommandDenial } from './permission-rules.ts'
 
 const DENY_GUARD = 'workcell/deny-guard'
+
+const CommandDenials = createExtensionPoint<CommandDenial>(
+  'workcell/command-denials'
+)
+
+export function commandDenialItems(denial: CommandDenial) {
+  return [
+    ...denial.rules.map((rule) => {
+      return PermissionRules.item(rule)
+    }),
+    CommandDenials.item(denial)
+  ]
+}
 
 const RULE_DENIAL = 'A permission rule denies this tool.'
 
@@ -93,6 +107,21 @@ export function denyGuard(denials: readonly CommandDenial[]) {
       const declared = setupContext.collect(PermissionResources)
       const rules = setupContext.collect(PermissionRules)
 
+      const reasonOf = async (tool: string, input: unknown) => {
+        const resources = await resourcesOf(declared, tool, input)
+        const denial = [
+          ...denials,
+          ...setupContext.collect(CommandDenials)
+        ].find(({ rules: denialRules }) => {
+          return (
+            decidePermission(denialRules, tool, 'default', { resources }) ===
+            'deny'
+          )
+        })
+
+        return denial?.reason
+      }
+
       const isDenied = async (tool: string, input: unknown) => {
         try {
           const resources = await resourcesOf(declared, tool, input)
@@ -101,18 +130,6 @@ export function denyGuard(denials: readonly CommandDenial[]) {
         } catch {
           return true
         }
-      }
-
-      const reasonOf = async (tool: string, input: unknown) => {
-        const resources = await resourcesOf(declared, tool, input)
-        const denial = denials.find(({ rules: denialRules }) => {
-          return (
-            decidePermission(denialRules, tool, 'default', { resources }) ===
-            'deny'
-          )
-        })
-
-        return denial?.reason
       }
 
       const guard: ChatMiddleware = {
