@@ -326,6 +326,9 @@ catalogs:
     smol-toml:
       specifier: ^1.9.1
       version: 1.9.1
+    srvx:
+      specifier: ^1.0.8
+      version: 1.0.8
     tinyrainbow:
       specifier: ^3.2.0
       version: 3.2.0
@@ -720,6 +723,9 @@ importers:
 
   packages/host:
     dependencies:
+      '@modelcontextprotocol/server':
+        specifier: 'catalog:'
+        version: 2.4.0
       '@opentelemetry/core':
         specifier: 'catalog:'
         version: 3.1.1(@opentelemetry/api@1.10.0)
@@ -738,6 +744,9 @@ importers:
       pino-roll:
         specifier: 'catalog:'
         version: 4.0.0
+      srvx:
+        specifier: 'catalog:'
+        version: 1.0.8
     devDependencies:
       '@opentelemetry/api':
         specifier: 'catalog:'
@@ -4212,6 +4221,11 @@ packages:
   split2@4.2.0:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
+
+  srvx@1.0.8:
+    resolution: {integrity: sha512-ngFS/J6St4PJfHRHGjr78xkPPtbyXtdMOLNE4x/XZunEK3OhV7aGUWMHf9WTUEy6wm1U0W4okkd82ZFFWRVQTw==}
+    engines: {node: '>=20.16.0'}
+    hasBin: true
 
   ssh-remote-port-forward@1.0.4:
     resolution: {integrity: sha512-x0LV1eVDwjf1gmG7TTnfqIzf+3VPRz7vrNIjX6oYLbeCrf/PeVY6hkT68Mg+q02qXxQhrLjB0jfgvhevoCRmLQ==}
@@ -7759,6 +7773,8 @@ snapshots:
   split-ca@1.0.1: {}
 
   split2@4.2.0: {}
+
+  srvx@1.0.8: {}
 
   ssh-remote-port-forward@1.0.4:
     dependencies:

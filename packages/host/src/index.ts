@@ -27,7 +27,12 @@ export { createModels } from './models/models.ts'
 export { defineLaunchAgent } from './service/launch-agent.ts'
 export { keepMachineAwake } from './service/keep-awake.ts'
 export { runHost } from './service/run-host.ts'
-export { liveViewUrl, openLiveView, readLiveView } from './service/live-view.ts'
+export { type HttpRoute, openHttpLayer } from './service/http-layer.ts'
+export {
+  liveViewRoute,
+  liveViewUrl,
+  readLiveView
+} from './service/live-view.ts'
 export { checkCommand } from './machine-check/check-command.ts'
 export { checkDatabaseSchema } from './machine-check/check-database-schema.ts'
 export { checkDockerMemory } from './machine-check/check-docker-memory.ts'

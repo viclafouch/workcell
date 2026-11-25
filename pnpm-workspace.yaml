@@ -66,6 +66,7 @@ catalog:
   read-tls-client-hello: ^2.0.0
   reflect-metadata: ^0.2.2
   smol-toml: ^1.9.1
+  srvx: ^1.0.8
   tinyrainbow: ^3.2.0
   turbo: ^2.11.11
   typescript: ^7.0.2
