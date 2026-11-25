@@ -18,13 +18,13 @@ export function shallowCloneFact(depth: number) {
 
 export const FINISH_TASK_TEXT = {
   description:
-    'End the task for good, only in the turn of a message where a person tells you to stop. A task that needs no change, or names the wrong target, is a question for a person: ask whether to close it, retarget it or go on, then end your turn and wait for the answer. It posts your report when you give one, archives this worker and destroys its sandbox. Your turn ends right after it. Before you call it, if a tool, a skill or a limit got in your way during this task and you did not report it yet, report it once with send_feedback.',
+    'End the task for good, only in the turn of a message where a person tells you to stop, or accepts work that opened no pull request. A task that needs no change, or names the wrong target, is a question for a person: ask whether to close it, retarget it or go on, then end your turn and wait for the answer. It posts your report when you give one, archives this worker and destroys its sandbox. Your turn ends right after it. Before you call it, if a tool, a skill or a limit got in your way during this task and you did not report it yet, report it once with send_feedback.',
   report:
     'A line in the thread, right under your last lines, that the person reads as any other line of yours: only what they have not read yet, such as the link of the pull request. Leave it out when your lines said it all, and the thread closes with no report.',
   outcome:
-    'How the task ends: blocked when you stop with the work undone, such as when you give up, reach your budget, or a person stops you; manual when a person takes the work over and finishes it by hand.',
+    'How the task ends: success when the task has no pull request and the person says its work is done, such as a review or an investigation they accept; blocked when you stop with the work undone, such as when you give up, reach your budget, or a person stops you; manual when a person takes the work over and finishes it by hand.',
   cause:
-    'Why the task ends here, in one line a person reads later: what blocked you, or what the person said.'
+    'Why the task ends here, in one line a person reads later: what blocked you, or what the person said. A success keeps the words of the person instead.'
 }
 
 export const SUBAGENT_TEXT = {
@@ -40,6 +40,13 @@ export const FILES_ANSWER =
 
 export const FINISH_WITHOUT_STOP_REFUSAL =
   'No person told you to stop, so the task goes on. Ask your question to a person and end your turn: their answer reaches you as a new message. Call finish_task only in the turn of the message that tells you to stop.'
+
+export const SUCCESS_WITHOUT_WORDS_REFUSAL =
+  'A success needs a person who says in words that the work is done, and no person did in this turn. Ask them, and end your turn: their answer reaches you as a new message.'
+
+export function successWithAPullRequestRefusal(pullRequest: string) {
+  return `The pull request ${pullRequest} decides how this task ends: its merge ends it as a success, never finish_task. End your turn, and the merge or the answer of a person reaches you as a new message.`
+}
 
 export function budgetAnswerPrompt(question: string, answer: string) {
   return `You stopped at your budget and asked: ${question}\nThe answer: ${answer}\nGo on only if the answer asks you to, and follow what it says. If it drops the task, call finish_task with the outcome blocked and your budget as its cause. Otherwise end your turn now, with no tool call.`

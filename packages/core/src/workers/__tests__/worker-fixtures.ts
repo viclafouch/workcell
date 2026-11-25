@@ -194,7 +194,7 @@ const STOPPED_BY_A_PERSON = {
 
 type FinishInput = {
   report?: string
-  outcome: 'blocked' | 'manual'
+  outcome: 'success' | 'blocked' | 'manual'
   cause: string
 }
 
@@ -218,6 +218,22 @@ export const ASK_DRAFT_OR_READY: FakeResponse = {
           {
             question: 'Open the pull request as a draft or ready?',
             options: [{ label: 'Draft' }, { label: 'Ready' }]
+          }
+        ]
+      }
+    }
+  ]
+}
+
+export const ASK_IF_THE_REVIEW_IS_ENOUGH: FakeResponse = {
+  toolCalls: [
+    {
+      name: 'question',
+      input: {
+        questions: [
+          {
+            question: 'The review is posted: is it enough?',
+            options: [{ label: 'Done' }, { label: 'Go on' }]
           }
         ]
       }
