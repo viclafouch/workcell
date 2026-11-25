@@ -1,61 +1,31 @@
-import { once } from 'node:events'
-import {
-  createServer,
-  type IncomingMessage,
-  type ServerResponse
-} from 'node:http'
 import { z } from 'zod'
 import { workerViewSchema, type WorkerView } from '@workcell/core'
-
-const LOOPBACK = '127.0.0.1'
+import { type HttpRoute, LOOPBACK } from './http-layer.ts'
 
 const WORKERS_PATH = '/workers'
 
-const OK = 200
-
-const NOT_FOUND = 404
-
-const INTERNAL_SERVER_ERROR = 500
+const METHOD_NOT_ALLOWED = 405
 
 export function liveViewUrl(port: number) {
   return `http://${LOOPBACK}:${port}${WORKERS_PATH}`
 }
 
-type LiveViewParams = {
-  port: number
+export function liveViewRoute(
   viewWorkers: () => Promise<WorkerView[]>
-  logger: { error: (bindings: object, message: string) => void }
-}
+): HttpRoute {
+  return {
+    path: WORKERS_PATH,
+    fetch: async (request) => {
+      if (request.method !== 'GET') {
+        return new Response(null, {
+          status: METHOD_NOT_ALLOWED,
+          headers: { allow: 'GET' }
+        })
+      }
 
-export async function openLiveView({
-  port,
-  viewWorkers,
-  logger
-}: LiveViewParams) {
-  const answer = async (request: IncomingMessage, response: ServerResponse) => {
-    if (request.method !== 'GET' || request.url !== WORKERS_PATH) {
-      response.writeHead(NOT_FOUND).end()
-
-      return
-    }
-
-    try {
-      const workers = await viewWorkers()
-      response
-        .writeHead(OK, { 'content-type': 'application/json' })
-        .end(JSON.stringify(workers))
-    } catch (error) {
-      logger.error({ error }, 'live view not built')
-      response.writeHead(INTERNAL_SERVER_ERROR).end()
+      return Response.json(await viewWorkers())
     }
   }
-  const server = createServer((request, response) => {
-    void answer(request, response)
-  })
-  server.listen(port, LOOPBACK)
-  await once(server, 'listening')
-
-  return server
 }
 
 export async function readLiveView(url: string) {

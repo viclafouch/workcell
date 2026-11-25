@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkerView } from '@workcell/core'
 import { createLogger } from '#/logger.ts'
-import { liveViewUrl, openLiveView, readLiveView } from '#/service/live-view.ts'
+import { openHttpLayer } from '#/service/http-layer.ts'
+import {
+  liveViewRoute,
+  liveViewUrl,
+  readLiveView
+} from '#/service/live-view.ts'
 
 const WORKER_VIEW: WorkerView = {
   threadId: 'live-thread',
@@ -20,34 +25,21 @@ const WORKER_VIEW: WorkerView = {
 
 const silentLogger = createLogger({ level: 'silent' })
 
-async function openOnFreePort(viewWorkers: () => Promise<WorkerView[]>) {
-  const server = await openLiveView({
-    port: 0,
-    viewWorkers,
+async function openLiveView(viewWorkers: () => Promise<WorkerView[]>) {
+  const layer = await openHttpLayer({
+    operator: { port: 0, routes: [liveViewRoute(viewWorkers)] },
     logger: silentLogger
   })
-  const address = server.address()
-
-  if (address === null || typeof address === 'string') {
-    throw new Error('The live view listens on no port.')
-  }
 
   return {
-    url: liveViewUrl(address.port),
-    close: async () => {
-      await server[Symbol.asyncDispose]()
-    },
-    [Symbol.asyncDispose]: async () => {
-      if (server.listening) {
-        await server[Symbol.asyncDispose]()
-      }
-    }
+    url: liveViewUrl(Number(new URL(layer.operatorUrl ?? '').port)),
+    [Symbol.asyncDispose]: layer[Symbol.asyncDispose]
   }
 }
 
 describe('the live view of the host', () => {
-  it('serves the view of every running worker on the loopback', async () => {
-    await using live = await openOnFreePort(async () => {
+  it('serves the view of every running worker from the operator listener', async () => {
+    await using live = await openLiveView(async () => {
       return [WORKER_VIEW]
     })
 
@@ -55,7 +47,7 @@ describe('the live view of the host', () => {
   })
 
   it('tells a stopped host apart from a failed view', async () => {
-    await using live = await openOnFreePort(async () => {
+    await using live = await openLiveView(async () => {
       throw new Error('The view failed.')
     })
 
@@ -63,7 +55,7 @@ describe('the live view of the host', () => {
       'The live view answered 500.'
     )
 
-    await live.close()
+    await live[Symbol.asyncDispose]()
 
     expect(await readLiveView(live.url)).toBeNull()
   })
