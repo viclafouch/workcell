@@ -14,17 +14,14 @@ import type { MessageFile, MessageReader } from '#/inputs/message-files.ts'
 import { FILES_ANSWER } from '#/prompts/worker.ts'
 import type { TaskEnd, WorkerMetadata } from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
-import {
-  personInputId,
-  type WorkerLifecycle,
-  type WorkerLogger
-} from './lifecycle.ts'
+import type { WorkerLifecycle, WorkerLogger } from './lifecycle.ts'
 import {
   listedWorkerOf,
   trackWorkerChanges,
   type ListedWorker,
   type OnWorkerChange
 } from './live-workers.ts'
+import { personInputId } from './person-turn.ts'
 import { pickFreeName } from './worker-names.ts'
 
 const REJECTED_BY_A_PERSON =

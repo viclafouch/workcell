@@ -16,7 +16,8 @@ import {
   SHUTDOWN_REASON,
   waitKind,
   type HarnessHost,
-  type HarnessRunContext
+  type HarnessRunContext,
+  type PluginSetupContext
 } from '@tanstack/ai-harness'
 import type { SandboxDefinition, SandboxProvider } from '@tanstack/ai-sandbox'
 import { scrubSecrets } from '@tanstack/ai/byok'
@@ -26,16 +27,18 @@ import type { LogLine } from '#/host/mcp-server-log.ts'
 import {
   branchFact,
   FINISH_TASK_TEXT,
-  FINISH_WITHOUT_STOP_REFUSAL,
   shallowCloneFact,
+  successWithAPullRequestRefusal,
   workerIdentityPrompt
 } from '#/prompts/worker.ts'
 import type { ListSandboxes } from '#/sandbox/sandboxes-under-keys.ts'
 import {
   workerMetadataSchema,
+  type TaskEnd,
   type WorkerMetadata
 } from '#/session/metadata.ts'
 import { finishSteps, type WorkerEnd } from './finish-steps.ts'
+import { createPersonTurn } from './person-turn.ts'
 import type { WorkerSandbox } from './worker-sandbox.ts'
 
 const MS_PER_MINUTE = 60_000
@@ -47,16 +50,6 @@ const IDLE_SANDBOX_MS = IDLE_SANDBOX_MINUTES * MS_PER_MINUTE
 export const FINISH_TASK = 'finish_task'
 
 const LIFECYCLE_PLUGIN = 'workcell/worker-lifecycle'
-
-const PERSON_INPUT = 'person:'
-
-export function personInputId(inputId: string) {
-  return `${PERSON_INPUT}${inputId}`
-}
-
-function isPersonInput(inputId: string | undefined) {
-  return inputId?.startsWith(PERSON_INPUT) === true
-}
 
 const commandSchema = z.object({ command: z.string() })
 
@@ -101,23 +94,34 @@ type TaskFact = (metadata: WorkerMetadata) => string | undefined
 
 export const TaskFacts = createExtensionPoint<TaskFact>('workcell/task-facts')
 
-type FinishRefusal = (metadata: WorkerMetadata) => Promise<string | undefined>
+type FinishRefusal = (
+  metadata: WorkerMetadata,
+  outcome: TaskEnd['value']
+) => string | undefined | Promise<string | undefined>
 
 export const FinishRefusals = createExtensionPoint<FinishRefusal>(
   'workcell/finish-refusals'
 )
 
+type FinishContext = Pick<
+  PluginSetupContext<WorkerMetadata>,
+  'collect' | 'session'
+>
+
 async function refuseFinish(
-  refusals: readonly FinishRefusal[],
-  metadata: WorkerMetadata | null
+  { collect, session }: FinishContext,
+  outcome: TaskEnd['value']
 ) {
-  if (metadata === null) {
+  const entry = await session.indexEntry()
+  const metadata = entry?.metadata
+
+  if (metadata === undefined) {
     return
   }
 
   const reasons = await Promise.all(
-    refusals.map((refusal) => {
-      return refusal(metadata)
+    collect(FinishRefusals).map(async (refusal) => {
+      return refusal(metadata, outcome)
     })
   )
   const refusal = reasons.find((reason) => {
@@ -127,6 +131,12 @@ async function refuseFinish(
   if (refusal !== undefined) {
     throw new Error(refusal)
   }
+}
+
+const successWithAPullRequest: FinishRefusal = ({ pullRequest }, outcome) => {
+  return outcome === 'success' && pullRequest !== undefined
+    ? successWithAPullRequestRefusal(pullRequest)
+    : undefined
 }
 
 const branchOfTask: TaskFact = ({ branch }) => {
@@ -188,7 +198,9 @@ const finishTaskDefinition = toolDefinition({
   description: FINISH_TASK_TEXT.description,
   inputSchema: z.object({
     report: z.string().optional().describe(FINISH_TASK_TEXT.report),
-    outcome: z.enum(['blocked', 'manual']).describe(FINISH_TASK_TEXT.outcome),
+    outcome: z
+      .enum(['success', 'blocked', 'manual'])
+      .describe(FINISH_TASK_TEXT.outcome),
     cause: z.string().describe(FINISH_TASK_TEXT.cause)
   })
 })
@@ -453,7 +465,7 @@ export function createWorkerLifecycle({
       let metadata: WorkerMetadata | null = null
       let slot: TurnSlot | null = null
       let isFinished = false
-      let isPersonTurn = false
+      const personTurn = createPersonTurn()
 
       const saveChanges = async () => {
         const branch = await workerSandbox.save(worker)
@@ -539,16 +551,18 @@ export function createWorkerLifecycle({
       const finishTask = durableTool(
         finishTaskDefinition,
         async ({ report, outcome, cause }, { step }) => {
-          if (!isPersonTurn) {
-            throw new Error(FINISH_WITHOUT_STOP_REFUSAL)
+          const personRefusal = personTurn.finishRefusal(outcome)
+
+          if (personRefusal !== undefined) {
+            throw new Error(personRefusal)
           }
 
           await saveChanges()
-          await refuseFinish(setupContext.collect(FinishRefusals), metadata)
+          await refuseFinish(setupContext, outcome)
           const steps = stepsOf({
             worker,
             report,
-            outcome: { value: outcome, cause },
+            outcome: personTurn.withTheirWords({ value: outcome, cause }),
             spending: setupContext.session.snapshot(),
             updateIndexEntry: async (update) => {
               return setupContext.session.updateIndexEntry(update)
@@ -569,13 +583,13 @@ export function createWorkerLifecycle({
       )
 
       return {
-        onTurnStart: async ({ run, inputId }) => {
-          isPersonTurn = isPersonInput(inputId)
+        onTurnStart: async (turn) => {
+          personTurn.start(turn)
           await idleTimers.stop(threadId)
           const entry = await setupContext.session.indexEntry()
           metadata = entry?.metadata ?? null
           worker = { threadId, name: metadata?.name }
-          await workerSandbox.rebind(run)
+          await workerSandbox.rebind(turn.run)
         },
         prompts: workerPrompts(() => {
           return { metadata, facts: setupContext.collect(TaskFacts) }
@@ -585,12 +599,14 @@ export function createWorkerLifecycle({
             return logOf(worker)
           }, secretValues),
           turnSlots,
+          personTurn.answers,
           stopOnCancelledAnswers
         ],
         tools: [finishTask],
         contribute: [
           TaskFacts.item(branchOfTask),
           TaskFacts.item(cloneHistoryOf(sandboxes)),
+          FinishRefusals.item(successWithAPullRequest),
           PermissionRules.item({
             tool: FINISH_TASK,
             decision: 'allow',

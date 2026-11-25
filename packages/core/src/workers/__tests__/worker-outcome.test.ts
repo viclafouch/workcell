@@ -10,6 +10,7 @@ import {
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import { TEST_STARTER } from '#/testing/test-doubles.ts'
 import {
+  ASK_IF_THE_REVIEW_IS_ENOUGH,
   bash,
   createOrigin,
   finishTask,
@@ -21,10 +22,19 @@ import {
   openWorkers,
   openWorkerTestbed,
   outcomeOf,
+  runWorkerThenStop,
   tellToStop,
   waitForArchive,
   workOnABranch
 } from './worker-testbed.ts'
+
+const REVIEW_SCREENSHOT = {
+  name: 'review.png',
+  mimeType: 'image/png',
+  read: async () => {
+    return new TextEncoder().encode('review bytes')
+  }
+}
 
 describe('the outcome of a task that a person stops', () => {
   beforeAll(async () => {
@@ -63,6 +73,155 @@ describe('the outcome of a task that a person stops', () => {
       expect(outcome?.costUsd).toBeGreaterThan(Number(view?.spentUsd))
     }
   )
+})
+
+describe('the success of a task with no pull request', () => {
+  beforeAll(async () => {
+    await openWorkerTestbed()
+  })
+
+  afterAll(async () => {
+    await closeWorkerTestbed()
+  })
+
+  it('ends as a success when a person accepts the work, with their own words as its cause and not the words of the worker', async () => {
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(url, [
+      { text: 'The review is posted.' },
+      finishTask({
+        report: undefined,
+        outcome: 'success',
+        cause: 'The work is done.'
+      })
+    ])
+    const worker = await agent.workers.startWorker({
+      repository: REPOSITORY,
+      starter: TEST_STARTER,
+      task: 'Review the login.'
+    })
+    await worker.firstTurn
+
+    await agent.workers.messageWorker({
+      threadId: worker.threadId,
+      sender: TEST_STARTER,
+      inputId: 'slack:accept',
+      message: 'Looks good, thanks.'
+    })
+    await waitForArchive(agent, worker.threadId)
+
+    await expect(outcomeOf(agent, worker.threadId)).resolves.toMatchObject({
+      value: 'success',
+      cause: 'Looks good, thanks.'
+    })
+    await expect(agent.viewWorkers()).resolves.toMatchObject([
+      {
+        threadId: worker.threadId,
+        phase: 'finished',
+        outcome: { value: 'success', cause: 'Looks good, thanks.' }
+      }
+    ])
+  })
+
+  it('ends as a success when a person accepts the work in the answer to its question, after a host restart, with that answer as its cause', async () => {
+    const url = await createMigratedDatabase()
+    const asker = await runWorkerThenStop(url, [ASK_IF_THE_REVIEW_IS_ENOUGH], {
+      repository: REPOSITORY,
+      task: 'Review the login.'
+    })
+    await using restarted = await openWorkers(url, [
+      finishTask({
+        report: undefined,
+        outcome: 'success',
+        cause: 'The work is done.'
+      })
+    ])
+
+    await restarted.workers.messageWorker({
+      threadId: asker.threadId,
+      sender: TEST_STARTER,
+      inputId: 'slack:answer',
+      message: 'Done, ship it.'
+    })
+    await waitForArchive(restarted, asker.threadId)
+
+    await expect(outcomeOf(restarted, asker.threadId)).resolves.toMatchObject({
+      value: 'success',
+      cause: 'Done, ship it.'
+    })
+  })
+
+  it('refuses a success when the person gave no words, such as an answer made only of files, and keeps the worker live', async () => {
+    const url = await createMigratedDatabase()
+    const answeredMessages: string[] = []
+    const asker = await runWorkerThenStop(url, [ASK_IF_THE_REVIEW_IS_ENOUGH], {
+      repository: REPOSITORY,
+      task: 'Review the login.'
+    })
+    await using restarted = await openWorkers(url, [
+      finishTask({ report: undefined, outcome: 'success', cause: 'Done.' }),
+      ({ request }) => {
+        answeredMessages.push(JSON.stringify(request.messages))
+
+        return { text: 'I ask in words.' }
+      }
+    ])
+
+    await restarted.workers.messageWorker({
+      threadId: asker.threadId,
+      sender: TEST_STARTER,
+      inputId: 'slack:answer',
+      message: '',
+      files: [REVIEW_SCREENSHOT]
+    })
+
+    await expect
+      .poll(() => {
+        return answeredMessages.join('\n')
+      })
+      .toContain('says in words that the work is done')
+    await expect(outcomeOf(restarted, asker.threadId)).resolves.toBeUndefined()
+  })
+
+  it('refuses a success once the task has a pull request, keeps the worker live, and gives the model the reason', async () => {
+    const url = await createMigratedDatabase()
+    const answeredMessages: string[] = []
+    await using agent = await openWorkers(url, [
+      { text: 'The pull request is open.' },
+      finishTask({ report: undefined, outcome: 'success', cause: 'Merged.' }),
+      ({ request }) => {
+        answeredMessages.push(JSON.stringify(request.messages))
+
+        return { text: 'I wait for the merge.' }
+      }
+    ])
+    const worker = await agent.workers.startWorker({
+      repository: REPOSITORY,
+      starter: TEST_STARTER,
+      task: 'Fix the login.'
+    })
+    await worker.firstTurn
+    await agent.workers.updateWorker({
+      threadId: worker.threadId,
+      metadata: { pullRequest: 'https://github.com/acme/app/pull/42' }
+    })
+
+    await agent.workers.messageWorker({
+      threadId: worker.threadId,
+      sender: TEST_STARTER,
+      inputId: 'slack:accept',
+      message: 'Looks good, thanks.'
+    })
+
+    await expect
+      .poll(() => {
+        return answeredMessages.join('\n')
+      })
+      .toContain('https://github.com/acme/app/pull/42 decides')
+    await expect(agent.workers.listWorkers()).resolves.toMatchObject([
+      { threadId: worker.threadId }
+    ])
+    await expect(outcomeOf(agent, worker.threadId)).resolves.toBeUndefined()
+  })
 })
 
 describe('the outcome of a task that the host ends', () => {
