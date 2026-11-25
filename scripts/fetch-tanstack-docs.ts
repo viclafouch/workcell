@@ -4,6 +4,8 @@ import { AsyncQueuer } from '@tanstack/pacer'
 
 const LIBRARIES = ['ai', 'pacer']
 
+const TANSTACK_INDEX = 'https://tanstack.com/llms.txt'
+
 const DOCS_DIR = '.tanstack-docs'
 
 const CONCURRENT_DOWNLOADS = 8
@@ -13,6 +15,9 @@ const PAGE_TIMEOUT_MS = 30_000
 const SERVER_FRAMEWORK = '/framework/vanilla/'
 
 const DOC_PAGE_LINK = /\((https:\/\/tanstack\.com\/[^)\s]+\.md)\)/gu
+
+const LIBRARY_INDEX_LINK =
+  /\((?<url>https:\/\/tanstack\.com\/(?<library>[a-z-]+)\/latest\/llms\.txt)\)/gu
 
 async function fetchText(url: string) {
   const response = await fetch(url, {
@@ -54,8 +59,31 @@ async function listPages(library: string) {
   return pages
 }
 
+async function listOtherLibraryIndexes() {
+  const index = await fetchText(TANSTACK_INDEX)
+  await save(TANSTACK_INDEX, index)
+  const libraryIndexes = [...index.matchAll(LIBRARY_INDEX_LINK)]
+
+  if (libraryIndexes.length === 0) {
+    throw new Error(
+      `${TANSTACK_INDEX} lists no library index: its link format changed.`
+    )
+  }
+
+  return libraryIndexes
+    .filter(({ groups }) => {
+      return !LIBRARIES.includes(groups?.library ?? '')
+    })
+    .map(({ groups }) => {
+      return groups?.url ?? ''
+    })
+}
+
 await rm(DOCS_DIR, { recursive: true, force: true })
-const pageLists = await Promise.all(LIBRARIES.map(listPages))
+const pageLists = await Promise.all([
+  ...LIBRARIES.map(listPages),
+  listOtherLibraryIndexes()
+])
 const pages = [...new Set(pageLists.flat())]
 const failures: string[] = []
 const allSettled = Promise.withResolvers<null>()
