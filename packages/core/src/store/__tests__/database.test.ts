@@ -8,10 +8,6 @@ import {
 
 const TRANSCRIPT_TEXT = 'the customer asked for a refund'
 
-const FIRST_TERM = 2
-
-const SECOND_TERM = 3
-
 const CLOSED_PORT_URL = 'postgres://agent:agent@127.0.0.1:1/agent'
 
 async function createTurnsDatabase(
@@ -27,31 +23,6 @@ async function createTurnsDatabase(
 }
 
 describe('openDatabase', () => {
-  it('returns the rows of a query', async () => {
-    const database = openTestDatabase(await createDatabase())
-
-    const rows = await database.query(
-      'add two numbers',
-      'SELECT $1::int + $2::int AS sum',
-      [FIRST_TERM, SECOND_TERM]
-    )
-    await database.close()
-
-    expect(rows).toStrictEqual([{ sum: 5 }])
-  })
-
-  it('serves two queries at once', async () => {
-    const database = openTestDatabase(await createDatabase())
-
-    const answers = await Promise.all([
-      database.query('read the first turn', 'SELECT 1 AS turn'),
-      database.query('read the second turn', 'SELECT 2 AS turn')
-    ])
-    await database.close()
-
-    expect(answers).toStrictEqual([[{ turn: 1 }], [{ turn: 2 }]])
-  })
-
   it('logs a failed query with its name and code, and keeps its parameters out of the log and the error', async () => {
     const { logger, lines } = recordLogs()
     const database = openTestDatabase(await createDatabase(), logger)

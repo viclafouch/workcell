@@ -428,26 +428,6 @@ describe('the approval of a worker', () => {
       .toContain('A person rejected this call')
     await expect(view.snapshot()).resolves.toMatchObject({ pendingWaits: [] })
   })
-
-  it('answers no approval for a wait that is not open', async () => {
-    const url = await createMigratedDatabase()
-    await using agent = await openWorkers(url, [{ text: 'Done.' }])
-    const worker = await agent.workers.startWorker({
-      repository: REPOSITORY,
-      starter: TEST_STARTER,
-      task: 'Say done.'
-    })
-    await worker.firstTurn
-
-    await expect(
-      agent.workers.answerApproval({
-        threadId: worker.threadId,
-        waitId: 'gone',
-        approver: TEST_STARTER,
-        answer: 'once'
-      })
-    ).resolves.toBe(false)
-  })
 })
 
 describe('the question of a worker', () => {

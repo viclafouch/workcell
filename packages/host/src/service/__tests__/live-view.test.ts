@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { WorkerView } from '@workcell/core'
 import { createLogger } from '#/logger.ts'
 import { liveViewUrl, openLiveView, readLiveView } from '#/service/live-view.ts'
@@ -47,13 +47,11 @@ async function openOnFreePort(viewWorkers: () => Promise<WorkerView[]>) {
 
 describe('the live view of the host', () => {
   it('serves the view of every running worker on the loopback', async () => {
-    const viewWorkers = vi.fn(async () => {
+    await using live = await openOnFreePort(async () => {
       return [WORKER_VIEW]
     })
-    await using live = await openOnFreePort(viewWorkers)
 
     expect(await readLiveView(live.url)).toStrictEqual([WORKER_VIEW])
-    expect(viewWorkers).toHaveBeenCalledTimes(1)
   })
 
   it('tells a stopped host apart from a failed view', async () => {

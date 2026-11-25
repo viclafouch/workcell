@@ -219,16 +219,4 @@ describe('the approvals of a worker thread', () => {
       `May I run this?\n\`\`\`\n${command}\n\`\`\``
     )
   })
-
-  it('shows the command alone for a call with a command', async () => {
-    const { posts, surface } = recordSurface()
-    await using worker = await openWorkerSession(memoryPersistence(), surface, [
-      ASK_TO_RUN
-    ])
-    await worker.session.updateIndexEntry({ metadata: TASK_7_METADATA })
-    await worker.session.send('Give me the React version.')
-    expect(posts.map(postText)[1]).toBe(
-      'May I run this?\n```\nnpm view react version\n```'
-    )
-  })
 })

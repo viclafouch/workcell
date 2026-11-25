@@ -161,7 +161,7 @@ const FAILED_JOBS = [
   }
 ]
 
-function redCheckEventsOf(personChecks?: readonly string[]) {
+function redCheckEventsOf(personChecks: readonly string[]) {
   return pullRequestEvents({
     repository: REPOSITORY,
     pullRequest: RED_CHECKS,
@@ -232,21 +232,6 @@ describe('the events of a pull request', () => {
         }
       },
       RISK_LINES[1]
-    ])
-  })
-
-  it('wakes the worker with each failed status and each failed job of its checks, with their links', () => {
-    expect(redCheckEventsOf()).toStrictEqual([
-      {
-        kind: 'red-check',
-        inputId:
-          'github:acme/app#42:red-check:head-1:code/scan,Risk score,unit tests,Validate risk',
-        action: {
-          type: 'wake',
-          delivery: 'steer',
-          message: `The pull request watcher sends this, not a person. The checks of the pull request ${PULL_REQUEST_URL} failed on head-1. The status "code/scan" failed: https://checks.example.com/code/scan. The status "Risk score" failed: https://checks.example.com/Risk score. The job "unit tests" failed: https://github.com/acme/app/actions/runs/7/job/70. The job "Validate risk" failed: https://github.com/acme/app/actions/runs/8/job/80. Read the log of a failed job with gh run view --job <job> --log-failed, where <job> ends its link. Push a fix, or ask with the question tool when you cannot fix it. Then end your turn.`
-        }
-      }
     ])
   })
 

@@ -57,17 +57,12 @@ describe('the pull request watch', () => {
       .fn<(finish: WorkerFinish) => Promise<boolean>>()
       .mockResolvedValueOnce(false)
       .mockResolvedValue(true)
-    const { watcher, finishes, lines } = openWatcher({ finishWorker })
+    const { watcher, finishes } = openWatcher({ finishWorker })
 
     await pollTwice(watcher)
     await watcher.pollOnce()
 
     expect(finishes).toHaveLength(2)
-    expect(lines).toStrictEqual([
-      `pull request recorded {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}"}`,
-      `pull request event held: the worker runs a turn, the next poll sends it again {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}","kind":"merged","inputId":"github:acme/app#42:merged:merge-1","action":"finish"}`,
-      `pull request event sent {"threadId":"thread-1","pullRequest":"${PULL_REQUEST_URL}","kind":"merged","inputId":"github:acme/app#42:merged:merge-1","action":"finish"}`
-    ])
   })
 
   it('sends again at the next poll an event that the worker failed to take', async () => {

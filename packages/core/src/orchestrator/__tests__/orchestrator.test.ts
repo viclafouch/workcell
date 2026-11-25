@@ -8,7 +8,6 @@ import { definePlugin } from '@tanstack/ai-harness'
 import type { FakeResponseStep } from '@tanstack/ai/testing'
 import { SENDER_REFUSAL } from '#/host/allowed-senders.ts'
 import { StarterOnlyTools } from '#/orchestrator/starter-only-tools.ts'
-import { DEFAULT_ORCHESTRATOR_SCOPE } from '#/prompts/orchestrator.ts'
 import { createMigratedDatabase } from '#/testing/test-database.ts'
 import {
   LONG_HOST_TOOL,
@@ -127,7 +126,7 @@ describe('the orchestrator', () => {
     await askOrchestrator(agent, { message: 'Give me a pancake recipe.' })
 
     expect(systemPrompts.join('\n')).toContain(
-      `Your scope: ${DEFAULT_ORCHESTRATOR_SCOPE}.`
+      'Your scope: questions on the code of the library, and the work of the workers.'
     )
   })
 

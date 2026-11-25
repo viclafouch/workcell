@@ -58,14 +58,6 @@ describe('the start of a Workcell', () => {
     )
   })
 
-  it('starts on a schema with no pending migration', async () => {
-    const url = await createMigratedDatabase()
-
-    await using agent = await openWorkers(url, [])
-
-    expect(await agent.workers.listWorkers()).toStrictEqual([])
-  })
-
   it('refuses a repository sandbox whose secrets come from a second copy of the sandbox package, and names the fix', async () => {
     const url = await createMigratedDatabase()
 

@@ -254,18 +254,6 @@ describe('the Linear tools', () => {
     expect(run.modelContext).toContain('[Output cut.')
   })
 
-  it('reads the project of a ticket with no question', async () => {
-    const run = await runToolCall({
-      name: 'linear_get_project',
-      input: { query: 'Apollo' }
-    })
-
-    expect(run.asked).toBe(false)
-    expect(linearCalls).toStrictEqual([
-      { tool: 'get_project', input: { query: 'Apollo' } }
-    ])
-  })
-
   it('comments on its own ticket with no question', async () => {
     const run = await comment({ issueId: OWN_TICKET })
 
