@@ -1,6 +1,6 @@
 export const SEND_FEEDBACK_TEXT = {
   description:
-    'Report to the people who run this project a tool, skill or limit of yours that got in your way: a tool that is missing, broken or confusing, or an idea. Call it once the problem is clear, at most once for each distinct problem, and when a person asks you to report something. Never call it to log progress or to try it. It only records the report: it retries nothing, changes nothing, and nobody answers it. Leave out tokens, keys, signed URLs and the content of files. If it fails, carry on with your task.',
+    'Report to the people who run this project a tool, skill or limit of yours that got in your way: a tool that is missing, broken or confusing, or an idea. Call it once the problem is clear, at most once for each distinct problem, and when a person asks you to report something. Never call it to log progress or to try it. It only records the report: it retries nothing, changes nothing, and nobody answers it. Leave out tokens, keys, signed URLs, personal data and the content of files. If it fails, carry on with your task.',
   kind: 'missing: no tool could do it. broken: a tool failed or returned something wrong. confusing: a tool, a skill or an error was unclear. idea: a suggestion.',
   impact:
     'blocked: you could not go on. worked_around: you went on another way. friction: you went on, but it was harder than it should be.',
