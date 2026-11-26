@@ -2,7 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createHarnessHost, logIdOf } from '@tanstack/ai-harness'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText, type FakeResponseStep } from '@tanstack/ai/testing'
-import type { FeedbackOptions, FeedbackReport } from '#/feedback/feedback.ts'
+import {
+  FEEDBACK_PLUGIN,
+  type FeedbackOptions,
+  type FeedbackReport
+} from '#/feedback/feedback.ts'
 import type { WorkerMetadata } from '#/session/metadata.ts'
 import { createHostFreeSandbox } from '#/testing/host-free-sandbox.ts'
 import { SILENT_HOST_LOGGER, TEST_STARTER } from '#/testing/test-doubles.ts'
@@ -74,7 +78,7 @@ async function runWorker(
 
   await session.send('Push the fix.')
   stopListening()
-  const { status } = session.snapshot()
+  const { status, plugins } = session.snapshot()
   await host.close()
 
   const entries = await persistence.stores.log.read({
@@ -84,7 +88,14 @@ async function runWorker(
     return record.type === 'workcell.feedback' ? [record] : []
   })
 
-  return { model: model.model, toolResults, warnings, reports, status }
+  return {
+    model: model.model,
+    toolResults,
+    warnings,
+    reports,
+    status,
+    pluginState: plugins[FEEDBACK_PLUGIN]
+  }
 }
 
 describe('the feedback of a worker', () => {
@@ -119,6 +130,14 @@ describe('the feedback of a worker', () => {
         reporter: TEST_STARTER.id
       })
     ])
+  })
+
+  it('keeps each report in the plugin state, where a reader of the session finds it', async () => {
+    const run = await runWorker([sendFeedback(DENIED_PUSH_REPORT)])
+
+    expect(run.pluginState).toStrictEqual({
+      reports: [expect.objectContaining(DENIED_PUSH_REPORT)]
+    })
   })
 
   it('delivers the report with the facts the host knows', async () => {

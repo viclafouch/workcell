@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "playwright-test": {
+      "command": "pnpm",
+      "args": [
+        "--filter",
+        "@workcell/dashboard",
+        "exec",
+        "playwright",
+        "run-test-mcp-server"
+      ]
+    }
+  }
+}

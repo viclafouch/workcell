@@ -1,0 +1,4 @@
+dist
+.tanstack
+e2e/.results
+playwright-report

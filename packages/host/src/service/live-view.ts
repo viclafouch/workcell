@@ -1,31 +1,11 @@
 import { z } from 'zod'
-import { workerViewSchema, type WorkerView } from '@workcell/core'
-import { type HttpRoute, LOOPBACK } from './http-layer.ts'
+import { workerViewSchema } from '@workcell/core'
+import { LOOPBACK } from './http-layer.ts'
 
-const WORKERS_PATH = '/workers'
-
-const METHOD_NOT_ALLOWED = 405
+const LIVE_VIEW_PATH = '/api/workers/inspect'
 
 export function liveViewUrl(port: number) {
-  return `http://${LOOPBACK}:${port}${WORKERS_PATH}`
-}
-
-export function liveViewRoute(
-  viewWorkers: () => Promise<WorkerView[]>
-): HttpRoute {
-  return {
-    path: WORKERS_PATH,
-    fetch: async (request) => {
-      if (request.method !== 'GET') {
-        return new Response(null, {
-          status: METHOD_NOT_ALLOWED,
-          headers: { allow: 'GET' }
-        })
-      }
-
-      return Response.json(await viewWorkers())
-    }
-  }
+  return `http://${LOOPBACK}:${port}${LIVE_VIEW_PATH}`
 }
 
 export async function readLiveView(url: string) {

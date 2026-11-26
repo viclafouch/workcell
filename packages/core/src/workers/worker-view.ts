@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { HarnessHost, PendingWait, WaitKind } from '@tanstack/ai-harness'
+import { scrubSecrets } from '@tanstack/ai/byok'
 import {
   budgetStateOf,
   spentUsdOf,
@@ -87,8 +88,9 @@ type CreateWorkerViewParams = {
   readFinishedWorkers: () => Promise<FinishedWorker[]>
   lifecycle: Pick<WorkerLifecycle, 'isQueued'>
   activity: Pick<WorkerActivity, 'activityOf'>
-  workerSandbox: Pick<WorkerSandbox, 'isInSetup' | 'inspect'>
+  workerSandbox: Pick<WorkerSandbox, 'isInSetup' | 'inspect' | 'readDiff'>
   pricing: Pick<ModelPricing, 'costOfUsage'>
+  secretValues: readonly string[]
 }
 
 export function firstLine(text: string) {
@@ -204,7 +206,8 @@ export function createWorkerView({
   lifecycle,
   activity,
   workerSandbox,
-  pricing
+  pricing,
+  secretValues
 }: CreateWorkerViewParams) {
   const viewOf = async (worker: ListedWorker) => {
     const { threadId } = worker
@@ -262,7 +265,13 @@ export function createWorkerView({
     return withFinishedWorkers(inspectLiveWorkers())
   }
 
-  return { viewWorkers, inspectWorkers }
+  const readWorkerDiff = async (threadId: string) => {
+    const diff = await workerSandbox.readDiff(threadId)
+
+    return diff === null ? null : scrubSecrets(diff, secretValues)
+  }
+
+  return { viewWorkers, inspectWorkers, readWorkerDiff }
 }
 
 export type ViewWorkers = ReturnType<typeof createWorkerView>['viewWorkers']

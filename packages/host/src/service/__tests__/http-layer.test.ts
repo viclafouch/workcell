@@ -134,34 +134,14 @@ describe('the HTTP layer of the host', () => {
     expect(layer.webhookUrl).toBeUndefined()
   })
 
-  it('refuses a foreign site on the operator listener', async () => {
+  it('refuses a foreign host on the operator listener', async () => {
     await using layer = await openHttpLayer({
       operator: { port: 0, routes: [answering('/dashboard')] },
       logger: silentLogger
     })
     const dashboard = new URL('/dashboard', layer.operatorUrl)
 
-    const sameListenerByName = `http://localhost:${dashboard.port}`
-    const otherLocalSite = `http://localhost:${Number(dashboard.port) + 1}`
-
-    expect(
-      await statusOf(dashboard, { headers: { origin: dashboard.origin } })
-    ).toBe(OK)
-    expect(
-      await statusOf(dashboard, { headers: { origin: sameListenerByName } })
-    ).toBe(OK)
-    expect(
-      await statusOf(dashboard, {
-        method: 'POST',
-        headers: { origin: otherLocalSite }
-      })
-    ).toBe(FORBIDDEN)
-    expect(
-      await statusOf(dashboard, {
-        method: 'POST',
-        headers: { origin: FOREIGN_SITE }
-      })
-    ).toBe(FORBIDDEN)
+    expect(await statusOf(dashboard)).toBe(OK)
     expect(await statusUnderHost(dashboard, new URL(FOREIGN_SITE).host)).toBe(
       FORBIDDEN
     )

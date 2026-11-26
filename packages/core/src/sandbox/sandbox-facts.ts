@@ -10,6 +10,14 @@ echo "untracked=$(git ls-files --others --exclude-standard | wc -l)"
 echo "memory=$(cat /sys/fs/cgroup/memory.current 2>/dev/null)"
 echo "memoryMax=$(cat /sys/fs/cgroup/memory.max 2>/dev/null)"`
 
+const DIFF_SCRIPT = `base=$(git merge-base HEAD "origin/$WORKCELL_BASE_REF" 2>/dev/null || git rev-parse HEAD)
+{
+  git diff "$base"
+  git ls-files --others --exclude-standard -z | xargs -0 -r -n 1 git diff --no-index -- /dev/null
+} | head -c "$WORKCELL_DIFF_BYTES"`
+
+const MOST_DIFF_BYTES = 1_000_000
+
 const FACT_LINE = /^(\w+)=(.*)$/u
 
 export type SandboxFacts = {
@@ -56,4 +64,16 @@ export async function readSandboxFacts(
     memoryBytes: bytesOf(facts.get('memory')),
     memoryMaxBytes: bytesOf(facts.get('memoryMax'))
   }
+}
+
+export async function readSandboxDiff(handle: SandboxHandle, baseRef: string) {
+  const { stdout } = await handle.process.exec(DIFF_SCRIPT, {
+    cwd: WORKSPACE_ROOT,
+    env: {
+      WORKCELL_BASE_REF: baseRef,
+      WORKCELL_DIFF_BYTES: String(MOST_DIFF_BYTES)
+    }
+  })
+
+  return stdout
 }

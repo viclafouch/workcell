@@ -11,6 +11,7 @@ import {
   holdTwoTurns,
   REPOSITORY,
   routedResponses,
+  SANDBOX_SECRETS,
   TICKET_START,
   toolResultsOf
 } from './worker-fixtures.ts'
@@ -256,6 +257,34 @@ describe('the live view of a worker', () => {
       .toBe('queued')
     released.resolve(null)
     await Promise.all([running.firstTurn, queued.firstTurn])
+  })
+
+  it('reads the whole diff of a worker in one read, with each secret it knows masked', async () => {
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(
+      url,
+      routedResponses(
+        [],
+        [
+          callTool('write_file', {
+            path: 'README.md',
+            content: `The repository.\ntoken ${SANDBOX_SECRETS.NPM_TOKEN}\n`
+          }),
+          callTool('write_file', { path: 'NOTES.md', content: 'new\n' }),
+          { text: 'Done.' }
+        ]
+      ),
+      { originUrl: origin.url }
+    )
+    const worker = await agent.workers.startWorker(TICKET_START)
+    await worker.firstTurn
+
+    const diff = await agent.readWorkerDiff(worker.threadId)
+
+    expect(diff).toContain('+++ b/README.md')
+    expect(diff).toContain('+++ b/NOTES.md')
+    expect(diff).not.toContain(SANDBOX_SECRETS.NPM_TOKEN)
+    expect(await agent.readWorkerDiff('no-such-thread')).toBeNull()
   })
 
   it('shows the pull request and the budget of a worker in the live view and in the line of list_workers', async () => {

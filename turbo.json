@@ -16,6 +16,15 @@
     "transit": {
       "dependsOn": ["^transit"]
     },
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!*.md", "!e2e/**"],
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
     "lint": {
       "dependsOn": ["transit"],
       "inputs": ["$TURBO_DEFAULT$", "!*.md", "!skills/**"]
@@ -28,14 +37,20 @@
       "inputs": ["$TURBO_DEFAULT$", "!*.md", "!skills/**"]
     },
     "test": {
-      "dependsOn": ["transit"],
+      "dependsOn": ["^build", "transit"],
       "inputs": ["$TURBO_DEFAULT$", "!*.md"]
     },
     "test:changed": {
-      "cache": false
+      "cache": false,
+      "dependsOn": ["^build"]
     },
     "test:integration": {
-      "cache": false
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
+    "test:e2e": {
+      "cache": false,
+      "dependsOn": ["^build"]
     },
     "//#lint:root": {
       "inputs": ["*.ts", "scripts/**", "package.json"]
