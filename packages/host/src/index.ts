@@ -28,11 +28,12 @@ export { defineLaunchAgent } from './service/launch-agent.ts'
 export { keepMachineAwake } from './service/keep-awake.ts'
 export { runHost } from './service/run-host.ts'
 export { type HttpRoute, openHttpLayer } from './service/http-layer.ts'
+export { liveViewUrl, readLiveView } from './service/live-view.ts'
 export {
-  liveViewRoute,
-  liveViewUrl,
-  readLiveView
-} from './service/live-view.ts'
+  dashboardRoute,
+  type DashboardOptions,
+  type DashboardWorkcell
+} from './service/dashboard.ts'
 export { checkCommand } from './machine-check/check-command.ts'
 export { checkDatabaseSchema } from './machine-check/check-database-schema.ts'
 export { checkDockerMemory } from './machine-check/check-docker-memory.ts'

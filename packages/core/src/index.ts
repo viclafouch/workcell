@@ -22,7 +22,9 @@ export {
   FEEDBACK_RECORD,
   SEND_FEEDBACK,
   type DeliverFeedback,
+  FEEDBACK_PLUGIN,
   type FeedbackOptions,
+  type FeedbackPluginState,
   type FeedbackReport
 } from './feedback/feedback.ts'
 export {

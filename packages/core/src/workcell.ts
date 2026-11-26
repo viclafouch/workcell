@@ -13,6 +13,7 @@ import {
 import type { ModelPricing } from './budget/budget.ts'
 import type { BudgetLimits } from './budget/limits.ts'
 import type { FeedbackOptions } from './feedback/feedback.ts'
+import { createRecentFeedback } from './feedback/recent-feedback.ts'
 import { sendFiles, type ReadAgentFile } from './files/send-files.ts'
 import {
   acceptAllowedSenders,
@@ -271,6 +272,11 @@ export async function openWorkcell({
     ...Object.values(sandboxes),
     libraryOptions.sandbox
   ])
+  const recentFeedback = createRecentFeedback()
+  const feedbackOptions = {
+    ...feedback,
+    deliver: recentFeedback.deliverThrough(feedback?.deliver)
+  }
   const skillServers = [
     ...(skills.servers ?? []),
     ...(orchestratorOptions.skills?.servers ?? [])
@@ -369,7 +375,7 @@ export async function openWorkcell({
       ...sendFilesFrom(workerSandbox.readFile),
       ...plugins
     ],
-    feedback,
+    feedback: feedbackOptions,
     observability
   })
   const repositories = Object.keys(sandboxes)
@@ -385,7 +391,7 @@ export async function openWorkcell({
     readMessage: messageReaderOf(models.worker),
     onWorkerStart
   })
-  const { viewWorkers, inspectWorkers } = createWorkerView({
+  const { viewWorkers, inspectWorkers, readWorkerDiff } = createWorkerView({
     host,
     harness,
     readWorkers: workers.readWorkers,
@@ -399,7 +405,8 @@ export async function openWorkcell({
     lifecycle,
     activity,
     workerSandbox,
-    pricing
+    pricing,
+    secretValues
   })
   const orchestratorHarness = defineOrchestratorHarness({
     ...orchestratorOptions,
@@ -421,7 +428,7 @@ export async function openWorkcell({
     isStarter,
     repositories,
     pricing,
-    feedback,
+    feedback: feedbackOptions,
     observability
   })
   await waitUntilReady('sandbox provider', sandboxProvider.list, startLog)
@@ -439,6 +446,8 @@ export async function openWorkcell({
     }),
     viewWorkers,
     inspectWorkers,
+    readWorkerDiff,
+    listRecentFeedback: recentFeedback.listRecentFeedback,
     [Symbol.asyncDispose]: async () => {
       await host.close({ recoverable: true })
       await skillSources[Symbol.asyncDispose]()

@@ -7,8 +7,6 @@ import { StartRefusalError } from '@workcell/core'
 
 export const LOOPBACK = '127.0.0.1'
 
-const FORBIDDEN = 403
-
 const NOT_FOUND = 404
 
 const INTERNAL_SERVER_ERROR = 500
@@ -61,22 +59,10 @@ export class PortInUseError extends StartRefusalError {
   }
 }
 
-function refuseForeignSites(ownPort: () => string): ServerMiddleware {
-  return (request, next) => {
-    const origin = request.headers.get('origin')
-    const ownOrigins = localhostAllowedHostnames().map((hostname) => {
-      return `http://${hostname}:${ownPort()}`
-    })
-
-    if (origin !== null && !ownOrigins.includes(origin)) {
-      return new Response(null, { status: FORBIDDEN })
-    }
-
-    return (
-      hostHeaderValidationResponse(request, localhostAllowedHostnames()) ??
-      next()
-    )
-  }
+const refuseForeignHosts: ServerMiddleware = (request, next) => {
+  return (
+    hostHeaderValidationResponse(request, localhostAllowedHostnames()) ?? next()
+  )
 }
 
 function isPortInUse(error: unknown) {
@@ -120,16 +106,13 @@ async function openListener({
   logger
 }: ListenerParams) {
   const routeOf = routerOf(routes)
-  const ownPort = () => {
-    return new URL(server.url ?? '').port
-  }
   const server: Server = serve({
     port,
     hostname,
     manual: true,
     silent: true,
     gracefulShutdown: false,
-    middleware: guardsOwnSite ? [refuseForeignSites(ownPort)] : [],
+    middleware: guardsOwnSite ? [refuseForeignHosts] : [],
     fetch: (request) => {
       const route = routeOf(new URL(request.url).pathname)
 

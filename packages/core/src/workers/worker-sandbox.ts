@@ -15,6 +15,7 @@ import {
 import { sandboxWorkspaceBackend } from '@tanstack/ai-sandbox/harness'
 import { followCurrent, type SandboxBackend } from '#/sandbox/follow-current.ts'
 import {
+  readSandboxDiff,
   readSandboxFacts,
   WORKSPACE_ROOT,
   type SandboxFacts
@@ -351,6 +352,16 @@ export function createWorkerSandbox({
     }
   }
 
+  const liveSandboxOf = async (threadId: string) => {
+    const current = opened.get(threadId)
+    const listed = current === undefined ? [] : await listSandboxes()
+    const isLive = listed.some(({ id }) => {
+      return id === current?.handle.id
+    })
+
+    return isLive ? (current ?? null) : null
+  }
+
   const isInSetup = (threadId: string) => {
     return runningSteps.has(threadId)
   }
@@ -370,18 +381,9 @@ export function createWorkerSandbox({
       )
     }
 
-    const current = opened.get(threadId)
+    const current = await liveSandboxOf(threadId)
 
-    if (current === undefined) {
-      return null
-    }
-
-    const listed = await listSandboxes()
-    const isLive = listed.some(({ id }) => {
-      return id === current.handle.id
-    })
-
-    if (!isLive) {
+    if (current === null) {
       return null
     }
 
@@ -399,6 +401,14 @@ export function createWorkerSandbox({
 
       return null
     }
+  }
+
+  const readDiff = async (threadId: string) => {
+    const current = await liveSandboxOf(threadId)
+
+    return current === null || runningSteps.has(threadId)
+      ? null
+      : readSandboxDiff(current.handle, cloneRefOf(current.sandbox) ?? 'HEAD')
   }
 
   const forget = async (worker: NamedWorker) => {
@@ -455,6 +465,7 @@ export function createWorkerSandbox({
     save,
     isInSetup,
     inspect,
+    readDiff,
     forget,
     readFile
   }

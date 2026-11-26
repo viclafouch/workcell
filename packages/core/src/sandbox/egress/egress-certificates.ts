@@ -102,7 +102,7 @@ export async function issueCertificate(
       ]),
       new SubjectAlternativeNameExtension(
         dnsNames.map((value) => {
-          return { type: 'dns', value }
+          return { type: 'dns' as const, value }
         })
       )
     ]

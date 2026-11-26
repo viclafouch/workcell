@@ -3,5 +3,11 @@ import { oxfmtConfig } from '@viclafouch/oxc-config/formatting'
 
 export default defineConfig({
   ...oxfmtConfig,
-  ignorePatterns: ['**/*.md']
+  ignorePatterns: [
+    '**/*.md',
+    '**/routeTree.gen.ts',
+    '**/cn-tables.ts',
+    '**/dist/**',
+    '**/.tanstack/**'
+  ]
 })

@@ -20,7 +20,7 @@ import {
 } from '#/prompts/feedback.ts'
 import { agentMetadataSchema, type AgentMetadata } from '#/session/metadata.ts'
 
-const FEEDBACK_PLUGIN = 'workcell/feedback'
+export const FEEDBACK_PLUGIN = 'workcell/feedback'
 
 export const SEND_FEEDBACK = 'send_feedback'
 
@@ -83,6 +83,10 @@ export type FeedbackReport = ReportInput & {
   runId: string
   reporter?: string
   version: string
+}
+
+export type FeedbackPluginState = {
+  reports: FeedbackReport[]
 }
 
 export type DeliverFeedback = (
@@ -165,6 +169,9 @@ export function feedback({
     keepRecords: { [FEEDBACK_RECORD]: KEPT_FEEDBACK_RECORDS },
     setup: (setupContext) => {
       const { threadId } = setupContext.session
+      const sentReports = setupContext.state<FeedbackPluginState>({
+        reports: []
+      })
       let model = ''
       let metadata: AgentMetadata | null = null
 
@@ -229,6 +236,13 @@ export function feedback({
             }
           })
           append([{ type: FEEDBACK_RECORD, ...report }])
+          await sentReports.update((current) => {
+            return {
+              reports: [...current.reports, report].slice(
+                -KEPT_FEEDBACK_RECORDS
+              )
+            }
+          })
 
           return isDelivered
             ? feedbackSentLine(report.id)
