@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { ChatMiddleware } from '@tanstack/ai'
 import { definePlugin } from '@tanstack/ai-harness'
 import { workerMetadataSchema } from '@workcell/core'
-import { MERGE_GATE_REFUSAL } from '#/prompts/github.ts'
+import { mergeGateRefusal } from '#/prompts/github.ts'
 import { mergeMetadataSchema } from '#/pull-requests/merge-metadata.ts'
 
 const MERGE_GATE = 'workcell/github-merge-gate'
@@ -44,21 +44,50 @@ const mergeGateMetadataSchema = workerMetadataSchema.extend(
 
 const QUOTES = /^['"]+|['"]+$/gu
 
+const REDIRECTION = /^\d*(?:>>?|<|>&|&>)/u
+
+const BARE_REDIRECTION = /^\d*(?:>>?|<|&>)$/u
+
+function wordsOf(segment: string) {
+  return segment
+    .trim()
+    .split(/\s+/u)
+    .map((word) => {
+      return word.replaceAll(QUOTES, '')
+    })
+}
+
+function commandWordsOf(segment: string) {
+  const words = wordsOf(segment)
+
+  return words.filter((word, index) => {
+    const previous = words[index - 1] ?? ''
+
+    return !REDIRECTION.test(word) && !BARE_REDIRECTION.test(previous)
+  })
+}
+
 function programOf(word: string) {
-  return word.replaceAll(QUOTES, '').split('/').at(-1)
+  return word.split('/').at(-1)
 }
 
 function isGithubMerge(segment: string) {
-  const words = segment.trim().split(/\s+/u).map(programOf)
-  const fromGh = words.slice(words.indexOf('gh'))
+  const programs = wordsOf(segment).map(programOf)
+  const fromGh = programs.slice(programs.indexOf('gh'))
 
   return (
-    words.includes('gh') && fromGh.includes('pr') && fromGh.includes('merge')
+    programs.includes('gh') && fromGh.includes('pr') && fromGh.includes('merge')
   )
 }
 
-function mergesOnGithub(command: string) {
-  return command.split(SEGMENT_SEPARATORS).some(isGithubMerge)
+function isRecordedMerge(segment: string, recorded: string) {
+  return (
+    commandWordsOf(segment).join(' ') === commandWordsOf(recorded).join(' ')
+  )
+}
+
+function mergeSegmentsOf(command: string) {
+  return command.split(SEGMENT_SEPARATORS).filter(isGithubMerge)
 }
 
 export const pullRequestMergeGate = definePlugin({
@@ -76,28 +105,36 @@ export const pullRequestMergeGate = definePlugin({
       name: MERGE_GATE,
       onGuardToolCall: async (_ctx, { toolName, args }) => {
         const command = commandArgsSchema.safeParse(args).data?.command
+        const merges =
+          toolName === 'bash' && command !== undefined
+            ? mergeSegmentsOf(command)
+            : []
 
-        if (
-          toolName !== 'bash' ||
-          command === undefined ||
-          !mergesOnGithub(command)
-        ) {
+        if (merges.length === 0) {
           return
         }
 
-        return command === (await recordedCommand())
+        const recorded = await recordedCommand()
+        const isTheRecordedMerge = merges.every((segment) => {
+          return recorded !== undefined && isRecordedMerge(segment, recorded)
+        })
+
+        return isTheRecordedMerge
           ? undefined
-          : { type: 'skip', result: { error: MERGE_GATE_REFUSAL } }
+          : { type: 'skip', result: { error: mergeGateRefusal(recorded) } }
       },
       onAfterToolCall: async (_ctx, { toolName, toolCall, result }) => {
         const mergeRefusal = failureOf(result)
         const recorded = await recordedCommand()
+        const merges = mergeSegmentsOf(
+          commandOf(toolCall.function.arguments) ?? ''
+        )
 
         if (
           toolName !== 'bash' ||
           mergeRefusal === undefined ||
           recorded === undefined ||
-          commandOf(toolCall.function.arguments) !== recorded
+          merges.length === 0
         ) {
           return
         }

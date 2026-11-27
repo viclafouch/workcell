@@ -92,12 +92,28 @@ describe('the merge gate of a worker', () => {
     async (_case, command, recorded) => {
       const run = await runBash(command, recorded)
 
-      expect(run.result).toContain(
-        'A merge runs only once the pull request is ready'
-      )
+      expect(run.result).toContain('A merge runs only')
       expect(run.result).not.toContain('Merged')
     }
   )
+
+  it.each([
+    ['with its output redirected', `${commandOf(MERGEABLE_URL)} 2>&1`],
+    ['after a step', `cd . && ${commandOf(MERGEABLE_URL)}`]
+  ])('runs the recorded command %s', async (_case, command) => {
+    const merge = await runBash(command, commandOf(MERGEABLE_URL))
+
+    expect(merge.result).toContain(`Merged ${MERGEABLE_URL}`)
+  })
+
+  it('names the recorded command when it refuses another merge', async () => {
+    const run = await runBash(
+      `${commandOf(MERGEABLE_URL)} --admin`,
+      commandOf(MERGEABLE_URL)
+    )
+
+    expect(run.result).toContain(`Run this one: ${commandOf(MERGEABLE_URL)}`)
+  })
 
   it('runs the recorded command as it is, and lets other gh commands through', async () => {
     const merge = await runBash(

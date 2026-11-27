@@ -331,6 +331,7 @@ describe('the review threads tool of a worker', () => {
         headRefOid: 'head-1',
         mergeCommit: null,
         isDraft: false,
+        mergeStateStatus: 'CLEAN',
         isInMergeQueue: false,
         isMergeQueueEnabled: false,
         reviewDecision: null,

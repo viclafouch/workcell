@@ -602,7 +602,7 @@ describe('the red checks of a pull request', () => {
       conclusion: 'cancelled',
       jobs: [{ name: 'unit tests', conclusion: 'cancelled' }]
     })
-    const { watcher, wakes, posts } = openWatcher()
+    const { watcher, wakes, posts } = openWatcher({ merge: false })
 
     await pollTwice(watcher)
 

@@ -117,6 +117,7 @@ export function openPullRequest(
     reviews: { nodes: [] },
     timelineItems: { nodes: [] },
     isDraft: false,
+    mergeStateStatus: 'CLEAN',
     isInMergeQueue: false,
     isMergeQueueEnabled: false,
     reviewDecision: null,

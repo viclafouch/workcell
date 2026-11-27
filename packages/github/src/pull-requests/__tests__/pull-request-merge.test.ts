@@ -7,6 +7,8 @@ import {
   openPullRequest,
   checks,
   status,
+  rollup,
+  workflowRuns,
   openWatcher,
   serveGithubPerTest,
   pollTwice
@@ -42,7 +44,7 @@ describe('the merge of a ready pull request', () => {
         threadId: WORKER.threadId,
         inputId: 'github:acme/app#42:ready:head-1',
         delivery: 'followUp',
-        message: `The pull request watcher sends this, not a person. The pull request ${PULL_REQUEST_URL} is ready: its checks are green on head-1. Merge it with this exact command, and no other: ${SQUASH_COMMAND} When GitHub refuses it, change nothing: the host ends the task. Then end your turn.`
+        message: `The pull request watcher sends this, not a person. The pull request ${PULL_REQUEST_URL} is ready: its checks are green on head-1. Merge it with this exact command, and no other: ${SQUASH_COMMAND} GitHub can take minutes to merge it, through its merge queue: the merge reaches the host on its own, so watch nothing and ask no one. When GitHub refuses it, change nothing: the host ends the task. Then end your turn.`
       }
     ])
     expect(posts).toStrictEqual([])
@@ -238,5 +240,48 @@ describe('the merge of a ready pull request', () => {
       'github:acme/app#42:ready:head-1',
       'github:acme/app#42:ready:head-1:ejected-1'
     ])
+  })
+
+  it('reads a pull request as ready when the only failed runs of its checks were run again green', async () => {
+    githubFake.pullRequests = onTheBranch({
+      ...checks('FAILURE'),
+      statusCheckRollup: rollup('FAILURE', 2)
+    })
+    githubFake.workflowRuns = workflowRuns(
+      {
+        workflow: 'validate',
+        conclusion: 'failure',
+        jobs: [{ name: 'Code checks', conclusion: 'failure' }]
+      },
+      {
+        workflow: 'validate',
+        conclusion: 'success',
+        jobs: [{ name: 'Code checks', conclusion: 'success' }]
+      }
+    )
+    const { watcher, updates, wakes } = openWatcher()
+
+    await pollTwice(watcher)
+
+    expect(updates).toContainEqual({
+      threadId: WORKER.threadId,
+      metadata: { mergeCommand: SQUASH_COMMAND }
+    })
+    expect(
+      wakes.map(({ inputId }) => {
+        return inputId
+      })
+    ).toStrictEqual(['github:acme/app#42:ready:head-1'])
+  })
+
+  it('records no command while GitHub reads the pull request as blocked or unstable', async () => {
+    githubFake.pullRequests = onTheBranch({ mergeStateStatus: 'BLOCKED' })
+    const blocked = openWatcher()
+    await pollTwice(blocked.watcher)
+    githubFake.pullRequests = onTheBranch({ mergeStateStatus: 'UNSTABLE' })
+    const unstable = openWatcher()
+    await pollTwice(unstable.watcher)
+
+    expect([...blocked.wakes, ...unstable.wakes]).toStrictEqual([])
   })
 })

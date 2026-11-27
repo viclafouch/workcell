@@ -65,6 +65,7 @@ export type WatchedPullRequest = Pick<
   | 'closed'
   | 'mergeable'
   | 'isDraft'
+  | 'mergeStateStatus'
   | 'isInMergeQueue'
   | 'isMergeQueueEnabled'
   | 'reviewDecision'
@@ -141,7 +142,7 @@ export type PullRequestRead =
     }
 
 const WATCHED_PULL_REQUEST_FIELDS = `number url merged closed mergeable headRefOid
-      isDraft isInMergeQueue isMergeQueueEnabled reviewDecision
+      isDraft mergeStateStatus isInMergeQueue isMergeQueueEnabled reviewDecision
       baseRepository { viewerDefaultMergeMethod }
       reviewRequests(first: 20) {
         nodes { requestedReviewer { __typename ... on User { login } ... on Team { slug } } }

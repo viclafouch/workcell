@@ -67,8 +67,11 @@ export function openPullRequestRefusal(pullRequest: string) {
   return `The pull request ${pullRequest} is still open, so the task goes on. End your turn: what happens next on the pull request reaches you as a new message. To give up the task, close the pull request first.`
 }
 
-export const MERGE_GATE_REFUSAL =
-  'A merge runs only once the pull request is ready: run the exact merge command that the pull request watcher sends you, and no other. Until it sends one, end your turn.'
+export function mergeGateRefusal(recorded: string | undefined) {
+  return recorded === undefined
+    ? 'A merge runs only once the pull request is ready: run the exact merge command that the pull request watcher sends you, and no other. Until it sends one, end your turn.'
+    : `A merge runs only as the pull request watcher sent it, with no flag added or removed. Run this one: ${recorded}`
+}
 
 export function pullRequestFact(pullRequest: string) {
   return `The pull request of this task: ${pullRequest}.`

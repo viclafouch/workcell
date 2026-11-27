@@ -91,8 +91,7 @@ type PullRequestEventsParams = {
 }
 
 type RedCheckParams = {
-  reviewGate: ReviewGate | undefined
-  failedJobs: readonly FailedJob[]
+  redChecks: readonly RedCheck[]
   personChecks: readonly string[]
   lines: PullRequestLines
   redCommits: RedCommits | undefined
@@ -191,23 +190,30 @@ function redRoundEvent({
     : { ...wakeEvent(), redCommit: headRefOid }
 }
 
-function redCheckEvents(
+function currentRedChecks(
   pullRequest: WatchedPullRequest,
-  { reviewGate, failedJobs, personChecks, lines, redCommits }: RedCheckParams,
-  eventOf: EventOf
-) {
-  const { statusCheckRollup, headRefOid, url } = pullRequest
-
-  if (!RED_STATES.has(statusCheckRollup?.state ?? '')) {
+  reviewGate: ReviewGate | undefined,
+  failedJobs: readonly FailedJob[]
+): RedCheck[] {
+  if (!RED_STATES.has(pullRequest.statusCheckRollup?.state ?? '')) {
     return []
   }
 
-  const redChecks = [
+  return [
     ...redStatuses(statusesOf(pullRequest), reviewGate),
     ...failedJobs.map(({ name, url: jobUrl }): RedCheck => {
       return { kind: 'job', name, url: jobUrl }
     })
   ]
+}
+
+function redCheckEvents(
+  pullRequest: WatchedPullRequest,
+  { redChecks, personChecks, lines, redCommits }: RedCheckParams,
+  eventOf: EventOf
+) {
+  const { headRefOid, url } = pullRequest
+
   const clearedByAPerson = ({ name }: RedCheck) => {
     return personChecks.includes(name)
   }
@@ -266,8 +272,19 @@ const REVIEW_DECISIONS_THAT_WAIT = new Set([
   'CHANGES_REQUESTED'
 ])
 
-function isGreen({ statusCheckRollup }: WatchedPullRequest) {
-  return statusCheckRollup === null || statusCheckRollup.state === 'SUCCESS'
+const MERGE_STATES_THAT_MERGE = new Set(['CLEAN', 'HAS_HOOKS'])
+
+function isGreen(
+  { statusCheckRollup }: WatchedPullRequest,
+  redChecks: readonly RedCheck[]
+) {
+  const state = statusCheckRollup?.state
+
+  return (
+    state === undefined ||
+    state === 'SUCCESS' ||
+    (RED_STATES.has(state) && redChecks.length === 0)
+  )
 }
 
 function lastEjectionOf({ timelineItems }: WatchedPullRequest) {
@@ -276,13 +293,21 @@ function lastEjectionOf({ timelineItems }: WatchedPullRequest) {
   })?.id
 }
 
-function isReady(pullRequest: WatchedPullRequest) {
-  const { mergeable, isDraft, isInMergeQueue, reviewDecision, reviewThreads } =
-    pullRequest
+function isReady(
+  pullRequest: WatchedPullRequest,
+  redChecks: readonly RedCheck[]
+) {
+  const {
+    mergeStateStatus,
+    isDraft,
+    isInMergeQueue,
+    reviewDecision,
+    reviewThreads
+  } = pullRequest
 
   return (
-    isGreen(pullRequest) &&
-    mergeable === 'MERGEABLE' &&
+    MERGE_STATES_THAT_MERGE.has(mergeStateStatus) &&
+    isGreen(pullRequest, redChecks) &&
     !isDraft &&
     !isInMergeQueue &&
     !REVIEW_DECISIONS_THAT_WAIT.has(reviewDecision ?? '') &&
@@ -311,8 +336,12 @@ function mergeCommandOf({
   ].join(' ')
 }
 
-function readyEvents(pullRequest: WatchedPullRequest, eventOf: EventOf) {
-  if (!isReady(pullRequest)) {
+function readyEvents(
+  pullRequest: WatchedPullRequest,
+  redChecks: readonly RedCheck[],
+  eventOf: EventOf
+) {
+  if (!isReady(pullRequest, redChecks)) {
     return []
   }
 
@@ -330,7 +359,7 @@ function readyEvents(pullRequest: WatchedPullRequest, eventOf: EventOf) {
       action: {
         type: 'merge',
         command,
-        message: `The pull request watcher sends this, not a person. The pull request ${url} is ready: its checks are green on ${headRefOid}. Merge it with this exact command, and no other: ${command} When GitHub refuses it, change nothing: the host ends the task. ${END_TURN}`
+        message: `The pull request watcher sends this, not a person. The pull request ${url} is ready: its checks are green on ${headRefOid}. Merge it with this exact command, and no other: ${command} GitHub can take minutes to merge it, through its merge queue: the merge reaches the host on its own, so watch nothing and ask no one. When GitHub refuses it, change nothing: the host ends the task. ${END_TURN}`
       }
     })
   ]
@@ -348,14 +377,19 @@ function reviewerNamesOf({ reviewRequests }: WatchedPullRequest) {
   })
 }
 
+type ApprovalWaitParams = {
+  redChecks: readonly RedCheck[]
+  lines: PullRequestLines
+}
+
 function approvalWaitEvents(
   pullRequest: WatchedPullRequest,
-  lines: PullRequestLines,
+  { redChecks, lines }: ApprovalWaitParams,
   eventOf: EventOf
 ) {
   const { reviewDecision, headRefOid, url } = pullRequest
 
-  return isGreen(pullRequest) && reviewDecision === 'REVIEW_REQUIRED'
+  return isGreen(pullRequest, redChecks) && reviewDecision === 'REVIEW_REQUIRED'
     ? [
         eventOf({
           kind: 'approval-wait',
@@ -635,16 +669,18 @@ export function pullRequestEvents({
         ]
       : []
 
+  const redChecks = currentRedChecks(pullRequest, reviewGate, failedJobs)
+
   return [
     ...redCheckEvents(
       pullRequest,
-      { reviewGate, failedJobs, personChecks, lines, redCommits },
+      { redChecks, personChecks, lines, redCommits },
       eventOf
     ),
     ...(merge
       ? [
-          ...readyEvents(pullRequest, eventOf),
-          ...approvalWaitEvents(pullRequest, lines, eventOf)
+          ...readyEvents(pullRequest, redChecks, eventOf),
+          ...approvalWaitEvents(pullRequest, { redChecks, lines }, eventOf)
         ]
       : greenCheckEvents(pullRequest, lines, eventOf)),
     ...commentEvents(pullRequest, viewerLogin, eventOf),
