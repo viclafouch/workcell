@@ -113,6 +113,22 @@
     --diff-removed-foreground: var(--status-failed);
     --diff-changed-foreground: var(--status-waiting);
 
+    --pull-request-open: light-dark(#1f883d, #238636);
+    --pull-request-draft: light-dark(#59636e, #656c76);
+    --pull-request-queued: light-dark(#9a6700, #9e6a03);
+    --pull-request-merged: light-dark(#8250df, #8957e5);
+    --pull-request-closed: light-dark(#cf222e, #da3633);
+    --pull-request-foreground: #ffffff;
+
+    --signal-success: light-dark(#1a7f37, #3fb950);
+    --signal-danger: light-dark(#d1242f, #f85149);
+    --signal-attention: light-dark(#9a6700, #d29922);
+    --signal-done: light-dark(#8250df, #ab7df8);
+    --signal-neutral: light-dark(#59636e, #9198a1);
+
+    --tab-underline: light-dark(#fd8c73, #f78166);
+    --tab-counter: light-dark(#818b981f, #656c7633);
+
     @media (prefers-contrast: more) {
       --border: light-dark(var(--palette-graphite), var(--palette-haze));
       --muted-foreground: var(--foreground);

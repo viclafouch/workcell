@@ -24,9 +24,13 @@ A distribution passes the console chat of each chat integration it runs, and the
 
 The thoughts of a model show once the distribution asks its models for a summary of their reasoning, at the level it already pays for.
 
-## Show the queue
+## Show the queue and the tickets
 
-A distribution that runs a tracker passes the queue its tracker integration builds. The page then shows every ticket that waits for a worker, in the order of the tracker, with the cause of each one that cannot start. A distribution with no tracker passes none, and the page shows no queue.
+A distribution that runs a tracker passes the tracker its integration builds. The page then shows every ticket that waits for a worker, in the order of the tracker, with the cause of each one that cannot start, and the panel of each worker shows the ticket it carries: its title, state, labels, assignee and description. A distribution with no tracker passes none, and the page shows no queue and no ticket.
+
+## Show the pull requests
+
+A distribution passes the pull requests its code host integration reads. The panel of each worker then shows its pull request: its state, its checks, its description, its files, its diff on demand and its merge. The page reads it again each time the watcher of the host records a change of the pull request, never on a timer. A check the token of the host cannot read counts as hidden, and the panel says how many.
 
 ## Work on it
 

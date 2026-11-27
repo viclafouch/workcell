@@ -1,4 +1,9 @@
-import type { FeedbackReport, TicketQueue, WorkerView } from '@workcell/core'
+import type {
+  FeedbackReport,
+  PullRequests,
+  Tracker,
+  WorkerView
+} from '@workcell/core'
 
 export const HARNESS_NAMES = ['worker', 'bot'] as const
 
@@ -66,6 +71,7 @@ export type ConsoleContext = {
   feedback: {
     recent: () => FeedbackReport[] | Promise<FeedbackReport[]>
   }
-  queue?: TicketQueue
+  tracker?: Tracker
+  pullRequests?: PullRequests
   traceUrl?: (threadId: string) => string
 }

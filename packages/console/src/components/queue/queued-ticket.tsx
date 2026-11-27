@@ -1,6 +1,7 @@
-import { CircleSlashIcon, ExternalLinkIcon, UserIcon } from 'lucide-react'
-import type { QueuedTicket, TicketLabel } from '@workcell/core'
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar.tsx'
+import { CircleSlashIcon, ExternalLinkIcon } from 'lucide-react'
+import type { QueuedTicket } from '@workcell/core'
+import { PersonLine } from '#/components/ticket/person-line.tsx'
+import { TicketLabelChip } from '#/components/ticket/ticket-label.tsx'
 import { Badge } from '#/components/ui/badge.tsx'
 import {
   Item,
@@ -12,27 +13,6 @@ import {
 } from '#/components/ui/item.tsx'
 
 const SHOWN_LABELS = 4
-
-type LabelChipProps = {
-  label: TicketLabel
-}
-
-const LabelChip = ({ label }: LabelChipProps) => {
-  return (
-    <Badge variant="outline" className="max-w-48">
-      {label.color === undefined ? null : (
-        <span
-          aria-hidden
-          className="label-dot"
-          style={{ backgroundColor: label.color }}
-        />
-      )}
-      <span dir="auto" className="truncate">
-        {label.name}
-      </span>
-    </Badge>
-  )
-}
 
 type QueuedTicketItemProps = {
   ticket: QueuedTicket
@@ -88,7 +68,7 @@ export const QueuedTicketItem = ({ ticket, rank }: QueuedTicketItemProps) => {
             <Badge variant="outline">{priority}</Badge>
           )}
           {labels.slice(0, SHOWN_LABELS).map((label) => {
-            return <LabelChip key={label.name} label={label} />
+            return <TicketLabelChip key={label.name} label={label} />
           })}
           {hiddenLabels > 0 ? (
             <span className="text-label text-muted-foreground">
@@ -97,24 +77,7 @@ export const QueuedTicketItem = ({ ticket, rank }: QueuedTicketItemProps) => {
             </span>
           ) : null}
           {assignees.map(({ name, avatarUrl }) => {
-            return (
-              <span
-                key={name}
-                className="inline-flex min-w-0 items-center gap-1.5 text-label text-muted-foreground"
-              >
-                <Avatar size="sm" className="size-5">
-                  {avatarUrl === undefined ? null : (
-                    <AvatarImage src={avatarUrl} alt="" loading="lazy" />
-                  )}
-                  <AvatarFallback>
-                    <UserIcon aria-hidden className="size-3" />
-                  </AvatarFallback>
-                </Avatar>
-                <span dir="auto" className="truncate">
-                  {name}
-                </span>
-              </span>
-            )
+            return <PersonLine key={name} name={name} avatarUrl={avatarUrl} />
           })}
         </span>
         {blocker === undefined ? null : (

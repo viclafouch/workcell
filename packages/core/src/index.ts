@@ -111,13 +111,30 @@ export {
 } from './workers/worker-reset.ts'
 export { workerViewSchema, type WorkerView } from './workers/worker-view.ts'
 export type {
+  PullRequestCheck,
+  PullRequestCheckState,
+  PullRequestDetails,
+  PullRequestFile,
+  PullRequestFileStatus,
+  PullRequestLabel,
+  PullRequestMerge,
+  PullRequestMergeStatus,
+  PullRequestPerson,
+  PullRequestReviewer,
+  PullRequestReviewState,
+  PullRequests,
+  PullRequestState
+} from './pull-requests/pull-request.ts'
+export type {
+  IntegrationMark,
   QueuedTicket,
   Ticket,
+  TicketDetails,
   TicketLabel,
   TicketPerson,
-  TicketQueue,
   TicketState,
-  TicketStateCategory
+  TicketStateCategory,
+  Tracker
 } from './tracker/ticket.ts'
 export {
   WorkerSandboxSetup,

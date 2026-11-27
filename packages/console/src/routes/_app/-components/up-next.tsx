@@ -26,7 +26,7 @@ const UpNextTickets = ({ queue }: UpNextTicketsProps) => {
     return (
       <EmptySection
         icon={InboxIcon}
-        title={`No ticket waits in ${queue.tracker}`}
+        title={`0 tickets wait in ${queue.tracker}`}
         description={`A ticket handed to the bot in ${queue.tracker} shows here until a worker takes it.`}
       />
     )

@@ -131,7 +131,7 @@ describe('the ticket poller', () => {
     ]
     const { poller } = openPoller(recordStarts([]))
 
-    const queue = await poller.queue.read()
+    const queue = await poller.tracker.queue()
 
     expect(
       queue.map(({ key, priority, blocker }) => {
@@ -150,13 +150,13 @@ describe('the ticket poller', () => {
       key: 'TASK-11',
       title: 'Fix the login',
       url: 'https://linear.app/acme/issue/TASK-11',
-      state: { name: 'Todo', category: 'open' },
+      state: { name: 'Todo', category: 'open', color: '#e2e2e2' },
       labels: [{ name: READY_LABEL, color: '#5e6ad2' }],
       assignees: [{ name: 'Ada Lovelace', avatarUrl: undefined }],
       priority: 'Urgent',
       blocker: 'It needs a repository label: repo:app, repo:tooling.'
     })
-    expect(poller.queue.tracker).toBe('Linear')
+    expect(poller.tracker.name).toBe('Linear')
   })
 
   it('starts the fakeLinear.tickets in the order of the queue, and each one it takes leaves the queue', async () => {
@@ -169,7 +169,7 @@ describe('the ticket poller', () => {
     const { poller } = openPoller(recordStarts(started))
 
     await poller.pollOnce()
-    const queue = await poller.queue.read()
+    const queue = await poller.tracker.queue()
 
     expect(
       started.map(({ task }) => {
@@ -194,7 +194,7 @@ describe('the ticket poller', () => {
     )
 
     await poller.pollOnce()
-    const queue = await poller.queue.read()
+    const queue = await poller.tracker.queue()
 
     expect(
       queue.map(({ key, blocker }) => {

@@ -3,6 +3,7 @@ export type TicketStateCategory = 'open' | 'closed'
 export type TicketState = {
   name: string
   category: TicketStateCategory
+  color?: string
 }
 
 export type TicketLabel = {
@@ -29,7 +30,19 @@ export type QueuedTicket = Ticket & {
   blocker?: string
 }
 
-export type TicketQueue = {
-  tracker: string
-  read: () => Promise<QueuedTicket[]>
+export type TicketDetails = Ticket & {
+  description: string
+}
+
+export type IntegrationMark = {
+  name: string
+  iconUrl: string
+  color?: string
+}
+
+export type Tracker = {
+  name: string
+  mark?: IntegrationMark
+  queue: () => Promise<QueuedTicket[]>
+  ticket: (key: string) => Promise<TicketDetails | null>
 }

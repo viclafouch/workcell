@@ -19,6 +19,7 @@ export const workerViewSchema = z.object({
   name: z.string(),
   repository: z.string(),
   topic: z.string(),
+  subject: z.string().optional(),
   originThreadId: z.string().optional(),
   lastActiveAt: z.number().optional(),
   phase: z.enum([
@@ -36,6 +37,7 @@ export const workerViewSchema = z.object({
   budgetUsd: z.number().optional(),
   branch: z.string().optional(),
   pullRequest: z.string().optional(),
+  pullRequestRevision: z.string().optional(),
   waits: z.array(
     z.custom<WaitKind>((value) => {
       return typeof value === 'string'
@@ -173,6 +175,7 @@ export function workerViewOf(facts: WorkerFacts): WorkerView {
     name: worker.name,
     repository: worker.repository,
     topic: worker.subject ?? firstLine(worker.task),
+    subject: worker.subject,
     originThreadId: worker.originThreadId,
     lastActiveAt: worker.updatedAt,
     phase: phaseOf(facts),
@@ -182,6 +185,7 @@ export function workerViewOf(facts: WorkerFacts): WorkerView {
     budgetUsd,
     branch: worker.branch,
     pullRequest: worker.pullRequest,
+    pullRequestRevision: worker.pullRequestRevision,
     waits: pendingWaits.map(({ kind }) => {
       return kind
     }),
@@ -199,12 +203,14 @@ export function finishedWorkerViewOf({
     name: worker.name,
     repository: worker.repository,
     topic: worker.subject ?? firstLine(worker.task),
+    subject: worker.subject,
     originThreadId: worker.originThreadId,
     lastActiveAt: worker.updatedAt,
     phase: 'finished',
     spentUsd: costUsd,
     branch: worker.branch,
     pullRequest: worker.pullRequest,
+    pullRequestRevision: worker.pullRequestRevision,
     waits: [],
     startupMs: worker.startupMs,
     outcome

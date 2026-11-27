@@ -3,6 +3,12 @@ const dateTime = new Intl.DateTimeFormat('en', {
   timeStyle: 'short'
 })
 
+const date = new Intl.DateTimeFormat('en', { dateStyle: 'medium' })
+
+export const formatDate = (value: string | number) => {
+  return date.format(new Date(value))
+}
+
 export const formatDateTime = (value: string | number) => {
   return dateTime.format(new Date(value))
 }

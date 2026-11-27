@@ -21,6 +21,7 @@ import {
   type PullRequestEvent,
   type ReviewGate
 } from './pull-request-events.ts'
+import { revisionOf } from './pull-request-revision.ts'
 
 type LogLine = (details: Record<string, unknown>, message: string) => void
 
@@ -30,6 +31,7 @@ export type WatchedWorker = {
   subject?: string
   branch?: string
   pullRequest?: string
+  pullRequestRevision?: unknown
   redCommits?: unknown
   mergeCommand?: unknown
   mergeRefusal?: unknown
@@ -100,6 +102,36 @@ async function clearStaleMergeCommand({
     logger.error(
       { threadId, error },
       'merge command not cleared: the next poll clears it again'
+    )
+  }
+}
+
+type RecordRevisionParams = Pick<
+  PullRequestWatcherParams,
+  'updateWorker' | 'logger'
+> & {
+  worker: WatchedWorker
+  pullRequest: WatchedPullRequest
+}
+
+async function recordRevision({
+  updateWorker,
+  logger,
+  worker: { threadId, pullRequestRevision: recorded },
+  pullRequest
+}: RecordRevisionParams) {
+  const pullRequestRevision = revisionOf(pullRequest)
+
+  if (recorded === pullRequestRevision) {
+    return
+  }
+
+  try {
+    await updateWorker({ threadId, metadata: { pullRequestRevision } })
+  } catch (error) {
+    logger.error(
+      { threadId, pullRequest: pullRequest.url, error },
+      'pull request revision not recorded: the next poll records it again'
     )
   }
 }
@@ -310,6 +342,9 @@ export function createPullRequestWatcher({
       if (pullRequest === undefined) {
         continue
       }
+
+      // oxlint-disable-next-line no-await-in-loop -- the revision is recorded before the events of the pull request reach the worker
+      await recordRevision({ updateWorker, logger, worker, pullRequest })
 
       const events = pullRequestEvents({
         repository: worker.repository,

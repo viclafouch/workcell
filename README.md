@@ -37,8 +37,8 @@ Each integration is its own package, and a project picks the ones it uses.
 | Package | What it brings |
 | --- | --- |
 | `@workcell/core` | The host, the worker engine, the budget, the Postgres stores, and the Docker sandbox behind an egress allowlist and a credential proxy |
-| `@workcell/github` | The pull request watcher, the read and review tools, the finish refusal while a pull request is open, and the feedback destination that opens a labelled issue in a repository you name |
-| `@workcell/linear` | Linear tickets as triggers, and the Linear tools |
+| `@workcell/github` | The pull request watcher, the pull requests the console shows, the read and review tools, the finish refusal while a pull request is open, and the feedback destination that opens a labelled issue in a repository you name |
+| `@workcell/linear` | Linear tickets as triggers, the tracker the console shows, and the Linear tools |
 | `@workcell/chat` | The chat of the workers and of the orchestrator bot on [Chat SDK](https://chat-sdk.dev), and `show_card`: tables, charts and key figures as native cards |
 | `@workcell/chat-slack` | What Slack adds on top of Chat SDK: the name and the picture of each worker, the session status, the card limits, the token checks and the Slack link of a thread in a feedback report |
 | `@workcell/host` | What the host process needs on a machine: the logger, the secret stores, the traces, the models, the login service, the live view and the machine check |

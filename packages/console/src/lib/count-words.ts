@@ -1,16 +1,11 @@
-const NUMBER_WORDS = [
-  'No',
-  'One',
-  'Two',
-  'Three',
-  'Four',
-  'Five',
-  'Six',
-  'Seven',
-  'Eight',
-  'Nine'
-]
+const pluralRules = new Intl.PluralRules('en')
 
-export const countWord = (count: number) => {
-  return NUMBER_WORDS[count] ?? String(count)
+const counts = new Intl.NumberFormat('en')
+
+export const formatCount = (count: number) => {
+  return counts.format(count)
+}
+
+export const countOf = (count: number, one: string, other: string) => {
+  return `${formatCount(count)} ${pluralRules.select(count) === 'one' ? one : other}`
 }

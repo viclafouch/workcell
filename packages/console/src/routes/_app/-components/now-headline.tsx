@@ -1,15 +1,13 @@
 import type { WorkerView } from '@workcell/core'
 import { PlacesLine } from '#/components/worker/places-line.tsx'
-import { countWord } from '#/lib/count-words.ts'
+import { countOf } from '#/lib/count-words.ts'
 
 const workSentence = (count: number) => {
   if (count === 0) {
     return 'Nothing runs right now.'
   }
 
-  return count === 1
-    ? 'One worker is working.'
-    : `${countWord(count)} workers are working.`
+  return `${countOf(count, 'worker is working', 'workers are working')}.`
 }
 
 const listFormat = new Intl.ListFormat('en', { type: 'conjunction' })
@@ -30,9 +28,11 @@ const restSentence = (
     return 'Nobody waits for you.'
   }
 
-  return asleep.length === 1
-    ? 'One worker sleeps until a message wakes it.'
-    : `${countWord(asleep.length)} workers sleep until a message wakes them.`
+  return `${countOf(
+    asleep.length,
+    'worker sleeps until a message wakes it',
+    'workers sleep until a message wakes them'
+  )}.`
 }
 
 type NowHeadlineProps = {

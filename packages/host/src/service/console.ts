@@ -8,7 +8,7 @@ import {
   type ConsoleLogger,
   type WorkerIdentity
 } from '@workcell/console'
-import type { openWorkcell, TicketQueue } from '@workcell/core'
+import type { openWorkcell, PullRequests, Tracker } from '@workcell/core'
 import type { HttpRoute } from './http-layer.ts'
 
 const OPERATOR = { id: 'operator' }
@@ -34,7 +34,8 @@ export type ConsoleOptions = {
   brand?: ConsoleBrandOptions
   chats?: readonly ConsoleChat[]
   workerIdentities?: readonly WorkerIdentity[]
-  queue?: TicketQueue
+  tracker?: Tracker
+  pullRequests?: PullRequests
   traceUrl?: (threadId: string) => string
 }
 

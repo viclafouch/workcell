@@ -36,6 +36,15 @@ const THEME_AWARE_CLASS_MERGE = {
 
 const DEVELOPMENT_ALIASES = [
   {
+    find: /^#\/components\/dev\/fixture-dataset-toggle\.tsx$/u,
+    replacement: fileURLToPath(
+      new URL(
+        'src/components/dev/fixture-dataset-toggle.dev.tsx',
+        import.meta.url
+      )
+    )
+  },
+  {
     find: /^#\/server\/development-context\.ts$/u,
     replacement: fileURLToPath(
       new URL('src/server/development-context.dev.ts', import.meta.url)

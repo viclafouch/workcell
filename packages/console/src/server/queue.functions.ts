@@ -7,14 +7,14 @@ export type QueueRead =
 
 export const getQueue = createServerFn({ method: 'GET' }).handler(
   async ({ context }): Promise<QueueRead | null> => {
-    if (context.queue === undefined) {
+    if (context.tracker === undefined) {
       return null
     }
 
-    const { tracker, read } = context.queue
+    const { name: tracker, queue } = context.tracker
 
     try {
-      return { tracker, tickets: await read() }
+      return { tracker, tickets: await queue() }
     } catch (error) {
       context.logger.error({ error, tracker }, 'The tracker gave no queue.')
 

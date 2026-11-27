@@ -70,6 +70,7 @@ export type WatchedPullRequest = Pick<
   | 'isMergeQueueEnabled'
   | 'reviewDecision'
 > & {
+  updatedAt: string
   baseRepository: Maybe<Pick<Repository, 'viewerDefaultMergeMethod'>>
   reviewRequests: Maybe<{
     nodes: Maybe<{ requestedReviewer: Maybe<RequestedReviewer> }>[] | null
@@ -141,7 +142,7 @@ export type PullRequestRead =
       pullRequest: WatchedPullRequest | undefined
     }
 
-const WATCHED_PULL_REQUEST_FIELDS = `number url merged closed mergeable headRefOid
+const WATCHED_PULL_REQUEST_FIELDS = `number url merged closed mergeable headRefOid updatedAt
       isDraft mergeStateStatus isInMergeQueue isMergeQueueEnabled reviewDecision
       baseRepository { viewerDefaultMergeMethod }
       reviewRequests(first: 20) {
