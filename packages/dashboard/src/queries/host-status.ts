@@ -7,12 +7,13 @@ import {
 import { createHostClient } from '#/lib/harness.ts'
 import type { HarnessName } from '#/server/dashboard-context.ts'
 import { BOT_THREADS_QUERY_KEY } from './bot-threads.ts'
+import { CHAT_THREADS_QUERY_KEY } from './chat.ts'
 import { FEEDBACK_QUERY_KEY } from './feedback.ts'
 import { WORKERS_QUERY_KEY } from './workers.ts'
 
 const REFRESHED_LISTS = {
   worker: [WORKERS_QUERY_KEY, FEEDBACK_QUERY_KEY],
-  bot: [BOT_THREADS_QUERY_KEY, FEEDBACK_QUERY_KEY]
+  bot: [BOT_THREADS_QUERY_KEY, FEEDBACK_QUERY_KEY, CHAT_THREADS_QUERY_KEY]
 } as const satisfies Record<HarnessName, readonly (readonly string[])[]>
 
 const LIST_CHANGES = new Set<HostEvent['type']>([
@@ -69,10 +70,7 @@ const setConnection = ({
 
 const refreshLists = (client: QueryClient, harness: HarnessName) => {
   for (const queryKey of REFRESHED_LISTS[harness]) {
-    void client.invalidateQueries(
-      { queryKey, exact: true },
-      { cancelRefetch: false }
-    )
+    void client.invalidateQueries({ queryKey }, { cancelRefetch: false })
   }
 }
 

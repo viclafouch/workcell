@@ -161,7 +161,7 @@ export const FIXTURE_FEEDBACK: FeedbackReport[] = [
 export const FIXTURE_DIFF = `diff --git a/src/auth/redirect.ts b/src/auth/redirect.ts
 --- a/src/auth/redirect.ts
 +++ b/src/auth/redirect.ts
-@@ -1,5 +1,9 @@
+@@ -1,3 +1,7 @@
 -export const afterSignIn = () => {
 -  return '/'
 +export const afterSignIn = (requested: string | null) => {

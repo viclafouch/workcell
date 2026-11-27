@@ -1,58 +1,24 @@
-import React from 'react'
-import { streamingMarkdownExtension } from '@tanstack/markdown/extensions/streaming'
-import {
-  Markdown,
-  type MarkdownComponentProps,
-  type MarkdownComponents
-} from '@tanstack/markdown/react'
-import { HighlightedCode } from '#/components/session/highlighted-code.tsx'
-
-const STREAMING_EXTENSIONS = [streamingMarkdownExtension()]
-
-const LANGUAGE_CLASS = /language-(?<language>[\w-]+)/u
-
-const matchIsCodeElement = (
-  node: React.ReactNode
-): node is React.ReactElement<{
-  className?: string
-  children?: React.ReactNode
-}> => {
-  return React.isValidElement(node)
-}
-
-type FencedCodeProps = MarkdownComponentProps<'pre'>
-
-const FencedCode = ({ children }: FencedCodeProps) => {
-  if (!matchIsCodeElement(children)) {
-    return <pre>{children}</pre>
-  }
-
-  const language =
-    LANGUAGE_CLASS.exec(children.props.className ?? '')?.groups?.language ??
-    'text'
-  const code =
-    typeof children.props.children === 'string' ? children.props.children : ''
-
-  return <HighlightedCode code={code} language={language} />
-}
-
-const COMPONENTS = { pre: FencedCode } satisfies MarkdownComponents
+import { Markdown } from '@pierre/words/react'
+import { MARKDOWN_PLUGINS } from '#/lib/code-highlighting.ts'
 
 type ChatMarkdownProps = {
   text: string
+  isStreaming?: boolean
 }
 
-export const ChatMarkdown = ({ text }: ChatMarkdownProps) => {
+export const ChatMarkdown = ({
+  text,
+  isStreaming = false
+}: ChatMarkdownProps) => {
   return (
-    <div className="typeset typeset-chat">
-      <Markdown
-        extensions={STREAMING_EXTENSIONS}
-        frontmatter={false}
-        headingIds={false}
-        components={COMPONENTS}
-      >
-        {text}
-      </Markdown>
-    </div>
+    <Markdown
+      className="typeset typeset-chat"
+      plugins={MARKDOWN_PLUGINS}
+      isAnimating={isStreaming}
+      animated
+      caret={isStreaming ? 'block' : undefined}
+    >
+      {text}
+    </Markdown>
   )
 }

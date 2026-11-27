@@ -18,7 +18,7 @@ The read-only page of the host, a TanStack Start app in SPA mode. `../../AGENTS.
 
 - Steering stays in the chat and over MCP, where the code checks the starter. A route answers `GET` alone, and the harness route refuses `describe`, the read that opens a session and mounts its plugins.
 - The page reads what the host hands it through the request context of the server entry, never the database. A server function opens on its verb and reads the context, a query option is its function name plus `QueryOpts`.
-- A list refreshes on a status change of the host events, never on a timer. A live panel closes its stream once its thread sleeps and while its tab is hidden, and opens it again when the thread wakes.
+- A list refreshes on a status change of the host events, never on a timer. A live panel keeps its stream while its tab is hidden, closes it once its thread sleeps, and opens it again when the thread wakes. A new stream replaces the shown one only once it is ready, so the panel never empties.
 - A read that needs a sandbox reads one sandbox, on demand. A list never reads a sandbox per worker.
 
 ## The theme decides
@@ -33,7 +33,7 @@ The app is a shell that grows: a sidebar, a header and one page per route. A new
 
 ## Components
 
-The shadcn components on Base UI live in `src/components/ui/`, added with the shadcn CLI and the style of `components.json`, and stay as the CLI writes them. Their `cn` import resolves to the class merge that the cn Vite plugin builds from the `@theme` of the stylesheet, so a size or a radius of the theme merges like a Tailwind one. A raw form control, button or table is a lint error: reach for its shadcn component. TanStack libraries come first: Table for a table, Store for live state, Query for every read, Pacer for pacing.
+The shadcn components on Base UI live in `src/components/ui/`, added with the shadcn CLI and the style of `components.json`, and stay as the CLI writes them. Their `cn` import resolves to the class merge that the cn Vite plugin builds from the `@theme` of the stylesheet, so a size or a radius of the theme merges like a Tailwind one. A raw form control, button or table is a lint error: reach for its shadcn component. TanStack libraries come first: Table for a table, Store for live state, Query for every read, Pacer for pacing. Markdown, code and diffs are the one exception: Words, Highlights and Diffs from Pierre colour a code block while it streams and share one engine and one theme across the chat and the diffs, which no TanStack library does.
 
 ## Files
 

@@ -9,6 +9,7 @@ test.describe('the panel of one worker', () => {
     await expect(
       page.getByText('Keep the requested path through sign-in')
     ).toBeVisible()
+    await page.getByRole('button', { name: /^Work(?:ing|ed)/u }).click()
     await expect(
       page.getByRole('button', {
         name: 'Wrote src/auth/redirect.ts write_file'

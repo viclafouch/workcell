@@ -6,6 +6,7 @@ test.describe('the panel of one worker on a phone', () => {
   }) => {
     await page.goto('/workers/worker-alpha-login-redirect')
 
+    await page.getByRole('button', { name: /^Work(?:ing|ed)/u }).click()
     await expect(
       page.getByRole('button', { name: /Updated the plan/u })
     ).toBeVisible()

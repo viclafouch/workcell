@@ -40,9 +40,7 @@ export default defineConfig({
     'src/routeTree.gen.ts',
     'src/lib/cn-tables.ts',
     'src/components/ui/**',
-    'src/hooks/use-highlighted-code.ts',
     'src/hooks/use-mobile.ts',
-    'src/lib/highlighter.tsx',
     '.claude/**'
   ],
   rules: {
@@ -52,6 +50,7 @@ export default defineConfig({
       { ignorePackages: true, checkTypeImports: true }
     ],
     'workcell-dashboard/no-link-as-button': 'error',
+    'workcell-dashboard/no-manual-memo': 'error',
     'jsx-a11y/no-noninteractive-tabindex': ['error', { tags: ['hr'] }],
     'react/forbid-elements': [
       'error',

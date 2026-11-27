@@ -188,8 +188,9 @@ export const SidebarResizer = () => {
     }
 
     resize.pendingX = event.clientX
-    resize.hasMoved ||=
-      Math.abs(event.clientX - resize.startX) > MOVE_THRESHOLD_PX
+    if (Math.abs(event.clientX - resize.startX) > MOVE_THRESHOLD_PX) {
+      resize.hasMoved = true
+    }
 
     if (resize.frame !== null) {
       return

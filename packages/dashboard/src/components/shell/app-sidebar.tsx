@@ -1,6 +1,8 @@
-import { BotIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useMatchRoute } from '@tanstack/react-router'
+import { BotThreadStatus } from '#/components/chat/bot-thread-status.tsx'
+import { ThreadChatIcon } from '#/components/chat/thread-chat-icon.tsx'
+import { TimeAgo } from '#/components/time/time-ago.tsx'
 import {
   Sidebar,
   SidebarContent,
@@ -20,7 +22,6 @@ import {
   UPCOMING_ITEMS
 } from '#/constants/navigation.ts'
 import { groupWorkers } from '#/constants/worker-status.ts'
-import { formatAgo } from '#/lib/dates.ts'
 import {
   listBotThreadsQueryOpts,
   titleOfThread
@@ -141,12 +142,16 @@ export const AppSidebar = ({ brand }: AppSidebarProps) => {
                             />
                           }
                         >
-                          <BotIcon aria-hidden />
+                          <ThreadChatIcon threadId={thread.threadId} />
                           <span dir="auto" className="min-w-0 truncate">
                             {title}
                           </span>
-                          <span className="ml-auto shrink-0 text-label text-muted-foreground tabular">
-                            {formatAgo(thread.updatedAt)}
+                          <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                            <TimeAgo
+                              value={thread.updatedAt}
+                              className="text-label text-muted-foreground tabular"
+                            />
+                            <BotThreadStatus threadId={thread.threadId} />
                           </span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

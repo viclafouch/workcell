@@ -109,6 +109,10 @@
       color-mix(in oklch, var(--palette-brick-bright) 16%, transparent)
     );
 
+    --diff-added-foreground: var(--status-success);
+    --diff-removed-foreground: var(--status-failed);
+    --diff-changed-foreground: var(--status-waiting);
+
     @media (prefers-contrast: more) {
       --border: light-dark(var(--palette-graphite), var(--palette-haze));
       --muted-foreground: var(--foreground);

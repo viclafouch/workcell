@@ -620,3 +620,160 @@ index d6012fbc06f3070daa67ef449634c04efe14b881..ee1045c4172091c9d42f6adb7e895c94
              ask: <TSchema extends SchemaInput | undefined = undefined>(question: StepQuestion<TSchema>) => Promise<never>;
          };
          append: (records: ReadonlyArray<LogRecord>) => void;
+diff --git a/dist/esm/view/reduce.js b/dist/esm/view/reduce.js
+index 591afd621cc81bcadecb16f0013863c305b7d10c..0197e74d1f8daec1782d2725000bb6f934d6c484 100644
+--- a/dist/esm/view/reduce.js
++++ b/dist/esm/view/reduce.js
+@@ -115,12 +115,37 @@ function withNotice(state, kind, text) {
+ 		messages: [...state.messages, message]
+ 	};
+ }
++/** The time of the event that the reducer applies now, from the host when it gives one. */
++let eventTime = Date.now();
++/** The input ops whose message a person wrote for a turn. */
++const TURN_INPUT_OPS = new Set(["prompt", "steer", "followUp"]);
++/**
++* Show the message of an input the session accepted, under the id its saved
++* message gets, so a reload of the transcript keeps one copy of it.
++*/
++function withAcceptedInput(state, value) {
++	if (typeof value.inputId !== "string" || !TURN_INPUT_OPS.has(value.op)) return state;
++	const id = `user-${value.inputId}`;
++	if (state.messages.some((message) => message.id === id)) return state;
++	const text = textOf(value.message);
++	if (text === "") return state;
++	return {
++		...state,
++		messages: [...state.messages, {
++			id,
++			role: "user",
++			text,
++			createdAt: eventTime
++		}]
++	};
++}
+ /** Add a user message, with the files the user sent, at the end of the messages. */
+ function withUserMessage(state, text, media = []) {
+ 	const message = {
+ 		id: `user-${state.messages.length}`,
+ 		role: "user",
+ 		text,
++		createdAt: Date.now(),
+ 		...media.length > 0 ? { media: media.map(mediaView) } : {}
+ 	};
+ 	return {
+@@ -298,11 +323,15 @@ function updateTurn(state, operationId, change) {
+ 	if (next === parts) return state;
+ 	const message = current?.role === "assistant" ? {
+ 		...current,
+-		parts: next
++		parts: next,
++		updatedAt: eventTime
+ 	} : {
+ 		id: `turn-${operationId}`,
+ 		role: "assistant",
+-		parts: next
++		parts: next,
++		operationId,
++		createdAt: eventTime,
++		updatedAt: eventTime
+ 	};
+ 	if (index < 0) return {
+ 		...state,
+@@ -330,6 +359,8 @@ function withTurnAgent(state, operationId, agent) {
+ 			id: current.id,
+ 			role: "assistant",
+ 			parts: [],
++			operationId,
++			...current.createdAt !== void 0 ? { createdAt: current.createdAt } : {},
+ 			...named
+ 		};
+ 		return {
+@@ -341,6 +372,8 @@ function withTurnAgent(state, operationId, agent) {
+ 		id: index < 0 ? `turn-${operationId}` : `turn-${operationId}:${state.messages.length}`,
+ 		role: "assistant",
+ 		parts: [],
++		operationId,
++		createdAt: eventTime,
+ 		...named
+ 	};
+ 	return {
+@@ -444,6 +477,7 @@ function withConfigValue(state, key, value) {
+ /** Fold one session event into the state. Returns `state` when nothing changes. */
+ function applyEvent(state, entry) {
+ 	const { event, operationId } = entry;
++	eventTime = typeof event.timestamp === "number" ? event.timestamp : Date.now();
+ 	if (event.type === EventType.TOOL_CALL_RESULT && subagentOf(event) === void 0) return applyToolResult(state, event);
+ 	if (TURN_EVENTS.has(event.type)) {
+ 		const updated = updateTurn(state, operationId, (parts) => applyToParts(parts, event));
+@@ -484,6 +518,7 @@ function applyEvent(state, entry) {
+ 		} : state;
+ 		return typeof value.result === "string" && value.result !== "" ? withNotice(signedIn, "command", value.result) : signedIn;
+ 	}
++	if (event.name === HARNESS_EVENTS.inputAccepted) return withAcceptedInput(state, value);
+ 	if (event.name === HARNESS_EVENTS.inputRejected) return withNotice(state, "rejected", notAccepted(value.reason));
+ 	if (event.name === HARNESS_EVENTS.reset) return withNotice(state, "info", resetNotice(value.note));
+ 	if (event.name === HARNESS_EVENTS.handoff && (typeof value.to === "string" || value.to === null) && operationId !== "session") return withTurnAgent(state, operationId, typeof value.to === "string" ? value.to : void 0);
+@@ -662,6 +697,15 @@ function applyDescription(state, description) {
+ * The media a turn made (`metadata.harness.media`) goes at the end of its
+ * assistant message. `metadata.harness.agent` is its `agent`.
+ */
++/** The creation time of a saved message, in milliseconds, when it has one. */
++function createdAtOf(message) {
++	if (message.createdAt === void 0) return {};
++	const time = new Date(message.createdAt).getTime();
++	return Number.isNaN(time) ? {} : {
++		createdAt: time,
++		updatedAt: time
++	};
++}
+ function messagesFromTranscript(messages) {
+ 	const result = [];
+ 	messages.forEach((message, index) => {
+@@ -697,6 +741,7 @@ function messagesFromTranscript(messages) {
+ 				id,
+ 				role: "user",
+ 				text: textOf(message.content),
++				...createdAtOf(message),
+ 				...media.length > 0 ? { media } : {}
+ 			});
+ 			return;
+@@ -725,10 +770,13 @@ function messagesFromTranscript(messages) {
+ 			const media = mediaOfMessage(message);
+ 			for (const record of media) parts.push(mediaView(record));
+ 			const agent = typeof harness.agent === "string" ? harness.agent : void 0;
++			const run = recordOf(tanstack.run);
+ 			result.push({
+ 				id,
+ 				role: "assistant",
+ 				parts,
++				...typeof run.id === "string" ? { operationId: run.id } : {},
++				...createdAtOf(message),
+ 				...agent !== void 0 ? { agent } : {}
+ 			});
+ 			return;
+diff --git a/dist/esm/view/types.d.ts b/dist/esm/view/types.d.ts
+index ad0b2a599d6de6f92679d37123a6d6755c6b3fea..15c096de78a1499052864b6e56a65895be966056 100644
+--- a/dist/esm/view/types.d.ts
++++ b/dist/esm/view/types.d.ts
+@@ -55,12 +55,20 @@ export type ViewMessage = {
+     id: string;
+     role: 'user';
+     text: string;
++    /** When the message was created, in milliseconds, when the source knows it. */
++    createdAt?: number;
+     /** The files the user sent, when there are any. */
+     media?: Array<MediaPart>;
+ } | {
+     id: string;
+     role: 'assistant';
+     parts: Array<ViewPart>;
++    /** When the message was created, in milliseconds, when the source knows it. */
++    createdAt?: number;
++    /** The operation that wrote the message, when the source knows it. */
++    operationId?: string;
++    /** When the message last changed, in milliseconds, when the source knows it. */
++    updatedAt?: number;
+     /**
+      * The root agent that wrote the message, in a harness with `routing`.
+      * `undefined` for the main model.

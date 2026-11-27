@@ -3,7 +3,7 @@ import { Button } from '#/components/ui/button.tsx'
 import { Spinner } from '#/components/ui/spinner.tsx'
 import { splitPatchByFile } from '#/lib/diff.ts'
 import { getWorkerDiffQueryOpts } from '#/queries/workers.ts'
-import { DiffCode } from './diff-code.tsx'
+import { LazyDiffCode } from './lazy-diff-code.tsx'
 
 const FILES_IN_FIRST_VIEW = 2
 
@@ -46,7 +46,7 @@ export const WholeDiff = ({ threadId }: WholeDiffProps) => {
           {splitPatchByFile(diffQuery.data).map(({ path, patch }, index) => {
             return (
               <li key={path}>
-                <DiffCode
+                <LazyDiffCode
                   patch={patch}
                   path={path}
                   className={

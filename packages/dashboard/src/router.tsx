@@ -28,7 +28,6 @@ export const getRouter = () => {
     defaultPendingComponent: DefaultPending,
     defaultNotFoundComponent: NotFound,
     defaultErrorComponent: RouteError,
-    defaultViewTransition: true,
     scrollRestoration: true,
     Wrap: ({ children }) => {
       return (
