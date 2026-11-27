@@ -13,6 +13,12 @@ export const listWorkers = createServerFn({ method: 'GET' }).handler(
   }
 )
 
+export const listWorkerIdentities = createServerFn({ method: 'GET' }).handler(
+  ({ context }) => {
+    return context.workerIdentities ?? []
+  }
+)
+
 export const getWorkerDiff = createServerFn({ method: 'GET' })
   .validator(threadInputSchema)
   .handler(async ({ context, data }) => {

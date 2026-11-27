@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-table'
 import type { WorkerView } from '@workcell/core'
 import { StatusPill } from '#/components/status/status-pill.tsx'
+import { TimeAgo } from '#/components/time/time-ago.tsx'
 import { Card } from '#/components/ui/card.tsx'
 import {
   Table,
@@ -16,7 +17,6 @@ import {
   TableRow
 } from '#/components/ui/table.tsx'
 import { statusOfWorker } from '#/constants/worker-status.ts'
-import { formatAgo, formatDateTime } from '#/lib/dates.ts'
 import { formatUsd } from '#/lib/money.ts'
 
 const features = tableFeatures({})
@@ -74,13 +74,7 @@ const columns = helper.columns([
       const changedAt = row.original.outcome?.changedAt
 
       return changedAt === undefined ? null : (
-        <time
-          dateTime={new Date(changedAt).toISOString()}
-          title={formatDateTime(changedAt)}
-          className="whitespace-nowrap"
-        >
-          {formatAgo(changedAt)}
-        </time>
+        <TimeAgo value={changedAt} className="whitespace-nowrap" />
       )
     }
   }),

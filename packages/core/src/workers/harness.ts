@@ -1,4 +1,8 @@
-import type { AnyTextAdapter, ChatMiddleware } from '@tanstack/ai'
+import type {
+  AnyTextAdapter,
+  ChatMiddleware,
+  ReasoningOption
+} from '@tanstack/ai'
 import {
   defineHarness,
   retryTransientErrors,
@@ -59,6 +63,7 @@ type DefineWorkerHarnessParams = {
   plugins: readonly HarnessPlugin[]
   feedback?: FeedbackOptions
   observability?: WorkerObservability
+  reasoning?: ReasoningOption
 }
 
 function requireRedactedSecrets(
@@ -78,6 +83,7 @@ function requireRedactedSecrets(
 
 export function defineWorkerHarness({
   adapter,
+  reasoning,
   compactionAdapter,
   subagentAdapter,
   workspace,
@@ -95,6 +101,7 @@ export function defineWorkerHarness({
   return defineHarness({
     name: WORKER_HARNESS_NAME,
     adapter,
+    reasoning,
     agentLoopStrategy: untilABudgetStop,
     turn: { onModelError: retryTransientErrors() },
     interrupts: [budgetStop],

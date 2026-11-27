@@ -1,36 +1,29 @@
-import { GitCompareIcon } from 'lucide-react'
-import {
-  CodeBlock,
-  CodeBlockActions,
-  CodeBlockContent,
-  CodeBlockCopyButton,
-  CodeBlockHeader,
-  CodeBlockLine,
-  CodeBlockTitle
-} from '#/components/ui/code-block.tsx'
-import { PathLabel } from './path-label.tsx'
+import type { FileDiffOptions } from '@pierre/diffs'
+import { PatchDiff } from '@pierre/diffs/react'
+import { useColorScheme } from '#/hooks/use-color-scheme.ts'
+import type { ColorScheme } from '#/lib/color-scheme.ts'
 
-type DiffLineVariant = 'added' | 'removed' | 'highlighted' | 'default'
+const THEME_SURFACES = `:host {
+  --diffs-light-bg: var(--card);
+  --diffs-dark-bg: var(--card);
+}`
 
-const variantOfLine = (line: string): DiffLineVariant => {
-  if (line.startsWith('@@')) {
-    return 'highlighted'
-  }
-
-  if (line.startsWith('+') && !line.startsWith('+++')) {
-    return 'added'
-  }
-
-  if (line.startsWith('-') && !line.startsWith('---')) {
-    return 'removed'
-  }
-
-  return 'default'
+const optionsFor = (themeType: ColorScheme) => {
+  return {
+    theme: { light: 'pierre-light', dark: 'pierre-dark' },
+    themeType,
+    preferredHighlighter: 'highlights',
+    diffStyle: 'unified',
+    hunkSeparators: 'line-info-basic',
+    overflow: 'wrap',
+    unsafeCSS: THEME_SURFACES
+  } as const satisfies FileDiffOptions<undefined, undefined>
 }
 
-const contentOfLine = (line: string, variant: DiffLineVariant) => {
-  return variant === 'added' || variant === 'removed' ? line.slice(1) : line
-}
+const DIFF_OPTIONS = {
+  light: optionsFor('light'),
+  dark: optionsFor('dark')
+} as const satisfies Record<ColorScheme, FileDiffOptions<undefined, undefined>>
 
 type DiffCodeProps = {
   patch: string
@@ -39,39 +32,11 @@ type DiffCodeProps = {
 }
 
 export const DiffCode = ({ patch, path, className }: DiffCodeProps) => {
-  const allLines = patch.replace(/\n$/u, '').split('\n')
-  const firstHunk = allLines.findIndex((line) => {
-    return line.startsWith('@@')
-  })
-  const lines = allLines.slice(Math.max(firstHunk, 0)).map((text, position) => {
-    const variant = variantOfLine(text)
-
-    return { id: position, variant, content: contentOfLine(text, variant) }
-  })
+  const { scheme } = useColorScheme()
 
   return (
-    <CodeBlock size="sm" className={className}>
-      <CodeBlockHeader>
-        <CodeBlockTitle className="min-w-0">
-          <GitCompareIcon aria-hidden className="shrink-0" />
-          <PathLabel path={path} className="font-mono" />
-        </CodeBlockTitle>
-        <CodeBlockActions>
-          <CodeBlockCopyButton value={patch} />
-        </CodeBlockActions>
-      </CodeBlockHeader>
-      <CodeBlockContent
-        className="max-h-code"
-        aria-label={`Changes to ${path}`}
-      >
-        {lines.map((line) => {
-          return (
-            <CodeBlockLine key={line.id} variant={line.variant}>
-              {line.content}
-            </CodeBlockLine>
-          )
-        })}
-      </CodeBlockContent>
-    </CodeBlock>
+    <section aria-label={`Changes to ${path}`} className={className}>
+      <PatchDiff patch={patch} options={DIFF_OPTIONS[scheme]} />
+    </section>
   )
 }

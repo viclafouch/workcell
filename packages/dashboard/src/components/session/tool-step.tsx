@@ -171,7 +171,6 @@ export const ToolStep = ({ part }: ToolStepProps) => {
                 : JSON.stringify(part.args, null, 2)
             }
             language="json"
-            title="Input"
           />
         )}
         {part.result === undefined ? null : (

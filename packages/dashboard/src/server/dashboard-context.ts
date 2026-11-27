@@ -9,12 +9,52 @@ export type DashboardBrand = {
   logoUrl?: string
 }
 
+export type ChatMark = {
+  adapter: string
+  name: string
+  iconUrl: string
+}
+
+export type ChatPerson = {
+  userId: string
+  name: string
+  avatarUrl?: string
+}
+
+export type ChatThreadMessage = {
+  inputId: string
+  authorId: string
+  sentAt: number
+  isMe: boolean
+  text: string
+}
+
+export type ChatThreadDetails = {
+  place: { name?: string; isDM: boolean; isPrivate: boolean; url?: string }
+  workspace?: { name: string; url: string }
+  threadUrl?: string
+  people: readonly ChatPerson[]
+  messages: readonly ChatThreadMessage[]
+}
+
+export type DashboardChat = ChatMark & {
+  bot?: () => Promise<ChatPerson | null>
+  describe?: (threadId: string) => Promise<ChatThreadDetails>
+}
+
+export type WorkerIdentity = {
+  name: string
+  iconUrl?: string
+}
+
 export type DashboardLogger = {
   error: (bindings: object, message: string) => void
 }
 
 export type DashboardContext = {
   brand: DashboardBrand
+  chats?: readonly DashboardChat[]
+  workerIdentities?: readonly WorkerIdentity[]
   logger: DashboardLogger
   harness: Record<HarnessName, (request: Request) => Promise<Response>>
   workers: {

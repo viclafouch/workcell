@@ -1,5 +1,9 @@
 import { queryOptions } from '@tanstack/react-query'
-import { getWorkerDiff, listWorkers } from '#/server/workers.functions.ts'
+import {
+  getWorkerDiff,
+  listWorkerIdentities,
+  listWorkers
+} from '#/server/workers.functions.ts'
 
 export const WORKERS_QUERY_KEY = ['workers'] as const
 
@@ -20,5 +24,15 @@ export const getWorkerDiffQueryOpts = (threadId: string) => {
     },
     staleTime: 0,
     enabled: false
+  })
+}
+
+export const listWorkerIdentitiesQueryOpts = () => {
+  return queryOptions({
+    queryKey: ['worker-identities'],
+    queryFn: () => {
+      return listWorkerIdentities()
+    },
+    staleTime: Infinity
   })
 }

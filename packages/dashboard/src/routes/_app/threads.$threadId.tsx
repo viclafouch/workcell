@@ -2,10 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { SessionPanel } from '#/components/session/session-panel.tsx'
 import { useIsThreadActive } from '#/hooks/use-host-status.ts'
+import { openSessionView } from '#/lib/session-views.ts'
 import {
   listBotThreadsQueryOpts,
   titleOfThread
 } from '#/queries/bot-threads.ts'
+import { preloadChatThread } from '#/queries/chat.ts'
 import { listWorkersQueryOpts } from '#/queries/workers.ts'
 import { StartedWorkers } from './-components/started-workers.tsx'
 
@@ -47,6 +49,10 @@ const BotThreadPage = () => {
 
 export const Route = createFileRoute('/_app/threads/$threadId')({
   staticData: { section: 'Bot threads', crumb: 'Thread' },
+  loader: ({ context, params }) => {
+    openSessionView({ harness: 'bot', threadId: params.threadId })
+    void preloadChatThread(context.queryClient, params.threadId)
+  },
   head: () => {
     return { meta: [{ title: 'Bot thread' }] }
   },

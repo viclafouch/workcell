@@ -2,7 +2,7 @@ import React from 'react'
 import { FileDiffIcon, FileMinusIcon, FilePlusIcon } from 'lucide-react'
 import { Button } from '#/components/ui/button.tsx'
 import type { FileChange } from '#/lib/workspace-events.ts'
-import { DiffCode } from './diff-code.tsx'
+import { LazyDiffCode } from './lazy-diff-code.tsx'
 import { PathLabel } from './path-label.tsx'
 
 const CHANGE_ICONS = {
@@ -67,7 +67,7 @@ export const ChangedFiles = ({ changes }: ChangedFilesProps) => {
           secret file.
         </p>
       ) : (
-        <DiffCode patch={selected.patch} path={selected.path} />
+        <LazyDiffCode patch={selected.patch} path={selected.path} />
       )}
     </div>
   )

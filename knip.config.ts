@@ -6,7 +6,6 @@ export default defineConfig({
     'packages/dashboard': {
       entry: [
         'src/components/ui/**/*.tsx',
-        'src/hooks/use-highlighted-code.ts',
         'src/hooks/use-mobile.ts',
         'src/server/development-context.dev.ts'
       ],

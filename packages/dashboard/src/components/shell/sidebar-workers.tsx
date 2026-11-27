@@ -1,6 +1,7 @@
 import { ChevronRightIcon } from 'lucide-react'
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import type { WorkerView } from '@workcell/core'
+import { TimeAgo } from '#/components/time/time-ago.tsx'
 import {
   Collapsible,
   CollapsibleContent,
@@ -15,7 +16,6 @@ import {
 } from '#/components/ui/sidebar.tsx'
 import { StatusDot } from '#/components/worker/status-dot.tsx'
 import { statusOfWorker } from '#/constants/worker-status.ts'
-import { formatAgo } from '#/lib/dates.ts'
 
 type WorkerMenuItemProps = {
   worker: WorkerView
@@ -59,9 +59,10 @@ const WorkerMenuItem = ({
           {worker.topic}
         </span>
         {showsLastActivity && worker.lastActiveAt !== undefined ? (
-          <span className="ml-auto shrink-0 text-label text-muted-foreground tabular">
-            {formatAgo(worker.lastActiveAt)}
-          </span>
+          <TimeAgo
+            value={worker.lastActiveAt}
+            className="ml-auto shrink-0 text-label text-muted-foreground tabular"
+          />
         ) : null}
       </SidebarMenuButton>
     </SidebarMenuItem>

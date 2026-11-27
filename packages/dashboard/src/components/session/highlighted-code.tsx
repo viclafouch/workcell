@@ -1,49 +1,27 @@
-import { FileCodeIcon } from 'lucide-react'
-import {
-  CodeBlock,
-  CodeBlockActions,
-  CodeBlockContent,
-  CodeBlockCopyButton,
-  CodeBlockHeader,
-  CodeBlockLine,
-  CodeBlockTitle
-} from '#/components/ui/code-block.tsx'
-import { useHighlightedCode } from '#/hooks/use-highlighted-code.ts'
+import { ChatMarkdown } from '#/components/markdown/chat-markdown.tsx'
+
+const BACKTICK_RUN = /`+/gu
+
+const SHORTEST_FENCE = 3
+
+const fenceAround = (code: string) => {
+  const longestRun = Math.max(
+    0,
+    ...Array.from(code.matchAll(BACKTICK_RUN), ([run]) => {
+      return run.length
+    })
+  )
+
+  return '`'.repeat(Math.max(SHORTEST_FENCE, longestRun + 1))
+}
 
 type HighlightedCodeProps = {
   code: string
   language: string
-  title?: string
-  size?: 'default' | 'sm'
 }
 
-export const HighlightedCode = ({
-  code,
-  language,
-  title,
-  size = 'sm'
-}: HighlightedCodeProps) => {
-  const lines = useHighlightedCode(code, language)
+export const HighlightedCode = ({ code, language }: HighlightedCodeProps) => {
+  const fence = fenceAround(code)
 
-  return (
-    <CodeBlock size={size}>
-      <CodeBlockHeader>
-        <CodeBlockTitle>
-          <FileCodeIcon aria-hidden />
-          {title ?? language}
-        </CodeBlockTitle>
-        <CodeBlockActions>
-          <CodeBlockCopyButton value={code} />
-        </CodeBlockActions>
-      </CodeBlockHeader>
-      <CodeBlockContent className="max-h-code">
-        {lines.map((line, index) => {
-          return (
-            // oxlint-disable-next-line react/no-array-index-key -- a highlighted line has no identity but its position
-            <CodeBlockLine key={index}>{line}</CodeBlockLine>
-          )
-        })}
-      </CodeBlockContent>
-    </CodeBlock>
-  )
+  return <ChatMarkdown text={`${fence}${language}\n${code}\n${fence}`} />
 }

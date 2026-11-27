@@ -21,21 +21,28 @@ import { ToolStep } from './tool-step.tsx'
 
 type ReasoningStepProps = {
   text: string
+  isStreaming: boolean
 }
 
-const ReasoningStep = ({ text }: ReasoningStepProps) => {
+const ReasoningStep = ({ text, isStreaming }: ReasoningStepProps) => {
+  const line = (
+    <TraceLine status={isStreaming ? 'running' : undefined}>
+      <TraceIcon>
+        <BrainIcon />
+      </TraceIcon>
+      <TraceTitle>{isStreaming ? 'Thinking' : 'Thought'}</TraceTitle>
+    </TraceLine>
+  )
+
+  if (text.trim() === '') {
+    return line
+  }
+
   return (
     <TraceCollapsible>
-      <TraceCollapsibleTrigger>
-        <TraceLine>
-          <TraceIcon>
-            <BrainIcon />
-          </TraceIcon>
-          <TraceTitle>Thought</TraceTitle>
-        </TraceLine>
-      </TraceCollapsibleTrigger>
-      <TraceCollapsibleContent className="whitespace-pre-wrap">
-        {text}
+      <TraceCollapsibleTrigger>{line}</TraceCollapsibleTrigger>
+      <TraceCollapsibleContent>
+        <ChatMarkdown text={text} isStreaming={isStreaming} />
       </TraceCollapsibleContent>
     </TraceCollapsible>
   )
@@ -106,7 +113,10 @@ const SubagentStep = ({ part }: SubagentStepProps) => {
         </TraceLine>
       </TraceCollapsibleTrigger>
       <TraceCollapsibleContent keepMounted className="flex flex-col gap-3">
-        <AssistantParts parts={part.parts} />
+        <AssistantParts
+          parts={part.parts}
+          isStreaming={part.status === 'running'}
+        />
       </TraceCollapsibleContent>
     </TraceCollapsible>
   )
@@ -114,20 +124,35 @@ const SubagentStep = ({ part }: SubagentStepProps) => {
 
 type AssistantPartsProps = {
   parts: readonly ViewPart[]
+  isStreaming: boolean
 }
 
-export const AssistantParts = ({ parts }: AssistantPartsProps) => {
+export const AssistantParts = ({ parts, isStreaming }: AssistantPartsProps) => {
   return (
     <Trace>
       {parts.map((part, index) => {
+        const isPartStreaming = isStreaming && index === parts.length - 1
+
         if (part.type === 'text') {
-          // oxlint-disable-next-line react/no-array-index-key -- a text part has no id but its position in the message
-          return <ChatMarkdown key={index} text={part.text} />
+          return (
+            <ChatMarkdown
+              // oxlint-disable-next-line react/no-array-index-key -- a text part has no id but its position in the message
+              key={index}
+              text={part.text}
+              isStreaming={isPartStreaming}
+            />
+          )
         }
 
         if (part.type === 'reasoning') {
-          // oxlint-disable-next-line react/no-array-index-key -- a reasoning part has no id but its position in the message
-          return <ReasoningStep key={index} text={part.text} />
+          return (
+            <ReasoningStep
+              // oxlint-disable-next-line react/no-array-index-key -- a reasoning part has no id but its position in the message
+              key={index}
+              text={part.text}
+              isStreaming={isPartStreaming}
+            />
+          )
         }
 
         if (part.type === 'tool-call') {

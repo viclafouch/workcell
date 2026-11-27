@@ -9,6 +9,7 @@ Open the dashboard in your browser to see what each robot does right now, withou
 3. **One robot at a time**: open a robot to follow its plan, each command it runs with its result, and each file it changes, as it happens.
 4. **What it finished lately**: each task with how it ended and what it cost.
 5. **What got in their way**: the notes the robots send about a tool or a rule that blocked them.
+6. **Where it happened**: a conversation from the chat shows its channel with a link back to it, who wrote each message with their photo and the time, the face of each robot, and what a robot thought before it acted.
 
 ## Your look, not ours
 

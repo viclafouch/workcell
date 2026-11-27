@@ -66,7 +66,48 @@ export const noLinkAsButton = defineRule({
   }
 })
 
+const MANUAL_MEMO_NAMES = new Set(['useMemo', 'useCallback', 'memo'])
+
+function findCalleeName(callee: ESTree.Node) {
+  if (callee.type === 'Identifier') {
+    return callee.name
+  }
+  if (
+    callee.type === 'MemberExpression' &&
+    callee.object.type === 'Identifier' &&
+    callee.object.name === 'React' &&
+    callee.property.type === 'Identifier'
+  ) {
+    return callee.property.name
+  }
+  return null
+}
+
+export const noManualMemo = defineRule({
+  meta: {
+    type: 'suggestion',
+    messages: {
+      manualMemo:
+        'Drop `{{name}}`: the React Compiler memoizes every component and hook of the page.'
+    },
+    schema: []
+  },
+  createOnce(context) {
+    return {
+      CallExpression(node) {
+        const name = findCalleeName(node.callee)
+        if (name !== null && MANUAL_MEMO_NAMES.has(name)) {
+          context.report({ node, messageId: 'manualMemo', data: { name } })
+        }
+      }
+    }
+  }
+})
+
 export default eslintCompatPlugin({
   meta: { name: 'workcell-dashboard' },
-  rules: { 'no-link-as-button': noLinkAsButton }
+  rules: {
+    'no-link-as-button': noLinkAsButton,
+    'no-manual-memo': noManualMemo
+  }
 })

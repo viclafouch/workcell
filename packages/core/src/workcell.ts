@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
-import type { AnyTextAdapter } from '@tanstack/ai'
+import type { AnyTextAdapter, ReasoningOption } from '@tanstack/ai'
 import {
   createHarnessHost,
   type HarnessPlugin,
@@ -80,6 +80,10 @@ type OpenWorkcellParams = {
     compaction: AnyTextAdapter
     title?: AnyTextAdapter
     subagent?: AnyTextAdapter
+    reasoning?: {
+      orchestrator?: ReasoningOption
+      worker?: ReasoningOption
+    }
   }
   pricing: ModelPricing
   secrets: Readonly<Record<string, string>>
@@ -371,6 +375,7 @@ export async function openWorkcell({
   })
   const harness = defineWorkerHarness({
     adapter: models.worker,
+    reasoning: models.reasoning?.worker,
     compactionAdapter: models.compaction,
     subagentAdapter: subagentModel,
     workspace: workerSandbox.workspace,
@@ -432,6 +437,7 @@ export async function openWorkcell({
       })
     ],
     adapter: models.orchestrator,
+    reasoning: models.reasoning?.orchestrator,
     compactionAdapter: models.compaction,
     titlePlugin:
       orchestratorOptions.title === undefined

@@ -8,6 +8,7 @@ import { DEFAULT_BRAND_NAME, pageTitleOf } from '#/constants/brand.ts'
 import { useHostStatus } from '#/hooks/use-host-status.ts'
 import { readIsSidebarOpen } from '#/lib/sidebar-state.ts'
 import { getBrandQueryOpts } from '#/queries/brand.ts'
+import { getChatMarksQueryOpts } from '#/queries/chat.ts'
 
 const TOOLTIP_DELAY_MS = 400
 
@@ -30,8 +31,13 @@ const AppLayout = () => {
 }
 
 export const Route = createFileRoute('/_app')({
-  loader: ({ context }) => {
-    return context.queryClient.query(getBrandQueryOpts())
+  loader: async ({ context }) => {
+    const [brand] = await Promise.all([
+      context.queryClient.query(getBrandQueryOpts()),
+      context.queryClient.query(getChatMarksQueryOpts())
+    ])
+
+    return brand
   },
   head: ({ loaderData }) => {
     return {

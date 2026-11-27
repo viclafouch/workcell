@@ -50,6 +50,14 @@ export const useWorkspaceActivity = (view: SessionView) => {
       }),
       view.on(JobStarted, ({ jobId, command }) => {
         setJobs((current) => {
+          if (
+            current.some((job) => {
+              return job.jobId === jobId
+            })
+          ) {
+            return current
+          }
+
           return [...current, { jobId, command, output: '' }]
         })
       }),

@@ -29,6 +29,7 @@ export {
   type SessionStatus
 } from './connection/chat-surface.ts'
 export type { TextLink } from './connection/text-links.ts'
+export { chatInputId } from './connection/chat-input-id.ts'
 export {
   createThreadCleaner,
   type ThreadCleaner
@@ -49,3 +50,9 @@ export {
   threadOf,
   type WorkerProfile
 } from './worker-threads/worker-threads.ts'
+export {
+  chatThreadContexts,
+  type ChatPerson,
+  type ChatThreadContext,
+  type ChatThreadMessage
+} from './dashboard/chat-thread-contexts.ts'

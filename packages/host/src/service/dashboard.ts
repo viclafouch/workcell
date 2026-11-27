@@ -5,7 +5,9 @@ import type { openWorkcell } from '@workcell/core'
 import {
   openDashboard,
   type DashboardBrandOptions,
-  type DashboardLogger
+  type DashboardChat,
+  type DashboardLogger,
+  type WorkerIdentity
 } from '@workcell/dashboard'
 import type { HttpRoute } from './http-layer.ts'
 
@@ -27,6 +29,8 @@ export type DashboardWorkcell = Pick<
 
 export type DashboardOptions = {
   brand?: DashboardBrandOptions
+  chats?: readonly DashboardChat[]
+  workerIdentities?: readonly WorkerIdentity[]
   traceUrl?: (threadId: string) => string
 }
 

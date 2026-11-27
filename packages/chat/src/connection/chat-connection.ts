@@ -8,6 +8,7 @@ import {
 } from 'chat'
 import type { MessageFile, WorkerApproval } from '@workcell/core'
 import { CHAT_LINES, type ChatLines } from '#/prompts/chat.ts'
+import { chatInputId } from './chat-input-id.ts'
 import type { LogLine } from './chat-logger.ts'
 
 export const APPROVAL_ACTIONS = {
@@ -77,7 +78,7 @@ function promptOf(thread: Thread, message: Message): ChatPrompt {
     user: message.author.userId,
     text: stringifyMarkdown(message.formatted).trimEnd(),
     files: message.attachments.map(fileOf),
-    inputId: `chat:${thread.id}:${message.id}`
+    inputId: chatInputId(thread.id, message.id)
   }
 }
 

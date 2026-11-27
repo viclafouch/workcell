@@ -16,7 +16,12 @@ import {
 export type { DashboardBrandOptions } from './serve-brand.ts'
 
 export type {
+  ChatMark,
+  ChatPerson,
+  ChatThreadDetails,
   DashboardBrand,
+  DashboardChat,
+  WorkerIdentity,
   DashboardContext,
   DashboardLogger,
   HarnessName
@@ -44,7 +49,7 @@ const YEAR_IN_SECONDS = 31_536_000
 
 const SECURITY_HEADERS = {
   'content-security-policy':
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'",
   'cross-origin-opener-policy': 'same-origin',
   'referrer-policy': 'no-referrer',
   'x-content-type-options': 'nosniff'

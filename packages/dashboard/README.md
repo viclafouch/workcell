@@ -18,6 +18,12 @@ A distribution passes a brand:
 
 The name of the brand titles the page. Nothing else changes: the layout, the components and the words stay those of Workcell, so every distribution gets each fix of the page.
 
+## Show where the work happens
+
+A distribution passes the dashboard chat of each chat integration it runs, and the names and pictures of its workers. A conversation of that chat then shows its channel and a link back to it, the author, picture and time of each message, and the face of the bot or the worker that answers. A thread whose chat the distribution does not pass shows the same conversation with plain icons.
+
+The thoughts of a model show once the distribution asks its models for a summary of their reasoning, at the level it already pays for.
+
 ## Work on it
 
 `pnpm --filter @workcell/dashboard dev` serves the page on a fixture context: a real worker harness of the core on TanStack's fake model, with no host, no database and no model key. `AGENTS.md` holds the rules of the package.

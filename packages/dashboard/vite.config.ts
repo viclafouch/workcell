@@ -71,6 +71,9 @@ export default defineConfig(({ command }) => {
     server: {
       port: DEV_PORT,
       strictPort: true,
+      warmup: {
+        clientFiles: ['./src/routes/**/*.tsx', './src/components/session/*.tsx']
+      },
       fs: {
         allow: [
           searchForWorkspaceRoot(process.cwd()),
@@ -95,7 +98,7 @@ export default defineConfig(({ command }) => {
           semicolons: false
         }
       }),
-      react({ compiler: true })
+      react({ compiler: { logDiagnostics: true } })
     ]
   }
 })

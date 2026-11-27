@@ -230,6 +230,15 @@ catalogs:
     '@peculiar/x509':
       specifier: ^3.1.0
       version: 3.1.0
+    '@pierre/diffs':
+      specifier: 1.7.2
+      version: 1.7.2
+    '@pierre/highlights':
+      specifier: 0.6.0
+      version: 0.6.0
+    '@pierre/words':
+      specifier: 0.3.0
+      version: 0.3.0
     '@playwright/test':
       specifier: 1.65.1
       version: 1.65.1
@@ -284,9 +293,6 @@ catalogs:
     '@tanstack/eslint-plugin-router':
       specifier: 1.162.0
       version: 1.162.0
-    '@tanstack/markdown':
-      specifier: 1.2.1
-      version: 1.2.1
     '@tanstack/pacer':
       specifier: 0.23.1
       version: 0.23.1
@@ -419,9 +425,6 @@ catalogs:
     shadcn:
       specifier: ^4.23.0
       version: 4.23.0
-    shiki:
-      specifier: ^4.6.0
-      version: 4.6.0
     smol-toml:
       specifier: ^1.9.1
       version: 1.9.1
@@ -457,7 +460,7 @@ catalogs:
       version: 4.6.7
 
 patchedDependencies:
-  '@tanstack/ai-harness@0.4.0': b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e
+  '@tanstack/ai-harness@0.4.0': 18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72
   '@tanstack/ai-sandbox@1.5.0': 4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974
   '@tanstack/ai-skills@1.0.3': 6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e
   '@tanstack/ai@1.8.0': 1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e
@@ -523,7 +526,7 @@ importers:
         version: 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       '@tanstack/ai-harness':
         specifier: 'catalog:'
-        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+        version: 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-persistence':
         specifier: 'catalog:'
         version: 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
@@ -578,7 +581,7 @@ importers:
         version: 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       '@tanstack/ai-harness':
         specifier: 'catalog:'
-        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+        version: 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-persistence':
         specifier: 'catalog:'
         version: 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
@@ -663,25 +666,25 @@ importers:
         version: 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-harness':
         specifier: 'catalog:'
-        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+        version: 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-harness-cli':
         specifier: 'catalog:'
-        version: 0.1.3(44875bdbe00a76438c1e1124a2abe9a9)
+        version: 0.1.3(cc1fa4719c953216a5e935165ae5b117)
       '@tanstack/ai-persistence':
         specifier: 'catalog:'
         version: 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
       '@tanstack/ai-sandbox':
         specifier: 'catalog:'
-        version: 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf)
+        version: 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9)
       '@tanstack/ai-sandbox-docker':
         specifier: 'catalog:'
-        version: 1.1.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf))
+        version: 1.1.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9))
       '@tanstack/ai-sandbox-local-process':
         specifier: 'catalog:'
-        version: 1.0.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf))
+        version: 1.0.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9))
       '@tanstack/ai-skills':
         specifier: 'catalog:'
-        version: 1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(b542e297e337a103ca0cecb811b78edf)
+        version: 1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(3786e86f63a9dee4746226f7526bb813)
       '@testcontainers/postgresql':
         specifier: 'catalog:'
         version: 12.2.1(bare-buffer@3.7.1)
@@ -727,12 +730,18 @@ importers:
       '@fontsource-variable/atkinson-hyperlegible-next':
         specifier: 'catalog:'
         version: 5.3.0
+      '@pierre/diffs':
+        specifier: 'catalog:'
+        version: 1.7.2(@shikijs/themes@4.6.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@pierre/highlights':
+        specifier: 'catalog:'
+        version: 0.6.0
+      '@pierre/words':
+        specifier: 'catalog:'
+        version: 0.3.0(@pierre/highlights@0.6.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@shadcn/react':
         specifier: 'catalog:'
         version: 0.3.1(@types/react@19.3.0)(react@19.3.1)
-      '@tanstack/markdown':
-        specifier: 'catalog:'
-        version: 1.2.1(react@19.3.1)
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.108.4(@types/react@19.3.0)(react@19.3.1)
@@ -781,9 +790,6 @@ importers:
       react-resizable-panels:
         specifier: 'catalog:'
         version: 4.24.1(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      shiki:
-        specifier: 'catalog:'
-        version: 4.6.0
       srvx:
         specifier: 'catalog:'
         version: 1.0.8
@@ -808,7 +814,7 @@ importers:
         version: 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       '@tanstack/ai-harness':
         specifier: 'catalog:'
-        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+        version: 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-persistence':
         specifier: 'catalog:'
         version: 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
@@ -881,10 +887,10 @@ importers:
         version: 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       '@tanstack/ai-harness':
         specifier: 'catalog:'
-        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+        version: 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-sandbox':
         specifier: 'catalog:'
-        version: 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf)
+        version: 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9)
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
@@ -948,7 +954,7 @@ importers:
         version: 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       '@tanstack/ai-harness':
         specifier: 'catalog:'
-        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+        version: 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-persistence':
         specifier: 'catalog:'
         version: 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
@@ -1024,7 +1030,7 @@ importers:
         version: 1.2.1(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(zod@4.6.7)
       '@tanstack/ai-harness':
         specifier: 'catalog:'
-        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+        version: 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-openai':
         specifier: 'catalog:'
         version: 1.2.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(undici@8.12.4)(ws@8.23.0)(zod@4.6.7)
@@ -1076,10 +1082,10 @@ importers:
         version: 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       '@tanstack/ai-harness':
         specifier: 'catalog:'
-        version: 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+        version: 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-mcp':
         specifier: 'catalog:'
-        version: 1.3.1(@opentelemetry/api@1.10.0)(@tanstack/ai-harness@0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)))(zod@4.6.7)
+        version: 1.3.1(@opentelemetry/api@1.10.0)(@tanstack/ai-harness@0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)))(zod@4.6.7)
       '@tanstack/ai-persistence':
         specifier: 'catalog:'
         version: 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
@@ -2642,6 +2648,61 @@ packages:
     peerDependencies:
       '@peculiar/asn1-schema': ^3.0.0
 
+  '@pierre/diffs@1.7.2':
+    resolution: {integrity: sha512-zMYTBWK4srIYKoKMTSwCVWxbgpJT8UXJ2v5ONTXBbzDSDYpOCpgqfoyQexDWo6FH9RDicZvkeZwIbiTrBBSJ2Q==}
+    peerDependencies:
+      react: ^18.3.1 || ^19.0.0
+      react-dom: ^18.3.1 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
+  '@pierre/highlights@0.6.0':
+    resolution: {integrity: sha512-5RhenEkZxlcsw2hrDaYlGyT6ERfQgHSvZxRg/ByZ11SVkoWuAwDMozL7HxUfUnOVyShD5WKMxqiakg8S/8Fi7A==}
+
+  '@pierre/patches@0.0.1':
+    resolution: {integrity: sha512-NycJQVQNuqmBdr7u1LsUcmkiIz1fRm9xhWZyRbm21oJYd0MVVCa45t9Lsuj5IKrTMBonxOuh4LMv+R3BpL4bmQ==}
+
+  '@pierre/theme@2.1.0':
+    resolution: {integrity: sha512-GIE3AD8eqUlZN2sFrMmp9gt+rNZsT+EhrdwB0KmLcwkqunrp2jU2j14SeAb64Ol/srWo4rHyNaWf20+bPzFbvg==}
+    engines: {vscode: ^1.0.0}
+
+  '@pierre/theming@1.0.2':
+    resolution: {integrity: sha512-RmXLLqtx31UGcR8kZyO5hGAQ1EXz6loT1Cu0BFAGsbnBboIxp2BlomkLfWyvdT4WZXnBGyu25onL1gKpFQuSUw==}
+    peerDependencies:
+      '@pierre/theme': ^1.1.0 || ^2.0.0
+      '@shikijs/themes': ^3.0.0 || ^4.0.0
+      react: ^18.3.1 || ^19.0.0
+      react-dom: ^18.3.1 || ^19.0.0
+      shiki: ^3.0.0 || ^4.0.0
+    peerDependenciesMeta:
+      '@pierre/theme':
+        optional: true
+      '@shikijs/themes':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      shiki:
+        optional: true
+
+  '@pierre/words@0.3.0':
+    resolution: {integrity: sha512-k38qoYj0eUCr+vGQlXlSer78q5EeG7rSge9b2ADBFvLQ0L+OJH5zAdgdgm1jqkFq2Q6zXUuBkZWB5nQgPy2iUQ==}
+    peerDependencies:
+      '@pierre/highlights': '>=0.5.1'
+      react: ^18.3.1 || ^19.0.0
+      react-dom: ^18.3.1 || ^19.0.0
+    peerDependenciesMeta:
+      '@pierre/highlights':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
@@ -3268,17 +3329,6 @@ packages:
   '@tanstack/history@1.162.5':
     resolution: {integrity: sha512-w1+YvwmTkwt5n8yUqEH3IWZ9DsmorCZW/EQ3KYHnqEgIkOZpH54NvW6/Epq3Dzb8H0ifIeYX8PExvrNLIH5FIA==}
     engines: {node: '>=20.19'}
-
-  '@tanstack/markdown@1.2.1':
-    resolution: {integrity: sha512-D/W8VHZe39mTGh74E5ZdmUPz9f/Gqso7ogKab3TRt3Mcto/IUGP94FTeI53hcNz1djwmo/s4hwU1og0rCPinOQ==}
-    peerDependencies:
-      octane: '>=0.1.12'
-      react: '>=18'
-    peerDependenciesMeta:
-      octane:
-        optional: true
-      react:
-        optional: true
 
   '@tanstack/openai-base@1.1.0':
     resolution: {integrity: sha512-Ki3i39DgnkhgYNk+NK9ec94m/+8hUDbkVRaRj8Zwvdg+IoSpfaQa0XKH8oEw7BY188di4j3p8k1t5BcFjWR0Vg==}
@@ -4710,6 +4760,9 @@ packages:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
+  hast-util-to-html@9.0.5:
+    resolution: {integrity: sha512-OguPdidb+fbHQSU4Q4ZiLKnzWo8Wwsf5bZfbvu7//a9oTYoqD/fWpe96NuHkoS9h0ccGOTe0C4NGXdtS0iObOw==}
+
   hast-util-to-html@9.0.7:
     resolution: {integrity: sha512-HYNDA3qdnzUPitY/LcQm1nWs8z0cWFNH1Nz09jdI/tXifAqF7h3+jrLl4S/b9Mi4VSjn0Dsn54ctuTV6zhBthA==}
 
@@ -5108,6 +5161,9 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lru_map@0.4.1:
+    resolution: {integrity: sha512-I+lBvqMMFfqaV8CJCISjI3wbjmwVu/VyOoU7+qtu9d7ioW5klMgsTTiUOUp+DJvfTTzKXoPbyC6YfgkNcyPSOg==}
 
   lucide-react@1.79.0:
     resolution: {integrity: sha512-MDHKxzUobPRyQgt4hHO1z+pUQJKYMvenh8qw+ndWQE0Wg+Hbjli/ZrkZXBGmRBrMvvqDRjkmQj0Z5RbeL/ogNw==}
@@ -8079,6 +8135,42 @@ snapshots:
     transitivePeerDependencies:
       - asn1js
 
+  '@pierre/diffs@1.7.2(@shikijs/themes@4.6.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    dependencies:
+      '@pierre/highlights': 0.6.0
+      '@pierre/patches': 0.0.1
+      '@pierre/theme': 2.1.0
+      '@pierre/theming': 1.0.2(@pierre/theme@2.1.0)(@shikijs/themes@4.6.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(shiki@4.6.0)
+      diff: 9.0.0
+      hast-util-to-html: 9.0.5
+      lru_map: 0.4.1
+      shiki: 4.6.0
+    optionalDependencies:
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+    transitivePeerDependencies:
+      - '@shikijs/themes'
+
+  '@pierre/highlights@0.6.0': {}
+
+  '@pierre/patches@0.0.1': {}
+
+  '@pierre/theme@2.1.0': {}
+
+  '@pierre/theming@1.0.2(@pierre/theme@2.1.0)(@shikijs/themes@4.6.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(shiki@4.6.0)':
+    optionalDependencies:
+      '@pierre/theme': 2.1.0
+      '@shikijs/themes': 4.6.0
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+      shiki: 4.6.0
+
+  '@pierre/words@0.3.0(@pierre/highlights@0.6.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    optionalDependencies:
+      '@pierre/highlights': 0.6.0
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
   '@pinojs/redact@0.4.0': {}
 
   '@pkgjs/parseargs@0.11.0':
@@ -8505,14 +8597,14 @@ snapshots:
     dependencies:
       '@tanstack/devtools-event-client': 0.4.4
 
-  '@tanstack/ai-harness-cli@0.1.3(44875bdbe00a76438c1e1124a2abe9a9)':
+  '@tanstack/ai-harness-cli@0.1.3(cc1fa4719c953216a5e935165ae5b117)':
     dependencies:
       '@tanstack/ai': 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
-      '@tanstack/ai-harness': 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+      '@tanstack/ai-harness': 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
     optionalDependencies:
-      '@tanstack/ai-mcp': 1.3.1(@opentelemetry/api@1.10.0)(@tanstack/ai-harness@0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)))(zod@4.6.7)
+      '@tanstack/ai-mcp': 1.3.1(@opentelemetry/api@1.10.0)(@tanstack/ai-harness@0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)))(zod@4.6.7)
 
-  '@tanstack/ai-harness@0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))':
+  '@tanstack/ai-harness@0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))':
     dependencies:
       '@tanstack/ai': 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       '@tanstack/ai-persistence': 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
@@ -8521,14 +8613,14 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.10.0
 
-  '@tanstack/ai-mcp@1.3.1(@opentelemetry/api@1.10.0)(@tanstack/ai-harness@0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)))(zod@4.6.7)':
+  '@tanstack/ai-mcp@1.3.1(@opentelemetry/api@1.10.0)(@tanstack/ai-harness@0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)))(zod@4.6.7)':
     dependencies:
       '@modelcontextprotocol/client': 2.4.0
       '@modelcontextprotocol/server': 2.4.0
       '@tanstack/ai': 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       jose: 6.2.17
     optionalDependencies:
-      '@tanstack/ai-harness': 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+      '@tanstack/ai-harness': 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - zod
@@ -8555,37 +8647,37 @@ snapshots:
     optionalDependencies:
       vitest: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
 
-  '@tanstack/ai-sandbox-docker@1.1.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf))':
+  '@tanstack/ai-sandbox-docker@1.1.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9))':
     dependencies:
-      '@tanstack/ai-sandbox': 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf)
+      '@tanstack/ai-sandbox': 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9)
       dockerode: 4.0.12
     transitivePeerDependencies:
       - supports-color
 
-  '@tanstack/ai-sandbox-local-process@1.0.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf))':
+  '@tanstack/ai-sandbox-local-process@1.0.0(@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9))':
     dependencies:
-      '@tanstack/ai-sandbox': 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf)
+      '@tanstack/ai-sandbox': 1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9)
       '@tanstack/ai-utils': 1.1.0
 
-  '@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(eb2114388bda979ea1a2e89a1c16adcf)':
+  '@tanstack/ai-sandbox@1.5.0(patch_hash=4557c71e639b922b7f2daa5dd4cdef0b3736857f8e0099b5e4ecd7c502bc7974)(0d32c3ed9866a0b053e7c90bee7502e9)':
     dependencies:
       '@modelcontextprotocol/server': 2.4.0
       '@tanstack/ai': 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
-      '@tanstack/ai-skills': 1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(b542e297e337a103ca0cecb811b78edf)
+      '@tanstack/ai-skills': 1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(3786e86f63a9dee4746226f7526bb813)
       '@tanstack/ai-utils': 1.1.0
     optionalDependencies:
-      '@tanstack/ai-harness': 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+      '@tanstack/ai-harness': 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       '@tanstack/ai-persistence': 1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))
       vitest: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
     transitivePeerDependencies:
       - zod
 
-  '@tanstack/ai-skills@1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(b542e297e337a103ca0cecb811b78edf)':
+  '@tanstack/ai-skills@1.0.3(patch_hash=6136ea0fbc1842e2660513095b420eb2f567ecad1c8078d4b10c6c7ba30da20e)(3786e86f63a9dee4746226f7526bb813)':
     dependencies:
       '@tanstack/ai': 1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7)
       zod: 4.6.7
     optionalDependencies:
-      '@tanstack/ai-harness': 0.4.0(patch_hash=b9b3f7a9ebde197fc15ca5acc73f40619f1a21acd6efb7d174b9936570a6034e)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
+      '@tanstack/ai-harness': 0.4.0(patch_hash=18a8d9c566fb094164a743a81734eb5eb1c4ab7b2abb0c83e8fd0eb8577bbd72)(@opentelemetry/api@1.10.0)(@tanstack/ai-persistence@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(vitest@5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))))(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))
       vitest: 5.1.0(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(msw@3.0.5(@types/node@26.6.6)(graphql@16.15.0)(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
 
   '@tanstack/ai-utils@1.1.0': {}
@@ -8628,10 +8720,6 @@ snapshots:
       - typescript
 
   '@tanstack/history@1.162.5': {}
-
-  '@tanstack/markdown@1.2.1(react@19.3.1)':
-    optionalDependencies:
-      react: 19.3.1
 
   '@tanstack/openai-base@1.1.0(@tanstack/ai@1.8.0(patch_hash=1f277d40266f0a2ba59847d040cd4407b59c58a3e71b9f7948df96de5ea8662e)(@opentelemetry/api@1.10.0)(zod@4.6.7))(undici@8.12.4)(ws@8.23.0)(zod@4.6.7)':
     dependencies:
@@ -10069,6 +10157,20 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
+  hast-util-to-html@9.0.5:
+    dependencies:
+      '@types/hast': 3.0.5
+      '@types/unist': 3.0.3
+      ccount: 2.0.1
+      comma-separated-tokens: 2.0.3
+      hast-util-whitespace: 3.0.0
+      html-void-elements: 3.0.0
+      mdast-util-to-hast: 13.2.2
+      property-information: 7.2.0
+      space-separated-tokens: 2.0.2
+      stringify-entities: 4.0.5
+      zwitch: 2.0.4
+
   hast-util-to-html@9.0.7:
     dependencies:
       '@types/hast': 3.0.5
@@ -10385,6 +10487,8 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  lru_map@0.4.1: {}
 
   lucide-react@1.79.0(@types/react@19.3.0)(react@19.3.1):
     dependencies:

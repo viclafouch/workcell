@@ -1,4 +1,4 @@
-import type { AnyTextAdapter } from '@tanstack/ai'
+import type { AnyTextAdapter, ReasoningOption } from '@tanstack/ai'
 import {
   defineHarness,
   definePlugin,
@@ -64,6 +64,7 @@ type DefineOrchestratorHarnessParams = {
   scope?: string
   feedback?: FeedbackOptions
   observability?: WorkerObservability
+  reasoning?: ReasoningOption
 }
 
 function libraryMap(map: () => string) {
@@ -85,6 +86,7 @@ export function defineOrchestratorHarness({
   name,
   scope = DEFAULT_ORCHESTRATOR_SCOPE,
   adapter,
+  reasoning,
   compactionAdapter,
   titlePlugin,
   library,
@@ -104,6 +106,7 @@ export function defineOrchestratorHarness({
   return defineHarness({
     name: ORCHESTRATOR_HARNESS_NAME,
     adapter,
+    reasoning,
     agentLoopStrategy: untilABudgetStop,
     turn: { onModelError: retryTransientErrors() },
     metadataSchema: agentMetadataSchema,
