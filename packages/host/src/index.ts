@@ -30,10 +30,10 @@ export { runHost } from './service/run-host.ts'
 export { type HttpRoute, openHttpLayer } from './service/http-layer.ts'
 export { liveViewUrl, readLiveView } from './service/live-view.ts'
 export {
-  dashboardRoute,
-  type DashboardOptions,
-  type DashboardWorkcell
-} from './service/dashboard.ts'
+  consoleRoute,
+  type ConsoleOptions,
+  type ConsoleWorkcell
+} from './service/console.ts'
 export { checkCommand } from './machine-check/check-command.ts'
 export { checkDatabaseSchema } from './machine-check/check-database-schema.ts'
 export { checkDockerMemory } from './machine-check/check-docker-memory.ts'

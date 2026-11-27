@@ -58,7 +58,7 @@ The three patches came back on the new versions: the bare directory imports of t
 
 ### re-route
 
-- `core/files/send-files.ts` and `chat/cards/card-tool.ts`: carry the sent file and the card as tool result metadata, in place of `emitCustomEvent`. The tool message then keeps them, so a read of the transcript, such as the dashboard of #48, shows them. The chat posts live today, so nothing breaks before #48. Carried by #48.
+- `core/files/send-files.ts` and `chat/cards/card-tool.ts`: carry the sent file and the card as tool result metadata, in place of `emitCustomEvent`. The tool message then keeps them, so a read of the transcript, such as the console of #48, shows them. The chat posts live today, so nothing breaks before #48. Carried by #48.
 - `chat/orchestrator-threads`: the answer reaches the chat only through the `onEvent` of the caller, so a turn recovered after a restart is never posted. Move the posting into a plugin. Carried by a new issue.
 - `core/sandbox/library-sandbox.ts` and `core/workers/worker-sandbox.ts` liveness: a listed but stopped container counts as live, because the list uses `all: true`. `SandboxDefinition.ensureExisting` decides it.
 - `core/sandbox/proxied-docker-sandbox.ts`: `ProxiedDockerHandle` reports `DOCKER_CAPS` (fork and snapshots `true`) while the provider reports them `false`. Override `capabilities`. Only `withSandbox` reads the handle value, so it is a wrong claim, not a live bug.

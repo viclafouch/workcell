@@ -17,8 +17,8 @@ Done when every section of the template is filled or cut, and the body names no 
 
 Evidence is proportional to the change:
 
-- **A screen of the dashboard**: a screenshot, before and after when the before exists on `main`.
-- **A flow or a live stream of the dashboard**: one video.
+- **A screen of the console**: a screenshot, before and after when the before exists on `main`.
+- **A flow or a live stream of the console**: one video.
 - **The host, the core or an integration**: the test that failed and now passes, as text. No media.
 - **Docs**: content checked, runnable examples run. No media.
 
@@ -28,9 +28,9 @@ Done when each media has its one-line claim, or the body says why the evidence i
 
 ## 3. Capture
 
-Playwright drives, ffmpeg assembles. The dashboard's Playwright suite serves the app on the fixture of `packages/dashboard/src/server/fixture-context.ts`: a real worker harness on the fake model, so every media shows test data only.
+Playwright drives, ffmpeg assembles. The console's Playwright suite serves the app on the fixture of `packages/console/src/server/fixture-context.ts`: a real worker harness on the fake model, so every media shows test data only.
 
-**A screen or a flow** runs as a throwaway `packages/dashboard/e2e/evidence.spec.ts`, or `evidence.mobile.spec.ts` for the phone. Git ignores both.
+**A screen or a flow** runs as a throwaway `packages/console/e2e/evidence.spec.ts`, or `evidence.mobile.spec.ts` for the phone. Git ignores both.
 
 ```ts
 for (const colorScheme of ['light', 'dark'] as const) {
@@ -43,7 +43,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
 - Each expected state gets an `expect`, so a red run leaves no misleading media.
 - A video needs `test.use({ video: 'on', reducedMotion: 'no-preference' })`. Playwright writes it to `e2e/.results/<test>/video.webm`.
-- Run `pnpm --filter @workcell/dashboard exec playwright test e2e/evidence.spec.ts --project=chromium`, or `--project=mobile-safari` for the phone. A change to how something looks runs on both projects, since the two engines render apart. Delete the spec after the run.
+- Run `pnpm --filter @workcell/console exec playwright test e2e/evidence.spec.ts --project=chromium`, or `--project=mobile-safari` for the phone. A change to how something looks runs on both projects, since the two engines render apart. Delete the spec after the run.
 - Every run empties `e2e/.results/`: copy each media into `.artifacts/<branch>/` before the next run.
 
 **Assemble** with ffmpeg, each clip from its first expected state so both themes play in step:
