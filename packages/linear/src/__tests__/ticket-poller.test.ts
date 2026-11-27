@@ -54,7 +54,7 @@ const PRIORITY_LABELS = ['No priority', 'Urgent', 'High', 'Medium', 'Low']
 
 const NO_PRIORITY = 0
 
-const PRIORITY_SORT = /sort: \[\{ priority: \{ order: Descending \} \}\]/u
+const PRIORITY_SORT = [{ priority: { order: 'Descending' } }]
 
 const RETRY_AFTER_SECONDS = 30
 
@@ -94,8 +94,11 @@ const LAST_PAGE = { hasNextPage: false, endCursor: null }
 const callSchema = z.discriminatedUnion('operation', [
   z.object({
     operation: z.literal('labelledTickets'),
-    query: z.string(),
-    variables: z.object({ filter: filterSchema })
+    variables: z.object({
+      filter: filterSchema,
+      sort: z.unknown(),
+      startedState: z.object({ type: z.object({ eq: z.string() }) })
+    })
   }),
   z.object({
     operation: z.literal('updateIssue'),
@@ -144,8 +147,8 @@ function urgencyOf({ priority = NO_PRIORITY }: FakeTicket) {
   return priority === NO_PRIORITY ? Infinity : priority
 }
 
-function inLinearOrder(query: string, matching: FakeTicket[]) {
-  return PRIORITY_SORT.test(query)
+function inLinearOrder(sort: unknown, matching: FakeTicket[]) {
+  return JSON.stringify(sort) === JSON.stringify(PRIORITY_SORT)
     ? matching.toSorted((left, right) => {
         return urgencyOf(left) - urgencyOf(right)
       })
@@ -174,7 +177,7 @@ function answerCall(call: z.infer<typeof callSchema>) {
   const matching = tickets.filter((ticket) => {
     return matches(ticket, call.variables.filter)
   })
-  const nodes = inLinearOrder(call.query, matching).map(
+  const nodes = inLinearOrder(call.variables.sort, matching).map(
     ({ identifier, labels, state, priority = NO_PRIORITY, assignee }) => {
       return {
         id: uuidOf(identifier),
@@ -193,7 +196,7 @@ function answerCall(call: z.infer<typeof callSchema>) {
         team: {
           states: {
             nodes: STATES.filter(({ type }) => {
-              return type === 'started'
+              return type === call.variables.startedState.type.eq
             })
           }
         }
@@ -240,7 +243,6 @@ const network = setupServer(
       answerCall(
         callSchema.parse({
           operation: OPERATION_NAME.exec(query)?.groups?.name,
-          query,
           variables
         })
       )
