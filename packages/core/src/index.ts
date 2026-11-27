@@ -110,6 +110,15 @@ export {
   type WorkerReset
 } from './workers/worker-reset.ts'
 export { workerViewSchema, type WorkerView } from './workers/worker-view.ts'
+export type {
+  QueuedTicket,
+  Ticket,
+  TicketLabel,
+  TicketPerson,
+  TicketQueue,
+  TicketState,
+  TicketStateCategory
+} from './tracker/ticket.ts'
 export {
   WorkerSandboxSetup,
   type WorkerSandboxSetupEvent,

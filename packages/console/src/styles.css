@@ -320,6 +320,18 @@
     --status: var(--status-idle);
   }
 
+  .label-dot {
+    flex-shrink: 0;
+    inline-size: --spacing(2);
+    block-size: --spacing(2);
+    border-radius: calc(infinity * 1px);
+    background-color: var(--muted-foreground);
+
+    @media (forced-colors: active) {
+      background-color: CanvasText;
+    }
+  }
+
   .status-pill {
     border-color: transparent;
     background-color: color-mix(in oklch, var(--status) 16%, transparent);

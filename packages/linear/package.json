@@ -1,7 +1,7 @@
 {
   "name": "@workcell/linear",
   "private": true,
-  "description": "The Linear integration: the ticket intake, the Linear tools through the Linear MCP server, and the ticket fact of a task.",
+  "description": "The Linear integration: the ticket intake and its queue, the Linear tools through the Linear MCP server, and the ticket fact of a task.",
   "license": "MIT",
   "repository": {
     "type": "git",
