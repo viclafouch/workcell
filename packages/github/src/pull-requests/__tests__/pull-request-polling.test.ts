@@ -31,9 +31,9 @@ describe('the pull request watch', () => {
         )
       }
     ]
-    const before = openWatcher()
+    const before = openWatcher({ merge: false })
     await pollTwice(before.watcher)
-    const after = openWatcher()
+    const after = openWatcher({ merge: false })
 
     await pollTwice(after.watcher)
 
@@ -108,7 +108,7 @@ describe('the pull request watch', () => {
   })
 })
 
-describe('the line of a pull request whose checks turn green', () => {
+describe('the line of a pull request whose checks turn green, with merging turned off', () => {
   serveGithubPerTest()
 
   it('posts one line in its thread once per head commit when its checks turn green, and wakes nothing', async () => {
@@ -118,7 +118,7 @@ describe('the line of a pull request whose checks turn green', () => {
     githubFake.pullRequests = [
       { repository: REPOSITORY, branch: WORKER.branch, pullRequest }
     ]
-    const { watcher, wakes, posts } = openWatcher()
+    const { watcher, wakes, posts } = openWatcher({ merge: false })
 
     await pollTwice(watcher)
     githubFake.pullRequests = [
@@ -153,9 +153,9 @@ describe('the line of a pull request whose checks turn green', () => {
         pullRequest: openPullRequest(checks('SUCCESS'))
       }
     ]
-    const before = openWatcher()
+    const before = openWatcher({ merge: false })
     await pollTwice(before.watcher)
-    const after = openWatcher()
+    const after = openWatcher({ merge: false })
 
     await pollTwice(after.watcher)
 

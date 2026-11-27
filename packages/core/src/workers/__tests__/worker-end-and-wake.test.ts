@@ -310,7 +310,7 @@ describe('the wake of a worker', () => {
     ).toHaveLength(1)
   })
 
-  it('tracks the live workers with their branch, from the host start to their finish', async () => {
+  it('tracks the live workers with their branch and their starter, from the host start to their finish', async () => {
     const url = await createMigratedDatabase()
     const earlier = await runWorkerThenStop(url, [{ text: 'On it.' }], {
       repository: REPOSITORY,
@@ -344,6 +344,11 @@ describe('the wake of a worker', () => {
       [earlier.threadId, 'task-1-login'],
       [later.threadId, 'task-2-signup']
     ])
+    expect(
+      liveWorkers().map(({ starterId }) => {
+        return starterId
+      })
+    ).toStrictEqual([TEST_STARTER.id, TEST_STARTER.id])
 
     await tellToStop(agent, earlier.threadId)
 

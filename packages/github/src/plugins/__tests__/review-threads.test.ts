@@ -330,6 +330,13 @@ describe('the review threads tool of a worker', () => {
         mergeable: 'MERGEABLE',
         headRefOid: 'head-1',
         mergeCommit: null,
+        isDraft: false,
+        mergeStateStatus: 'CLEAN',
+        isInMergeQueue: false,
+        isMergeQueueEnabled: false,
+        reviewDecision: null,
+        reviewRequests: { nodes: [] },
+        baseRepository: { viewerDefaultMergeMethod: 'SQUASH' },
         statusCheckRollup: {
           state: 'SUCCESS',
           contexts: { checkRunCountsByState: [] }

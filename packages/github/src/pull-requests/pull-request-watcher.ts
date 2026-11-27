@@ -14,6 +14,7 @@ import type {
   WatchedPullRequest
 } from '#/api/github-api.ts'
 import type { PullRequestLines } from '#/prompts/github.ts'
+import { mergeMetadataSchema } from './merge-metadata.ts'
 import {
   failedCheckRunCount,
   pullRequestEvents,
@@ -30,6 +31,9 @@ export type WatchedWorker = {
   branch?: string
   pullRequest?: string
   redCommits?: unknown
+  mergeCommand?: unknown
+  mergeRefusal?: unknown
+  starterId?: string
 }
 
 type PullRequestWatcherParams = {
@@ -45,6 +49,7 @@ type PullRequestWatcherParams = {
   reviewGate?: ReviewGate
   personChecks?: readonly string[]
   maxRedRounds?: number
+  merge?: boolean
 }
 
 type WorkerOnABranch = WatchedWorker & { branch: string }
@@ -67,6 +72,38 @@ function matchIsOnABranch(worker: WatchedWorker): worker is WorkerOnABranch {
   return worker.branch !== undefined
 }
 
+type ClearStaleMergeCommandParams = Pick<
+  PullRequestWatcherParams,
+  'updateWorker' | 'logger'
+> & {
+  worker: WatchedWorker
+  events: readonly PullRequestEvent[]
+}
+
+async function clearStaleMergeCommand({
+  updateWorker,
+  logger,
+  worker: { threadId, mergeCommand },
+  events
+}: ClearStaleMergeCommandParams) {
+  const isStillReady = events.some(({ action }) => {
+    return action.type === 'merge'
+  })
+
+  if (mergeCommand === undefined || isStillReady) {
+    return
+  }
+
+  try {
+    await updateWorker({ threadId, metadata: { mergeCommand: undefined } })
+  } catch (error) {
+    logger.error(
+      { threadId, error },
+      'merge command not cleared: the next poll clears it again'
+    )
+  }
+}
+
 export function createPullRequestWatcher({
   github,
   liveWorkers,
@@ -79,7 +116,8 @@ export function createPullRequestWatcher({
   lines,
   reviewGate,
   personChecks,
-  maxRedRounds
+  maxRedRounds,
+  merge
 }: PullRequestWatcherParams) {
   const pullRequestNumbers = new Map<string, number>()
   let sentInputIds = new Set<string>()
@@ -98,6 +136,20 @@ export function createPullRequestWatcher({
       }
       case 'post': {
         await postLine({ threadId, inputId, line: action.line })
+
+        return true
+      }
+      case 'merge': {
+        await updateWorker({
+          threadId,
+          metadata: { mergeCommand: action.command }
+        })
+        await wakeWorker({
+          threadId,
+          inputId,
+          message: action.message,
+          delivery: 'followUp'
+        })
 
         return true
       }
@@ -269,6 +321,9 @@ export function createPullRequestWatcher({
         // oxlint-disable-next-line no-await-in-loop -- the failed jobs read shares the paced budget of the poll
         failedJobs: await failedJobsOf(worker, pullRequest, redHeadsRead),
         personChecks,
+        merge,
+        mergeRefusal: mergeMetadataSchema.safeParse(worker).data?.mergeRefusal,
+        starterId: worker.starterId,
         redCommits:
           maxRedRounds === undefined
             ? undefined
@@ -277,6 +332,9 @@ export function createPullRequestWatcher({
                 recorded: redCommitsOf(worker)
               }
       })
+
+      // oxlint-disable-next-line no-await-in-loop -- a stale command is cleared before the events reach the worker
+      await clearStaleMergeCommand({ updateWorker, logger, worker, events })
 
       for (const event of events) {
         const isSent =

@@ -199,9 +199,11 @@ export async function runWorkerToolCall({
   await session.send(`Call ${toolCall.name}.`)
   stopListening()
   const { pendingWaits } = session.snapshot()
+  const entry = await session.indexEntry()
   await host.close()
 
   return {
+    metadata: entry?.metadata,
     result: results.join('\n'),
     asked: pendingWaits.length > 0,
     modelTools,

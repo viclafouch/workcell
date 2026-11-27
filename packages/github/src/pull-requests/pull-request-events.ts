@@ -26,6 +26,8 @@ type PullRequestEventKind =
   | 'red-round-cap'
   | 'person-check'
   | 'green-check'
+  | 'ready'
+  | 'approval-wait'
   | 'review-comment'
   | 'comment'
   | 'review'
@@ -35,10 +37,12 @@ type PullRequestEventKind =
   | 'merge-queue-ejection'
   | 'merged'
   | 'closed'
+  | 'merge-refused'
 
 type PullRequestAction =
   | { type: 'wake'; delivery: WakeWorkerParams['delivery']; message: string }
   | { type: 'post'; line: string }
+  | { type: 'merge'; command: string; message: string }
   | { type: 'finish'; report: string; outcome: TaskEnd }
 
 export type PullRequestEvent = {
@@ -81,11 +85,13 @@ type PullRequestEventsParams = {
   failedJobs?: readonly FailedJob[]
   personChecks?: readonly string[]
   redCommits?: RedCommits
+  merge?: boolean
+  mergeRefusal?: string
+  starterId?: string
 }
 
 type RedCheckParams = {
-  reviewGate: ReviewGate | undefined
-  failedJobs: readonly FailedJob[]
+  redChecks: readonly RedCheck[]
   personChecks: readonly string[]
   lines: PullRequestLines
   redCommits: RedCommits | undefined
@@ -184,23 +190,30 @@ function redRoundEvent({
     : { ...wakeEvent(), redCommit: headRefOid }
 }
 
-function redCheckEvents(
+function currentRedChecks(
   pullRequest: WatchedPullRequest,
-  { reviewGate, failedJobs, personChecks, lines, redCommits }: RedCheckParams,
-  eventOf: EventOf
-) {
-  const { statusCheckRollup, headRefOid, url } = pullRequest
-
-  if (!RED_STATES.has(statusCheckRollup?.state ?? '')) {
+  reviewGate: ReviewGate | undefined,
+  failedJobs: readonly FailedJob[]
+): RedCheck[] {
+  if (!RED_STATES.has(pullRequest.statusCheckRollup?.state ?? '')) {
     return []
   }
 
-  const redChecks = [
+  return [
     ...redStatuses(statusesOf(pullRequest), reviewGate),
     ...failedJobs.map(({ name, url: jobUrl }): RedCheck => {
       return { kind: 'job', name, url: jobUrl }
     })
   ]
+}
+
+function redCheckEvents(
+  pullRequest: WatchedPullRequest,
+  { redChecks, personChecks, lines, redCommits }: RedCheckParams,
+  eventOf: EventOf
+) {
+  const { headRefOid, url } = pullRequest
+
   const clearedByAPerson = ({ name }: RedCheck) => {
     return personChecks.includes(name)
   }
@@ -246,6 +259,150 @@ function redCheckEvents(
     })
 
   return [...wakeEvents, ...personEvents]
+}
+
+const MERGE_METHOD_FLAGS = {
+  MERGE: '--merge',
+  SQUASH: '--squash',
+  REBASE: '--rebase'
+} as const
+
+const REVIEW_DECISIONS_THAT_WAIT = new Set([
+  'REVIEW_REQUIRED',
+  'CHANGES_REQUESTED'
+])
+
+const MERGE_STATES_THAT_MERGE = new Set(['CLEAN', 'HAS_HOOKS'])
+
+function isGreen(
+  { statusCheckRollup }: WatchedPullRequest,
+  redChecks: readonly RedCheck[]
+) {
+  const state = statusCheckRollup?.state
+
+  return (
+    state === undefined ||
+    state === 'SUCCESS' ||
+    (RED_STATES.has(state) && redChecks.length === 0)
+  )
+}
+
+function lastEjectionOf({ timelineItems }: WatchedPullRequest) {
+  return timelineItems.nodes.findLast(({ __typename }) => {
+    return __typename === 'RemovedFromMergeQueueEvent'
+  })?.id
+}
+
+function isReady(
+  pullRequest: WatchedPullRequest,
+  redChecks: readonly RedCheck[]
+) {
+  const {
+    mergeStateStatus,
+    isDraft,
+    isInMergeQueue,
+    reviewDecision,
+    reviewThreads
+  } = pullRequest
+
+  return (
+    MERGE_STATES_THAT_MERGE.has(mergeStateStatus) &&
+    isGreen(pullRequest, redChecks) &&
+    !isDraft &&
+    !isInMergeQueue &&
+    !REVIEW_DECISIONS_THAT_WAIT.has(reviewDecision ?? '') &&
+    reviewThreads.nodes.every(({ isResolved }) => {
+      return isResolved
+    })
+  )
+}
+
+function mergeCommandOf({
+  url,
+  headRefOid,
+  isMergeQueueEnabled,
+  baseRepository
+}: WatchedPullRequest) {
+  const method = isMergeQueueEnabled
+    ? []
+    : [MERGE_METHOD_FLAGS[baseRepository?.viewerDefaultMergeMethod ?? 'MERGE']]
+
+  return [
+    'gh pr merge',
+    url,
+    ...method,
+    '--match-head-commit',
+    headRefOid
+  ].join(' ')
+}
+
+function readyEvents(
+  pullRequest: WatchedPullRequest,
+  redChecks: readonly RedCheck[],
+  eventOf: EventOf
+) {
+  if (!isReady(pullRequest, redChecks)) {
+    return []
+  }
+
+  const { url, headRefOid } = pullRequest
+  const command = mergeCommandOf(pullRequest)
+  const lastEjection = lastEjectionOf(pullRequest)
+
+  return [
+    eventOf({
+      kind: 'ready',
+      id:
+        lastEjection === undefined
+          ? headRefOid
+          : `${headRefOid}:${lastEjection}`,
+      action: {
+        type: 'merge',
+        command,
+        message: `The pull request watcher sends this, not a person. The pull request ${url} is ready: its checks are green on ${headRefOid}. Merge it with this exact command, and no other: ${command} GitHub can take minutes to merge it, through its merge queue: the merge reaches the host on its own, so watch nothing and ask no one. When GitHub refuses it, change nothing: the host ends the task. ${END_TURN}`
+      }
+    })
+  ]
+}
+
+function reviewerNamesOf({ reviewRequests }: WatchedPullRequest) {
+  return (reviewRequests?.nodes ?? []).flatMap((request) => {
+    const reviewer = request?.requestedReviewer
+
+    if (reviewer?.__typename === 'User') {
+      return [`@${reviewer.login}`]
+    }
+
+    return reviewer?.__typename === 'Team' ? [`@${reviewer.slug}`] : []
+  })
+}
+
+type ApprovalWaitParams = {
+  redChecks: readonly RedCheck[]
+  lines: PullRequestLines
+}
+
+function approvalWaitEvents(
+  pullRequest: WatchedPullRequest,
+  { redChecks, lines }: ApprovalWaitParams,
+  eventOf: EventOf
+) {
+  const { reviewDecision, headRefOid, url } = pullRequest
+
+  return isGreen(pullRequest, redChecks) && reviewDecision === 'REVIEW_REQUIRED'
+    ? [
+        eventOf({
+          kind: 'approval-wait',
+          id: headRefOid,
+          action: post(
+            lines.approvalWait({
+              pullRequestUrl: url,
+              reviewers: reviewerNamesOf(pullRequest)
+            })
+          )
+        })
+      ]
+    : []
 }
 
 function greenCheckEvents(
@@ -429,7 +586,10 @@ export function pullRequestEvents({
   reviewGate,
   failedJobs = [],
   personChecks = [],
-  redCommits
+  redCommits,
+  merge = true,
+  mergeRefusal,
+  starterId
 }: PullRequestEventsParams): PullRequestEvent[] {
   const { number, url, merged, closed, mergeCommit, mergeable, headRefOid } =
     pullRequest
@@ -473,6 +633,28 @@ export function pullRequestEvents({
     ]
   }
 
+  if (mergeRefusal !== undefined) {
+    return [
+      eventOf({
+        kind: 'merge-refused',
+        id: headRefOid,
+        action: {
+          type: 'finish',
+          report: lines.mergeRefused({
+            pullRequestUrl: url,
+            subject,
+            cause: mergeRefusal,
+            starterId
+          }),
+          outcome: {
+            value: 'blocked',
+            cause: `GitHub refused the merge: ${mergeRefusal}`
+          }
+        }
+      })
+    ]
+  }
+
   const conflictEvents =
     mergeable === 'CONFLICTING'
       ? [
@@ -487,13 +669,20 @@ export function pullRequestEvents({
         ]
       : []
 
+  const redChecks = currentRedChecks(pullRequest, reviewGate, failedJobs)
+
   return [
     ...redCheckEvents(
       pullRequest,
-      { reviewGate, failedJobs, personChecks, lines, redCommits },
+      { redChecks, personChecks, lines, redCommits },
       eventOf
     ),
-    ...greenCheckEvents(pullRequest, lines, eventOf),
+    ...(merge
+      ? [
+          ...readyEvents(pullRequest, redChecks, eventOf),
+          ...approvalWaitEvents(pullRequest, { redChecks, lines }, eventOf)
+        ]
+      : greenCheckEvents(pullRequest, lines, eventOf)),
     ...commentEvents(pullRequest, viewerLogin, eventOf),
     ...conflictEvents,
     ...reviewGateEvents(pullRequest, reviewGate, eventOf),

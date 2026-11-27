@@ -43,7 +43,7 @@ describe('the pull request of a worker', () => {
       {
         repository: REPOSITORY,
         branch: WORKER.branch,
-        pullRequest: openPullRequest()
+        pullRequest: openPullRequest(checks('PENDING'))
       }
     ]
     const { watcher, updates } = openWatcher()
@@ -97,7 +97,7 @@ describe('the pull request of a worker', () => {
       {
         repository: REPOSITORY,
         branch: WORKER.branch,
-        pullRequest: openPullRequest()
+        pullRequest: openPullRequest(checks('PENDING'))
       }
     ]
     const { watcher, updates } = openWatcher({
@@ -602,7 +602,7 @@ describe('the red checks of a pull request', () => {
       conclusion: 'cancelled',
       jobs: [{ name: 'unit tests', conclusion: 'cancelled' }]
     })
-    const { watcher, wakes, posts } = openWatcher()
+    const { watcher, wakes, posts } = openWatcher({ merge: false })
 
     await pollTwice(watcher)
 

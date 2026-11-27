@@ -17,6 +17,7 @@ export {
   type ReviewThreadWriter
 } from './api/review-thread-writer.ts'
 export { refuseFinishWithAnOpenPullRequest } from './plugins/finish-refusals.ts'
+export { pullRequestMergeGate } from './plugins/merge-gate.ts'
 export { GITHUB_TOOL_NAMES, githubTools } from './plugins/github-tools.ts'
 export { taskPullRequest } from './plugins/task-pull-request.ts'
 export { reviewThreadTools } from './plugins/review-threads.ts'

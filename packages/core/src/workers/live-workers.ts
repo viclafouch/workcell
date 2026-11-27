@@ -13,7 +13,9 @@ import type { WorkerHarness } from './harness.ts'
 import type { WorkerLifecycle, WorkerLogger } from './lifecycle.ts'
 
 export type ListedWorker = WorkerMetadata &
-  Pick<SessionIndexEntry, 'threadId' | 'updatedAt' | 'usage'>
+  Pick<SessionIndexEntry, 'threadId' | 'updatedAt' | 'usage'> & {
+    starterId?: string
+  }
 
 export type LiveStatus = HostStatusEvent['status'] | 'queued'
 
@@ -38,12 +40,16 @@ export function listedWorkerOf({
   threadId,
   updatedAt,
   usage,
+  members,
   metadata
 }: SessionIndexEntry): ListedWorker | undefined {
   const parsed = workerMetadataSchema.safeParse(metadata)
+  const starterId = members.find(({ role }) => {
+    return role === 'owner'
+  })?.userId
 
   return parsed.success
-    ? { threadId, updatedAt, usage, ...parsed.data }
+    ? { threadId, updatedAt, usage, starterId, ...parsed.data }
     : undefined
 }
 

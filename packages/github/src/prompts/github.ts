@@ -64,7 +64,13 @@ export const REVIEW_THREADS_TEXT = {
 }
 
 export function openPullRequestRefusal(pullRequest: string) {
-  return `The pull request ${pullRequest} is still open, so the task goes on. End your turn: a person reviews and merges it, and the merge or their answer reaches you as a new message. To give up the task, close the pull request first.`
+  return `The pull request ${pullRequest} is still open, so the task goes on. End your turn: what happens next on the pull request reaches you as a new message. To give up the task, close the pull request first.`
+}
+
+export function mergeGateRefusal(recorded: string | undefined) {
+  return recorded === undefined
+    ? 'A merge runs only once the pull request is ready: run the exact merge command that the pull request watcher sends you, and no other. Until it sends one, end your turn.'
+    : `A merge runs only as the pull request watcher sent it, with no flag added or removed. Run this one: ${recorded}`
 }
 
 export function pullRequestFact(pullRequest: string) {
@@ -81,6 +87,16 @@ type RedRoundCap = {
   rounds: number
 }
 
+type MergeRefusal = EndedPullRequest & {
+  cause: string
+  starterId: string | undefined
+}
+
+type ApprovalWait = {
+  pullRequestUrl: string
+  reviewers: readonly string[]
+}
+
 type PersonCheck = {
   pullRequestUrl: string
   check: string
@@ -90,25 +106,49 @@ type PersonCheck = {
 export type PullRequestLines = {
   merged: (end: EndedPullRequest) => string
   closed: (end: EndedPullRequest) => string
+  mergeRefused: (refusal: MergeRefusal) => string
   greenCheck: (pullRequestUrl: string) => string
+  approvalWait: (wait: ApprovalWait) => string
   personCheck: (failure: PersonCheck) => string
   redRoundCap: (cap: RedRoundCap) => string
   mergeQueueEntry: (pullRequestUrl: string) => string
 }
 
+function subjectLines(subject: string | undefined) {
+  return subject === undefined ? [] : [`Subject: ${subject}`]
+}
+
 export const PULL_REQUEST_LINES: PullRequestLines = {
   merged: ({ pullRequestUrl, subject }) => {
-    const subjectLine = subject === undefined ? [] : [`Subject: ${subject}`]
-
-    return [`Merged: ${pullRequestUrl}`, ...subjectLine].join('\n')
+    return [`Merged: ${pullRequestUrl}`, ...subjectLines(subject)].join('\n')
   },
   closed: ({ pullRequestUrl, subject }) => {
-    const subjectLine = subject === undefined ? [] : [`Subject: ${subject}`]
+    return [
+      `Closed unmerged: ${pullRequestUrl}`,
+      ...subjectLines(subject)
+    ].join('\n')
+  },
+  mergeRefused: ({ pullRequestUrl, subject, cause, starterId }) => {
+    const mention = starterId === undefined ? [] : [`@${starterId}`]
 
-    return [`Closed unmerged: ${pullRequestUrl}`, ...subjectLine].join('\n')
+    return [
+      [
+        ...mention,
+        `GitHub refused the merge of ${pullRequestUrl}: ${cause}`
+      ].join(' '),
+      ...subjectLines(subject)
+    ].join('\n')
   },
   greenCheck: (pullRequestUrl) => {
     return `Checks green: ${pullRequestUrl}`
+  },
+  approvalWait: ({ pullRequestUrl, reviewers }) => {
+    const whose =
+      reviewers.length === 0
+        ? 'an approval'
+        : `the approval of ${reviewers.join(', ')}`
+
+    return `Checks green, waiting for ${whose}: ${pullRequestUrl}`
   },
   personCheck: ({ pullRequestUrl, check, checkUrl }) => {
     return `${check} failed on ${pullRequestUrl}, a person clears it: ${checkUrl ?? 'no link'}`

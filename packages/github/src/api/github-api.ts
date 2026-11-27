@@ -11,6 +11,8 @@ import type {
   Organization,
   PullRequest,
   PullRequestReview,
+  Repository,
+  Team,
   PullRequestReviewThread,
   RemovedFromMergeQueueEvent,
   StatusCheckRollup,
@@ -51,10 +53,27 @@ type TimelineItem =
   | (Required<Pick<RemovedFromMergeQueueEvent, '__typename' | 'id'>> &
       Pick<RemovedFromMergeQueueEvent, 'reason'>)
 
+type RequestedReviewer =
+  | Required<Pick<User, '__typename' | 'login'>>
+  | Required<Pick<Team, '__typename' | 'slug'>>
+  | Required<Pick<Bot | Mannequin, '__typename'>>
+
 export type WatchedPullRequest = Pick<
   PullRequest,
-  'number' | 'merged' | 'closed' | 'mergeable'
+  | 'number'
+  | 'merged'
+  | 'closed'
+  | 'mergeable'
+  | 'isDraft'
+  | 'mergeStateStatus'
+  | 'isInMergeQueue'
+  | 'isMergeQueueEnabled'
+  | 'reviewDecision'
 > & {
+  baseRepository: Maybe<Pick<Repository, 'viewerDefaultMergeMethod'>>
+  reviewRequests: Maybe<{
+    nodes: Maybe<{ requestedReviewer: Maybe<RequestedReviewer> }>[] | null
+  }>
   url: string
   headRefOid: string
   mergeCommit: Maybe<{ oid: string }>
@@ -123,6 +142,11 @@ export type PullRequestRead =
     }
 
 const WATCHED_PULL_REQUEST_FIELDS = `number url merged closed mergeable headRefOid
+      isDraft mergeStateStatus isInMergeQueue isMergeQueueEnabled reviewDecision
+      baseRepository { viewerDefaultMergeMethod }
+      reviewRequests(first: 20) {
+        nodes { requestedReviewer { __typename ... on User { login } ... on Team { slug } } }
+      }
       mergeCommit { oid }
       statusCheckRollup { state contexts { checkRunCountsByState { state count } } }
       commits(last: 1) {
