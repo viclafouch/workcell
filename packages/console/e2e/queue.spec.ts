@@ -23,7 +23,7 @@ test.describe('the queue', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: 'Five tickets wait in Linear.'
+        name: '5 tickets wait in Linear.'
       })
     ).toBeVisible()
     await expect(queueTicketsOf(page)).toHaveCount(FIXTURE_QUEUE_LENGTH)

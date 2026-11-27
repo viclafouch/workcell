@@ -7,7 +7,7 @@ test.describe('the page of what runs now', () => {
     await page.goto('/')
 
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Two workers are working.' })
+      page.getByRole('heading', { level: 1, name: '2 workers are working.' })
     ).toBeVisible()
     await expect(page.getByText('Bravo and Golf wait for you.')).toBeVisible()
     await expect(

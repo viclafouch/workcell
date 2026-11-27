@@ -24,7 +24,7 @@ export const SpendMeter = ({ spentUsd, budgetUsd }: SpendMeterProps) => {
   if (budgetUsd === undefined) {
     return (
       <Hint label="What its model calls cost so far. This task has no budget.">
-        <span className="tabular text-sm md:pt-1">
+        <span className="tabular text-sm whitespace-nowrap md:pt-1">
           {formatUsd(spentUsd)}
           <span className="text-muted-foreground"> no budget</span>
         </span>
@@ -46,7 +46,7 @@ export const SpendMeter = ({ spentUsd, budgetUsd }: SpendMeterProps) => {
         }}
         className="cell-meter"
       >
-        <ProgressLabel className="tabular text-sm font-normal">
+        <ProgressLabel className="tabular text-sm font-normal whitespace-nowrap">
           {formatUsd(spentUsd)}
           <span className="text-muted-foreground">
             {' '}

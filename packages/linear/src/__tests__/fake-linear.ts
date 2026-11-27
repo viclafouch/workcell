@@ -23,21 +23,24 @@ export const TODO = {
   id: 'state-todo',
   name: 'Todo',
   type: 'unstarted',
-  position: 0
+  position: 0,
+  color: '#e2e2e2'
 }
 
 export const IN_PROGRESS = {
   id: 'state-in-progress',
   name: 'In Progress',
   type: 'started',
-  position: 1
+  position: 1,
+  color: '#f2c94c'
 }
 
 const IN_REVIEW = {
   id: 'state-in-review',
   name: 'In Review',
   type: 'started',
-  position: 2
+  position: 2,
+  color: '#0f783c'
 }
 
 const STATES = [TODO, IN_PROGRESS, IN_REVIEW]
@@ -62,6 +65,7 @@ type FakeTicket = {
   state: (typeof STATES)[number]
   priority?: number
   assignee?: { name: string; avatarUrl: string | null }
+  description?: string
 }
 
 export type StartedWorker = {
@@ -122,6 +126,10 @@ const callSchema = z.discriminatedUnion('operation', [
     })
   }),
   z.object({
+    operation: z.literal('ticket'),
+    variables: z.object({ key: z.string() })
+  }),
+  z.object({
     operation: z.literal('updateIssue'),
     variables: z.object({
       id: z.string(),
@@ -166,7 +174,64 @@ function inLinearOrder(sort: unknown, matching: FakeTicket[]) {
     : matching.toReversed()
 }
 
+function ticketNodeOf({
+  identifier,
+  labels,
+  state,
+  priority = NO_PRIORITY,
+  assignee
+}: FakeTicket) {
+  return {
+    id: uuidOf(identifier),
+    identifier,
+    title: 'Fix the login',
+    url: `https://linear.app/acme/issue/${identifier}`,
+    priority,
+    priorityLabel: PRIORITY_LABELS[priority],
+    state: {
+      id: state.id,
+      name: state.name,
+      type: state.type,
+      color: state.color
+    },
+    labels: {
+      nodes: labels.map((name) => {
+        return { name, color: '#5e6ad2' }
+      })
+    },
+    assignee: assignee ?? null
+  }
+}
+
+const ENTITY_NOT_FOUND = {
+  message: 'Entity not found: Issue',
+  path: ['issue'],
+  extensions: {
+    type: 'invalid input',
+    code: 'INPUT_ERROR',
+    statusCode: 400,
+    userError: true
+  }
+}
+
 function answerCall(call: z.infer<typeof callSchema>) {
+  if (call.operation === 'ticket') {
+    const ticket = fakeLinear.tickets.find(({ identifier }) => {
+      return identifier === call.variables.key
+    })
+
+    return ticket === undefined
+      ? { errors: [ENTITY_NOT_FOUND], data: null }
+      : {
+          data: {
+            issue: {
+              ...ticketNodeOf(ticket),
+              description: ticket.description ?? null
+            }
+          }
+        }
+  }
+
   if (call.operation === 'updateIssue') {
     const { id } = call.variables
     const { stateId } = call.variables.input
@@ -188,32 +253,18 @@ function answerCall(call: z.infer<typeof callSchema>) {
   const matching = fakeLinear.tickets.filter((ticket) => {
     return matches(ticket, call.variables.filter)
   })
-  const nodes = inLinearOrder(call.variables.sort, matching).map(
-    ({ identifier, labels, state, priority = NO_PRIORITY, assignee }) => {
-      return {
-        id: uuidOf(identifier),
-        identifier,
-        title: 'Fix the login',
-        url: `https://linear.app/acme/issue/${identifier}`,
-        priority,
-        priorityLabel: PRIORITY_LABELS[priority],
-        state: { id: state.id, name: state.name, type: state.type },
-        labels: {
-          nodes: labels.map((name) => {
-            return { name, color: '#5e6ad2' }
+  const nodes = inLinearOrder(call.variables.sort, matching).map((ticket) => {
+    return {
+      ...ticketNodeOf(ticket),
+      team: {
+        states: {
+          nodes: STATES.filter(({ type }) => {
+            return type === call.variables.startedState.type.eq
           })
-        },
-        assignee: assignee ?? null,
-        team: {
-          states: {
-            nodes: STATES.filter(({ type }) => {
-              return type === call.variables.startedState.type.eq
-            })
-          }
         }
       }
     }
-  )
+  })
 
   return { data: { issues: { nodes, pageInfo: LAST_PAGE } } }
 }
@@ -391,7 +442,7 @@ export function fiveWaitingTickets() {
 export async function keysInQueue(
   poller: ReturnType<typeof createTicketPoller>
 ) {
-  const queue = await poller.queue.read()
+  const queue = await poller.tracker.queue()
 
   return queue.map(({ key }) => {
     return key

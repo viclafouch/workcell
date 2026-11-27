@@ -1,5 +1,5 @@
 import type { QueuedTicket } from '@workcell/core'
-import { countWord } from './count-words.ts'
+import { countOf } from './count-words.ts'
 
 export const startableTicketsOf = (tickets: readonly QueuedTicket[]) => {
   return tickets.filter(({ blocker }) => {
@@ -8,9 +8,7 @@ export const startableTicketsOf = (tickets: readonly QueuedTicket[]) => {
 }
 
 export const waitSentence = (tracker: string, count: number) => {
-  return count === 1
-    ? `One ticket waits in ${tracker}.`
-    : `${countWord(count)} tickets wait in ${tracker}.`
+  return `${countOf(count, 'ticket waits', 'tickets wait')} in ${tracker}.`
 }
 
 export const blockedSentence = (count: number) => {
@@ -19,6 +17,6 @@ export const blockedSentence = (count: number) => {
   }
 
   return count === 1
-    ? 'One cannot start: its cause shows below.'
-    : `${countWord(count)} cannot start: each cause shows below.`
+    ? '1 cannot start: its cause shows below.'
+    : `${count} cannot start: each cause shows below.`
 }

@@ -5,13 +5,9 @@ import { useSelector } from '@tanstack/react-store'
 import type { FeedbackPluginState } from '@workcell/core'
 import { ChatPlaceHeader } from '#/components/chat/chat-place-header.tsx'
 import { FeedbackList } from '#/components/feedback/feedback-list.tsx'
+import { PanelTab, PanelTabsList } from '#/components/tabs/panel-tabs.tsx'
 import { Skeleton } from '#/components/ui/skeleton.tsx'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '#/components/ui/tabs.tsx'
+import { Tabs, TabsContent } from '#/components/ui/tabs.tsx'
 import { useChatSpeakers } from '#/hooks/use-chat-speakers.ts'
 import { useIsWideScreen } from '#/hooks/use-is-wide-screen.ts'
 import { useSessionView } from '#/hooks/use-session-view.ts'
@@ -36,6 +32,8 @@ type SessionBodyProps = {
   threadId: string
   agentName?: string
   startedWorkers?: React.ReactNode
+  ticket?: React.ReactNode
+  pullRequest?: React.ReactNode
 }
 
 const EMPTY_FEEDBACK: FeedbackPluginState['reports'] = []
@@ -49,14 +47,35 @@ const matchIsFeedbackState = (value: unknown): value is FeedbackPluginState => {
   )
 }
 
-const PANE_CONTENT = 'min-h-0 flex-1 overflow-y-auto overscroll-contain pt-4'
+type PaneProps = {
+  value: string
+  children: React.ReactNode
+  className?: string
+}
+
+const Pane = ({ value, className, children }: PaneProps) => {
+  return (
+    <TabsContent value={value} className="flex min-h-0 flex-1 flex-col">
+      <div
+        className={cn(
+          'relative min-h-0 flex-1 overflow-y-auto overscroll-contain pt-4 scroll-fade-block',
+          className
+        )}
+      >
+        {children}
+      </div>
+    </TabsContent>
+  )
+}
 
 const SessionBody = ({
   view,
   harness,
   threadId,
   agentName,
-  startedWorkers
+  startedWorkers,
+  ticket,
+  pullRequest
 }: SessionBodyProps) => {
   const isWide = useIsWideScreen()
   const messages = useSelector(view.store, (state) => {
@@ -123,30 +142,27 @@ const SessionBody = ({
     <>
       {isWorker ? (
         <>
-          <TabsTrigger value="work">Work</TabsTrigger>
-          <TabsTrigger value="files">
+          <PanelTab value="work">Work</PanelTab>
+          <PanelTab
+            value="files"
+            count={fileChanges.length === 0 ? undefined : fileChanges.length}
+          >
             Files
-            {fileChanges.length === 0 ? null : (
-              <span className="tabular text-muted-foreground">
-                {fileChanges.length}
-              </span>
-            )}
-          </TabsTrigger>
+          </PanelTab>
+          <PanelTab value="ticket">Ticket</PanelTab>
+          <PanelTab value="pull-request">Pull request</PanelTab>
         </>
       ) : (
-        <TabsTrigger value="workers">Workers</TabsTrigger>
+        <PanelTab value="workers">Workers</PanelTab>
       )}
-      <TabsTrigger value="feedback">Feedback</TabsTrigger>
+      <PanelTab value="feedback">Feedback</PanelTab>
     </>
   )
   const panes = (
     <>
       {isWorker ? (
         <>
-          <TabsContent
-            value="work"
-            className={cn(PANE_CONTENT, 'flex flex-col gap-8')}
-          >
+          <Pane value="work" className="flex flex-col gap-8">
             <PlanStep state={todos} />
             <PanelSection title="Sandbox setup">
               <SetupSteps events={setupEvents} />
@@ -154,27 +170,24 @@ const SessionBody = ({
             <PanelSection title="Background jobs">
               <BackgroundJobs jobs={jobs} />
             </PanelSection>
-          </TabsContent>
-          <TabsContent
-            value="files"
-            className={cn(PANE_CONTENT, 'flex flex-col gap-8')}
-          >
+          </Pane>
+          <Pane value="files" className="flex flex-col gap-8">
             <PanelSection title="Changed in this visit">
               <ChangedFiles changes={fileChanges} />
             </PanelSection>
             <PanelSection title="Whole diff">
               <WholeDiff threadId={threadId} />
             </PanelSection>
-          </TabsContent>
+          </Pane>
+          <Pane value="ticket">{ticket}</Pane>
+          <Pane value="pull-request">{pullRequest}</Pane>
         </>
       ) : (
-        <TabsContent value="workers" className={PANE_CONTENT}>
-          {startedWorkers}
-        </TabsContent>
+        <Pane value="workers">{startedWorkers}</Pane>
       )}
-      <TabsContent value="feedback" className={PANE_CONTENT}>
+      <Pane value="feedback">
         <FeedbackList reports={feedback} showsThread={false} />
-      </TabsContent>
+      </Pane>
     </>
   )
 
@@ -189,7 +202,13 @@ const SessionBody = ({
             className="flex min-h-0 min-w-0 flex-col"
           >
             <div className="flex items-center gap-3">
-              <TabsList>{paneTabs}</TabsList>
+              <PanelTabsList
+                label="Views of this thread"
+                variant="segmented"
+                className="min-w-0 flex-1"
+              >
+                {paneTabs}
+              </PanelTabsList>
               {liveBadge}
             </div>
             {panes}
@@ -198,10 +217,14 @@ const SessionBody = ({
       ) : (
         <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col">
           <div className="flex min-w-0 items-center gap-3">
-            <TabsList className="max-w-full min-w-0 overflow-x-auto">
-              <TabsTrigger value="chat">Chat</TabsTrigger>
+            <PanelTabsList
+              label="Views of this thread"
+              variant="segmented"
+              className="min-w-0 flex-1"
+            >
+              <PanelTab value="chat">Chat</PanelTab>
               {paneTabs}
-            </TabsList>
+            </PanelTabsList>
             {liveBadge}
           </div>
           <TabsContent value="chat" className="min-h-0 flex-1 pt-4">
@@ -251,6 +274,8 @@ type SessionPanelProps = {
   header: React.ReactNode
   agentName?: string
   startedWorkers?: React.ReactNode
+  ticket?: React.ReactNode
+  pullRequest?: React.ReactNode
 }
 
 export const SessionPanel = ({
@@ -259,7 +284,9 @@ export const SessionPanel = ({
   isThreadActive,
   header,
   agentName,
-  startedWorkers
+  startedWorkers,
+  ticket,
+  pullRequest
 }: SessionPanelProps) => {
   const view = useSessionView({ harness, threadId, isThreadActive })
 
@@ -275,6 +302,8 @@ export const SessionPanel = ({
           threadId={threadId}
           agentName={agentName}
           startedWorkers={startedWorkers}
+          ticket={ticket}
+          pullRequest={pullRequest}
         />
       )}
     </div>

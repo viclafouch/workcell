@@ -109,6 +109,7 @@ export function openPullRequest(
     closed: false,
     mergeable: 'MERGEABLE',
     headRefOid: 'head-1',
+    updatedAt: '2026-11-20T09:00:00Z',
     mergeCommit: null,
     statusCheckRollup: rollup('SUCCESS'),
     commits: { nodes: [] },
@@ -327,6 +328,7 @@ export function openWatcher({
   let updatesToRefuse = refusedUpdates
   const workers = [...liveWorkers]
   const updates: UpdateWorkerParams[] = []
+  const revisions: unknown[] = []
   const wakes: WakeWorkerParams[] = []
   const posts: ThreadLine[] = []
   const finishes: WorkerFinish[] = []
@@ -350,7 +352,14 @@ export function openWatcher({
         throw new Error('The store is down.')
       }
 
-      updates.push(update)
+      const { pullRequestRevision } = update.metadata
+
+      if (pullRequestRevision === undefined) {
+        updates.push(update)
+      } else {
+        revisions.push(pullRequestRevision)
+      }
+
       const index = workers.findIndex(({ threadId }) => {
         return threadId === update.threadId
       })
@@ -379,7 +388,7 @@ export function openWatcher({
     logger: { info: record, error: record }
   })
 
-  return { watcher, updates, wakes, posts, finishes, lines }
+  return { watcher, updates, revisions, wakes, posts, finishes, lines }
 }
 
 export function serveGithubPerTest() {

@@ -108,6 +108,7 @@ describe('the view of a worker', () => {
       name: 'Alpha',
       repository: 'acme/app',
       topic: 'Fix the ticket.',
+      subject: undefined,
       originThreadId: undefined,
       lastActiveAt: WORKER.updatedAt,
       phase: 'tool',
@@ -117,6 +118,7 @@ describe('the view of a worker', () => {
       budgetUsd: 5,
       branch: 'task-1-fix',
       pullRequest: 'https://example.com/acme/app/pull/7',
+      pullRequestRevision: undefined,
       waits: ['question'],
       startupMs: undefined,
       sandboxFailure: undefined

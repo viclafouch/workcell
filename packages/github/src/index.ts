@@ -1,6 +1,7 @@
 export { createGithubApi, type GithubApi } from './api/github-api.ts'
 export { GithubOctokit, splitRepository } from './api/github-octokit.ts'
 export { pullRequestUrlOf } from './pull-requests/pull-request-url.ts'
+export { githubPullRequests } from './pull-requests/pull-request-details.ts'
 export { createGithubReader, type GithubReader } from './api/github-reader.ts'
 export {
   createPullRequestCloser,

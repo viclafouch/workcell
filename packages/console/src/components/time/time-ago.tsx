@@ -1,16 +1,30 @@
 import { useNow } from '#/hooks/use-now.ts'
-import { formatAgo, formatDateTime } from '#/lib/dates.ts'
+import { formatAgo, formatDate, formatDateTime } from '#/lib/dates.ts'
+
+const MILLISECONDS_PER_DAY = 86_400_000
 
 type TimeAgoProps = {
   value: number
   className?: string
+  recentLabel?: string
+  absoluteAfterDays?: number
 }
 
-export const TimeAgo = ({ value, className }: TimeAgoProps) => {
+export const TimeAgo = ({
+  value,
+  className,
+  recentLabel,
+  absoluteAfterDays
+}: TimeAgoProps) => {
   const now = useNow()
-  const ago = formatAgo(value, now)
+  const isOld =
+    absoluteAfterDays !== undefined &&
+    now - value > absoluteAfterDays * MILLISECONDS_PER_DAY
+  const text = isOld
+    ? `on ${formatDate(value)}`
+    : (formatAgo(value, now) ?? recentLabel)
 
-  if (ago === null) {
+  if (text === undefined) {
     return null
   }
 
@@ -20,7 +34,7 @@ export const TimeAgo = ({ value, className }: TimeAgoProps) => {
       title={formatDateTime(value)}
       className={className}
     >
-      {ago}
+      {text}
     </time>
   )
 }

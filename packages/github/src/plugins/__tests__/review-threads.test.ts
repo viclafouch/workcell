@@ -329,6 +329,7 @@ describe('the review threads tool of a worker', () => {
         closed: false,
         mergeable: 'MERGEABLE',
         headRefOid: 'head-1',
+        updatedAt: '2026-11-20T09:00:00Z',
         mergeCommit: null,
         isDraft: false,
         mergeStateStatus: 'CLEAN',

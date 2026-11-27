@@ -7,6 +7,7 @@ import {
   Scripts,
   ScriptOnce
 } from '@tanstack/react-router'
+import { FixtureDatasetToggle } from '#/components/dev/fixture-dataset-toggle.tsx'
 import { DEFAULT_BRAND_NAME, pageTitleOf } from '#/constants/brand.ts'
 import { COLOR_SCHEME_SCRIPT } from '#/lib/color-scheme.ts'
 import { SIDEBAR_WIDTH_SCRIPT } from '#/lib/sidebar-width.ts'
@@ -37,6 +38,7 @@ const RootDocument = ({ children }: RootDocumentProps) => {
           Skip to the content
         </a>
         {children}
+        <FixtureDatasetToggle />
         <Scripts />
       </body>
     </html>

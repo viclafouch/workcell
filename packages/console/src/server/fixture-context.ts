@@ -8,6 +8,7 @@ import {
   type FakeResponse,
   type FakeResponseStep
 } from '@tanstack/ai/testing'
+import { getCookie } from '@tanstack/react-start/server'
 import {
   createHostFreeSandbox,
   defineTestWorker,
@@ -17,14 +18,24 @@ import {
 import { DEFAULT_BRAND_NAME } from '#/constants/brand.ts'
 import type { ConsoleContext } from './console-context.ts'
 import {
+  FIXTURE_DATASET_COOKIE,
+  fixtureDataOf,
+  matchIsFixtureDataset
+} from './fixture-datasets.ts'
+import {
   BOT_FIXTURE_THREAD,
   FIXTURE_CAPACITY,
   FIXTURE_DIFF,
   FIXTURE_FEEDBACK,
+  FIXTURE_PULL_REQUESTS,
   FIXTURE_QUEUE,
+  FIXTURE_TICKETS,
+  FIXTURE_CODE_HOST_MARK,
   FIXTURE_TRACKER,
+  FIXTURE_TRACKER_MARK,
   FIXTURE_WORKERS,
-  LIVE_FIXTURE_THREAD
+  LIVE_FIXTURE_THREAD,
+  MERGED_FIXTURE_THREAD
 } from './fixtures.ts'
 import { STDERR_LOGGER } from './stderr-logger.ts'
 
@@ -86,6 +97,22 @@ const BOT_TURN: FakeResponseStep[] = [
     text: 'Three workers run now. Bravo waits for your answer on a command it wants to run.'
   }
 ]
+
+const DEMO_DATA = {
+  workers: FIXTURE_WORKERS,
+  tickets: FIXTURE_TICKETS,
+  pullRequests: FIXTURE_PULL_REQUESTS
+}
+
+const fixtureData = () => {
+  const dataset = getCookie(FIXTURE_DATASET_COOKIE)
+
+  return fixtureDataOf(matchIsFixtureDataset(dataset) ? dataset : 'demo', {
+    demo: DEMO_DATA,
+    liveThread: LIVE_FIXTURE_THREAD,
+    mergedThread: MERGED_FIXTURE_THREAD
+  })
+}
 
 export const createFixtureContext = async (): Promise<ConsoleContext> => {
   const host = createHarnessHost({
@@ -153,10 +180,10 @@ export const createFixtureContext = async (): Promise<ConsoleContext> => {
     workers: {
       capacity: FIXTURE_CAPACITY,
       view: async () => {
-        return FIXTURE_WORKERS
+        return fixtureData().workers
       },
       inspect: async () => {
-        return FIXTURE_WORKERS
+        return fixtureData().workers
       },
       diff: async (threadId) => {
         return threadId === LIVE_FIXTURE_THREAD ? FIXTURE_DIFF : null
@@ -167,10 +194,23 @@ export const createFixtureContext = async (): Promise<ConsoleContext> => {
         return FIXTURE_FEEDBACK
       }
     },
-    queue: {
-      tracker: FIXTURE_TRACKER,
-      read: async () => {
+    tracker: {
+      name: FIXTURE_TRACKER,
+      mark: FIXTURE_TRACKER_MARK,
+      queue: async () => {
         return FIXTURE_QUEUE
+      },
+      ticket: async (key) => {
+        return fixtureData().tickets.get(key) ?? null
+      }
+    },
+    pullRequests: {
+      mark: FIXTURE_CODE_HOST_MARK,
+      read: async (url) => {
+        return fixtureData().pullRequests.get(url) ?? null
+      },
+      diff: async (url) => {
+        return fixtureData().pullRequests.has(url) ? FIXTURE_DIFF : null
       }
     },
     traceUrl: (threadId) => {

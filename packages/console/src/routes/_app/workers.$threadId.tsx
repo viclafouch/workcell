@@ -1,6 +1,8 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, notFound } from '@tanstack/react-router'
+import { PullRequestPanel } from '#/components/pull-request/pull-request-panel.tsx'
 import { SessionPanel } from '#/components/session/session-panel.tsx'
+import { TicketPanel } from '#/components/ticket/ticket-panel.tsx'
 import { useIsThreadActive } from '#/hooks/use-host-status.ts'
 import { openSessionView } from '#/lib/session-views.ts'
 import { listWorkersQueryOpts } from '#/queries/workers.ts'
@@ -26,6 +28,20 @@ const WorkerPage = () => {
       isThreadActive={isThreadActive}
       agentName={worker.name}
       header={<WorkerHeader worker={worker} />}
+      ticket={
+        <TicketPanel
+          subject={worker.subject}
+          workerActiveAt={worker.lastActiveAt}
+        />
+      }
+      pullRequest={
+        <PullRequestPanel
+          repository={worker.repository}
+          url={worker.pullRequest}
+          revision={worker.pullRequestRevision}
+          branch={worker.branch}
+        />
+      }
     />
   )
 }

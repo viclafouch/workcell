@@ -4,10 +4,16 @@ import {
   NoFreePlaceError,
   startLoop,
   type QueuedTicket,
-  type TicketQueue,
+  type Ticket,
+  type Tracker,
   type WorkerTask
 } from '@workcell/core'
-import type { LinearApi, LinearTicket } from './linear-api.ts'
+import type {
+  LinearApi,
+  LinearTicket,
+  LinearTicketDetails
+} from './linear-api.ts'
+import { LINEAR_MARK } from './linear-mark.ts'
 import { ticketTask } from './prompts/linear.ts'
 
 const CLAIMABLE_STATE_TYPES = ['backlog', 'unstarted']
@@ -40,25 +46,37 @@ type TicketPollerParams = {
   logger: { info: LogLine; error: LogLine }
 }
 
-function queuedTicketOf(
-  { identifier, title, url, state, labels, assignee, priority }: LinearTicket,
-  blocker: string | null
-): QueuedTicket {
+function ticketOf({
+  identifier,
+  title,
+  url,
+  state,
+  labels,
+  assignee,
+  priority
+}: LinearTicket | LinearTicketDetails): Ticket {
   return {
     key: identifier,
     title,
     url,
     state: {
       name: state.name,
-      category: CLOSED_STATE_TYPES.has(state.type) ? 'closed' : 'open'
+      category: CLOSED_STATE_TYPES.has(state.type) ? 'closed' : 'open',
+      color: state.color
     },
     labels: labels.map(({ name, color }) => {
       return { name, color }
     }),
     assignees: assignee === undefined ? [] : [assignee],
-    priority,
-    blocker: blocker ?? undefined
+    priority
   }
+}
+
+function queuedTicketOf(
+  ticket: LinearTicket,
+  blocker: string | null
+): QueuedTicket {
+  return { ...ticketOf(ticket), blocker: blocker ?? undefined }
 }
 
 export function createTicketPoller({
@@ -234,11 +252,24 @@ export function createTicketPoller({
     }
   }
 
-  const queue: TicketQueue = { tracker: TRACKER_NAME, read: readQueue }
+  const readTicket = async (key: string) => {
+    const ticket = await linear.ticket(key)
+
+    return ticket === undefined
+      ? null
+      : { ...ticketOf(ticket), description: ticket.description }
+  }
+
+  const tracker: Tracker = {
+    name: TRACKER_NAME,
+    mark: LINEAR_MARK,
+    queue: readQueue,
+    ticket: readTicket
+  }
 
   return {
     pollOnce,
-    queue,
+    tracker,
     start: () => {
       return startLoop(run)
     }

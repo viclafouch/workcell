@@ -2,6 +2,7 @@ import {
   LinearDocument,
   LinearError,
   LinearGraphQLClient,
+  InvalidInputLinearError,
   LinearSdk,
   parseLinearError,
   RatelimitedLinearError,
@@ -47,15 +48,20 @@ type LabelledTicketsFilter = {
   stateTypes: readonly string[]
 }
 
-type LabelledTicketNode = Pick<
+type TicketNode = Pick<
   Issue,
   'id' | 'identifier' | 'title' | 'url' | 'priority' | 'priorityLabel'
 > & {
-  state: Pick<WorkflowState, 'id' | 'name' | 'type'>
+  state: Pick<WorkflowState, 'id' | 'name' | 'type' | 'color'>
   labels: { nodes: Pick<IssueLabel, 'name' | 'color'>[] }
   assignee: Pick<User, 'name' | 'avatarUrl'> | null
+}
+
+type LabelledTicketNode = TicketNode & {
   team: { states: { nodes: Pick<WorkflowState, 'id' | 'position'>[] } }
 }
+
+type TicketDetailsNode = TicketNode & Pick<Issue, 'description'>
 
 type LabelledTicketsPage = {
   issues: {
@@ -76,15 +82,19 @@ const STARTED_STATE: LinearDocument.WorkflowStateFilter = {
   type: { eq: STARTED_STATE_TYPE }
 }
 
-export type LinearTicket = Pick<
-  Issue,
-  'id' | 'identifier' | 'title' | 'url'
-> & {
-  state: Pick<WorkflowState, 'id' | 'name' | 'type'>
+type LinearTicketFields = Pick<Issue, 'id' | 'identifier' | 'title' | 'url'> & {
+  state: Pick<WorkflowState, 'id' | 'name' | 'type' | 'color'>
   priority: string | undefined
   labels: Pick<IssueLabel, 'name' | 'color'>[]
   assignee: { name: string; avatarUrl: string | undefined } | undefined
+}
+
+export type LinearTicket = LinearTicketFields & {
   startedStateId: string | undefined
+}
+
+export type LinearTicketDetails = LinearTicketFields & {
+  description: string
 }
 
 export type ResetTicket = Pick<Issue, 'id' | 'identifier'> & {
@@ -94,23 +104,34 @@ export type ResetTicket = Pick<Issue, 'id' | 'identifier'> & {
   backlogState: Pick<WorkflowState, 'id' | 'name' | 'position'> | undefined
 }
 
-const LABELLED_TICKETS_QUERY = `query labelledTickets($filter: IssueFilter, $sort: [IssueSortInput!], $first: Int, $after: String, $startedState: WorkflowStateFilter) {
-  issues(filter: $filter, sort: $sort, first: $first, after: $after) {
-    nodes {
-      id
+const TICKET_FIELDS = `id
       identifier
       title
       url
       priority
       priorityLabel
-      state { id name type }
+      state { id name type color }
       labels(first: ${LABELS_PER_TICKET}) { nodes { name color } }
-      assignee { name avatarUrl }
+      assignee { name avatarUrl }`
+
+const LABELLED_TICKETS_QUERY = `query labelledTickets($filter: IssueFilter, $sort: [IssueSortInput!], $first: Int, $after: String, $startedState: WorkflowStateFilter) {
+  issues(filter: $filter, sort: $sort, first: $first, after: $after) {
+    nodes {
+      ${TICKET_FIELDS}
       team { states(filter: $startedState) { nodes { id position } } }
     }
     pageInfo { hasNextPage endCursor }
   }
 }`
+
+const TICKET_QUERY = `query ticket($key: String!) {
+  issue(id: $key) {
+    ${TICKET_FIELDS}
+    description
+  }
+}`
+
+const TICKET_KEY = /^[A-Z][A-Z0-9]*-\d+$/u
 
 function labelledTicketsFilter({
   readyLabel,
@@ -124,7 +145,7 @@ function labelledTicketsFilter({
   }
 }
 
-function linearTicketOf({
+function ticketFieldsOf({
   id,
   identifier,
   title,
@@ -133,9 +154,8 @@ function linearTicketOf({
   priorityLabel,
   state,
   labels,
-  assignee,
-  team
-}: LabelledTicketNode): LinearTicket {
+  assignee
+}: TicketNode): LinearTicketFields {
   return {
     id,
     identifier,
@@ -147,8 +167,14 @@ function linearTicketOf({
     assignee:
       assignee === null
         ? undefined
-        : { name: assignee.name, avatarUrl: assignee.avatarUrl ?? undefined },
-    startedStateId: firstState(team.states.nodes)?.id
+        : { name: assignee.name, avatarUrl: assignee.avatarUrl ?? undefined }
+  }
+}
+
+function linearTicketOf(node: LabelledTicketNode): LinearTicket {
+  return {
+    ...ticketFieldsOf(node),
+    startedStateId: firstState(node.team.states.nodes)?.id
   }
 }
 
@@ -308,6 +334,29 @@ export function createLinearApi(apiKey: string) {
     return nodes.map(linearTicketOf)
   }
 
+  const ticket = async (
+    key: string
+  ): Promise<LinearTicketDetails | undefined> => {
+    if (!TICKET_KEY.test(key)) {
+      return undefined
+    }
+
+    try {
+      const { issue } = await request<{ issue: TicketDetailsNode }>(
+        TICKET_QUERY,
+        { key }
+      )
+
+      return { ...ticketFieldsOf(issue), description: issue.description ?? '' }
+    } catch (error) {
+      if (error instanceof InvalidInputLinearError) {
+        return undefined
+      }
+
+      throw error
+    }
+  }
+
   const moveTicket = async (id: string, stateId: string) => {
     const { success } = await linear.updateIssue(id, { stateId })
 
@@ -372,6 +421,7 @@ export function createLinearApi(apiKey: string) {
 
   return {
     labelledTickets,
+    ticket,
     teamKeys,
     moveTicket,
     readResetTicket,
