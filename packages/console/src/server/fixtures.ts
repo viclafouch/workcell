@@ -1,4 +1,4 @@
-import type { FeedbackReport, WorkerView } from '@workcell/core'
+import type { FeedbackReport, QueuedTicket, WorkerView } from '@workcell/core'
 
 export const LIVE_FIXTURE_THREAD = 'worker-alpha-login-redirect'
 
@@ -172,3 +172,69 @@ export const FIXTURE_DIFF = `diff --git a/src/auth/redirect.ts b/src/auth/redire
 +  return requested
  }
 `
+
+const READY_LABEL = { name: 'agent-ready', color: '#5e6ad2' }
+
+const WEB_LABEL = { name: 'repo:web', color: '#26b5ce' }
+
+const ticketUrl = (key: string) => {
+  return `https://tracker.example.com/acme/issue/${key}`
+}
+
+export const FIXTURE_TRACKER = 'Linear'
+
+export const FIXTURE_QUEUE: QueuedTicket[] = [
+  {
+    key: 'ENG-142',
+    title: 'Keep the cart of a visitor who signs in halfway through checkout',
+    url: ticketUrl('ENG-142'),
+    state: { name: 'Todo', category: 'open' },
+    labels: [READY_LABEL, WEB_LABEL, { name: 'Bug', color: '#eb5757' }],
+    assignees: [{ name: 'Ada Lovelace' }],
+    priority: 'Urgent'
+  },
+  {
+    key: 'ENG-151',
+    title: 'Rename the export button of the reports page',
+    url: ticketUrl('ENG-151'),
+    state: { name: 'Todo', category: 'open' },
+    labels: [READY_LABEL],
+    assignees: [],
+    priority: 'High',
+    blocker: 'It needs a repository label: repo:web, repo:api.'
+  },
+  {
+    key: 'ENG-139',
+    title: 'Show the delivery date on the order page',
+    url: ticketUrl('ENG-139'),
+    state: { name: 'Backlog', category: 'open' },
+    labels: [READY_LABEL, { name: 'repo:api', color: '#f2994a' }],
+    assignees: [{ name: 'Grace Hopper' }],
+    priority: 'High'
+  },
+  {
+    key: 'ENG-120',
+    title:
+      'Replace every hand-written date format of the dashboard, the invoices and the emails with the one formatter the design system ships',
+    url: ticketUrl('ENG-120'),
+    state: { name: 'Todo', category: 'open' },
+    labels: [
+      READY_LABEL,
+      WEB_LABEL,
+      { name: 'Tech debt', color: '#95a2b3' },
+      { name: 'Design system', color: '#bb87fc' },
+      { name: 'Invoices', color: '#4cb782' },
+      { name: 'Emails', color: '#f7c8c1' }
+    ],
+    assignees: [],
+    priority: 'Low'
+  },
+  {
+    key: 'ENG-98',
+    title: 'Drop the unused feature flags',
+    url: ticketUrl('ENG-98'),
+    state: { name: 'Backlog', category: 'open' },
+    labels: [READY_LABEL, WEB_LABEL],
+    assignees: []
+  }
+]

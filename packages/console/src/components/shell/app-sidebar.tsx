@@ -27,6 +27,7 @@ import {
   titleOfThread
 } from '#/queries/bot-threads.ts'
 import { listFeedbackQueryOpts } from '#/queries/feedback.ts'
+import { getQueueQueryOpts } from '#/queries/queue.ts'
 import { listWorkersQueryOpts } from '#/queries/workers.ts'
 import type { ConsoleBrand } from '#/server/console-context.ts'
 import { BrandMark } from './brand-mark.tsx'
@@ -35,6 +36,7 @@ import { SidebarAsleepWorkers, SidebarWorkerGroup } from './sidebar-workers.tsx'
 
 const BADGE_MEANINGS = {
   '/': 'Workers that work or wait for you',
+  '/queue': 'Tickets that wait for a worker',
   '/feedback': 'Reports'
 } as const
 
@@ -48,11 +50,21 @@ export const AppSidebar = ({ brand }: AppSidebarProps) => {
   const workersQuery = useQuery(listWorkersQueryOpts())
   const feedbackQuery = useQuery(listFeedbackQueryOpts())
   const botThreadsQuery = useQuery(listBotThreadsQueryOpts())
+  const queueQuery = useQuery(getQueueQueryOpts())
   const groups = groupWorkers(workersQuery.data ?? [])
   const badges = {
     '/': (groups.needsYou?.length ?? 0) + (groups.working?.length ?? 0),
+    '/queue':
+      queueQuery.data === null ||
+      queueQuery.data === undefined ||
+      'failure' in queueQuery.data
+        ? 0
+        : queueQuery.data.tickets.length,
     '/feedback': feedbackQuery.data?.length ?? 0
   }
+  const navigationItems = OVERVIEW_ITEMS.filter(({ to }) => {
+    return to !== '/queue' || queueQuery.data !== null
+  })
   const closeOnPhone = () => {
     setOpenMobile(false)
   }
@@ -78,7 +90,7 @@ export const AppSidebar = ({ brand }: AppSidebarProps) => {
         <nav aria-label="Sections" className="contents">
           <SidebarGroup>
             <SidebarMenu>
-              {OVERVIEW_ITEMS.map(({ to, label, icon: Icon }) => {
+              {navigationItems.map(({ to, label, icon: Icon }) => {
                 return (
                   <SidebarMenuItem key={to}>
                     <SidebarMenuButton

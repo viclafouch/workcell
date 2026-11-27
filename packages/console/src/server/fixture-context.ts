@@ -20,6 +20,8 @@ import {
   BOT_FIXTURE_THREAD,
   FIXTURE_DIFF,
   FIXTURE_FEEDBACK,
+  FIXTURE_QUEUE,
+  FIXTURE_TRACKER,
   FIXTURE_WORKERS,
   LIVE_FIXTURE_THREAD
 } from './fixtures.ts'
@@ -161,6 +163,12 @@ export const createFixtureContext = async (): Promise<ConsoleContext> => {
     feedback: {
       recent: () => {
         return FIXTURE_FEEDBACK
+      }
+    },
+    queue: {
+      tracker: FIXTURE_TRACKER,
+      read: async () => {
+        return FIXTURE_QUEUE
       }
     },
     traceUrl: (threadId) => {

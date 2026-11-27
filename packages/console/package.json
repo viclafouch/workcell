@@ -1,7 +1,7 @@
 {
   "name": "@workcell/console",
   "private": true,
-  "description": "The read-only console of the host: the running workers, the finished tasks, the bot threads, one live panel per thread, and the feedback of the agents.",
+  "description": "The read-only console of the host: the queue of the tracker, the running workers, the finished tasks, the bot threads, one live panel per thread, and the feedback of the agents.",
   "license": "MIT",
   "repository": {
     "type": "git",

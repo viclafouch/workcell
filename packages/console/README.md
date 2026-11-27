@@ -1,6 +1,6 @@
 # @workcell/console
 
-The read-only page of the host: the running workers, the finished tasks, the bot threads, one live panel per thread, and the feedback of the agents. A TanStack Start app in SPA mode that the host mounts on its operator listener, so it shares the origin of the harness handlers and needs no CORS and no cookie.
+The read-only page of the host: the queue of the tracker, the running workers, the finished tasks, the bot threads, one live panel per thread, and the feedback of the agents. A TanStack Start app in SPA mode that the host mounts on its operator listener, so it shares the origin of the harness handlers and needs no CORS and no cookie.
 
 ## Mount it
 
@@ -23,6 +23,10 @@ The name of the brand titles the page. Nothing else changes: the layout, the com
 A distribution passes the console chat of each chat integration it runs, and the names and pictures of its workers. A conversation of that chat then shows its channel and a link back to it, the author, picture and time of each message, and the face of the bot or the worker that answers. A thread whose chat the distribution does not pass shows the same conversation with plain icons.
 
 The thoughts of a model show once the distribution asks its models for a summary of their reasoning, at the level it already pays for.
+
+## Show the queue
+
+A distribution that runs a tracker passes the queue its tracker integration builds. The page then shows every ticket that waits for a worker, in the order of the tracker, with the cause of each one that cannot start. A distribution with no tracker passes none, and the page shows no queue.
 
 ## Work on it
 

@@ -2,12 +2,13 @@ import {
   ActivityIcon,
   ChartLineIcon,
   FlaskConicalIcon,
+  ListOrderedIcon,
   MessageSquareWarningIcon,
   type LucideIcon
 } from 'lucide-react'
 
 export type NavigationItem = {
-  to: '/' | '/feedback'
+  to: '/' | '/queue' | '/feedback'
   label: string
   icon: LucideIcon
 }
@@ -19,6 +20,7 @@ export type UpcomingItem = {
 
 export const OVERVIEW_ITEMS = [
   { to: '/', label: 'Now', icon: ActivityIcon },
+  { to: '/queue', label: 'Queue', icon: ListOrderedIcon },
   { to: '/feedback', label: 'Feedback', icon: MessageSquareWarningIcon }
 ] as const satisfies readonly NavigationItem[]
 

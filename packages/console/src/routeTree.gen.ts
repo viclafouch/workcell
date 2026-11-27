@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppFeedbackRouteImport } from './routes/_app/feedback'
+import { Route as AppQueueRouteImport } from './routes/_app/queue'
 import { Route as ApiWorkersRouteImport } from './routes/api/workers'
 import { Route as AppThreadsThreadIdRouteImport } from './routes/_app/threads.$threadId'
 import { Route as AppWorkersThreadIdRouteImport } from './routes/_app/workers.$threadId'
@@ -30,6 +31,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppFeedbackRoute = AppFeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQueueRoute = AppQueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiWorkersRoute = ApiWorkersRouteImport.update({
@@ -61,6 +67,7 @@ const ApiHarnessHarnessSplatRoute = ApiHarnessHarnessSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/feedback': typeof AppFeedbackRoute
+  '/queue': typeof AppQueueRoute
   '/api/workers': typeof ApiWorkersRouteWithChildren
   '/threads/$threadId': typeof AppThreadsThreadIdRoute
   '/workers/$threadId': typeof AppWorkersThreadIdRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/feedback': typeof AppFeedbackRoute
+  '/queue': typeof AppQueueRoute
   '/api/workers': typeof ApiWorkersRouteWithChildren
   '/': typeof AppIndexRoute
   '/threads/$threadId': typeof AppThreadsThreadIdRoute
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_app/feedback': typeof AppFeedbackRoute
+  '/_app/queue': typeof AppQueueRoute
   '/api/workers': typeof ApiWorkersRouteWithChildren
   '/_app/': typeof AppIndexRoute
   '/_app/threads/$threadId': typeof AppThreadsThreadIdRoute
@@ -92,6 +101,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/feedback'
+    | '/queue'
     | '/api/workers'
     | '/threads/$threadId'
     | '/workers/$threadId'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/feedback'
+    | '/queue'
     | '/api/workers'
     | '/'
     | '/threads/$threadId'
@@ -110,6 +121,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/_app/feedback'
+    | '/_app/queue'
     | '/api/workers'
     | '/_app/'
     | '/_app/threads/$threadId'
@@ -145,6 +157,13 @@ declare module '@tanstack/react-router' {
       path: '/feedback'
       fullPath: '/feedback'
       preLoaderRoute: typeof AppFeedbackRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/queue': {
+      id: '/_app/queue'
+      path: '/queue'
+      fullPath: '/queue'
+      preLoaderRoute: typeof AppQueueRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/workers': {
@@ -187,6 +206,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppFeedbackRoute: typeof AppFeedbackRoute
+  AppQueueRoute: typeof AppQueueRoute
   AppIndexRoute: typeof AppIndexRoute
   AppThreadsThreadIdRoute: typeof AppThreadsThreadIdRoute
   AppWorkersThreadIdRoute: typeof AppWorkersThreadIdRoute
@@ -194,6 +214,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppFeedbackRoute: AppFeedbackRoute,
+  AppQueueRoute: AppQueueRoute,
   AppIndexRoute: AppIndexRoute,
   AppThreadsThreadIdRoute: AppThreadsThreadIdRoute,
   AppWorkersThreadIdRoute: AppWorkersThreadIdRoute,

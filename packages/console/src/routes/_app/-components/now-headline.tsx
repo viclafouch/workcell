@@ -1,21 +1,5 @@
 import type { WorkerView } from '@workcell/core'
-
-const NUMBER_WORDS = [
-  'No',
-  'One',
-  'Two',
-  'Three',
-  'Four',
-  'Five',
-  'Six',
-  'Seven',
-  'Eight',
-  'Nine'
-]
-
-const countWord = (count: number) => {
-  return NUMBER_WORDS[count] ?? String(count)
-}
+import { countWord } from '#/lib/count-words.ts'
 
 const workSentence = (count: number) => {
   if (count === 0) {

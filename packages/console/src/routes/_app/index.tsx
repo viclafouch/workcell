@@ -20,6 +20,7 @@ import { BotThreads } from './-components/bot-threads.tsx'
 import { EmptySection } from './-components/empty-section.tsx'
 import { NowHeadline } from './-components/now-headline.tsx'
 import { SectionHeading } from './-components/section-heading.tsx'
+import { UpNext } from './-components/up-next.tsx'
 
 const NowPage = () => {
   const workersQuery = useSuspenseQuery(listWorkersQueryOpts())
@@ -58,6 +59,7 @@ const NowPage = () => {
           <WorkerLanes workers={working} label="Working workers" />
         )}
       </section>
+      <UpNext />
       <section aria-labelledby="bot-heading" className="flex flex-col gap-4">
         <SectionHeading id="bot-heading">Bot threads</SectionHeading>
         {botThreadsQuery.data === undefined ||

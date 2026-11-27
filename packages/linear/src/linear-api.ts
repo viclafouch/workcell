@@ -33,19 +33,42 @@ const STARTED_STATE_TYPE = 'started'
 
 const BACKLOG_STATE_TYPE = 'backlog'
 
-type ReadyTicketsFilter = {
+const NO_PRIORITY = 0
+
+const TICKETS_PER_PAGE = 50
+
+const LABELS_PER_TICKET = 50
+
+type LabelledTicketsFilter = {
   readyLabel: string
-  repositoryLabels: readonly string[]
   stateTypes: readonly string[]
+}
+
+type LabelledTicketNode = Pick<
+  Issue,
+  'id' | 'identifier' | 'title' | 'url' | 'priority' | 'priorityLabel'
+> & {
+  state: Pick<WorkflowState, 'id' | 'name' | 'type'>
+  labels: { nodes: Pick<IssueLabel, 'name' | 'color'>[] }
+  assignee: { name: string; avatarUrl?: string | null } | null
+  team: { states: { nodes: Pick<WorkflowState, 'id' | 'position'>[] } }
+}
+
+type LabelledTicketsPage = {
+  issues: {
+    nodes: LabelledTicketNode[]
+    pageInfo: { hasNextPage: boolean; endCursor?: string | null }
+  }
 }
 
 export type LinearTicket = Pick<
   Issue,
   'id' | 'identifier' | 'title' | 'url'
 > & {
-  stateId: string
-  isStarted: boolean
-  labels: string[]
+  state: Pick<WorkflowState, 'id' | 'name' | 'type'>
+  priority: string | undefined
+  labels: Pick<IssueLabel, 'name' | 'color'>[]
+  assignee: { name: string; avatarUrl: string | undefined } | undefined
   startedStateId: string | undefined
 }
 
@@ -56,17 +79,61 @@ export type ResetTicket = Pick<Issue, 'id' | 'identifier'> & {
   backlogState: Pick<WorkflowState, 'id' | 'name' | 'position'> | undefined
 }
 
-function readyTicketsFilter({
+const LABELLED_TICKETS_QUERY = `query labelledTickets($filter: IssueFilter!, $after: String) {
+  issues(filter: $filter, sort: [{ priority: { order: Descending } }], first: ${TICKETS_PER_PAGE}, after: $after) {
+    nodes {
+      id
+      identifier
+      title
+      url
+      priority
+      priorityLabel
+      state { id name type }
+      labels(first: ${LABELS_PER_TICKET}) { nodes { name color } }
+      assignee { name avatarUrl }
+      team { states(filter: { type: { eq: "${STARTED_STATE_TYPE}" } }) { nodes { id position } } }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}`
+
+function labelledTicketsFilter({
   readyLabel,
-  repositoryLabels,
   stateTypes
-}: ReadyTicketsFilter) {
+}: LabelledTicketsFilter) {
   return {
     and: [
       { labels: { some: { name: { eq: readyLabel } } } },
-      { labels: { some: { name: { in: [...repositoryLabels] } } } },
       { state: { type: { in: [...stateTypes] } } }
     ]
+  }
+}
+
+function linearTicketOf({
+  id,
+  identifier,
+  title,
+  url,
+  priority,
+  priorityLabel,
+  state,
+  labels,
+  assignee,
+  team
+}: LabelledTicketNode): LinearTicket {
+  return {
+    id,
+    identifier,
+    title,
+    url,
+    state,
+    priority: priority === NO_PRIORITY ? undefined : priorityLabel,
+    labels: labels.nodes,
+    assignee:
+      assignee === null
+        ? undefined
+        : { name: assignee.name, avatarUrl: assignee.avatarUrl ?? undefined },
+    startedStateId: firstState(team.states.nodes)?.id
   }
 }
 
@@ -106,16 +173,6 @@ function firstState<State extends Pick<WorkflowState, 'position'>>(
   return states.toSorted((left, right) => {
     return left.position - right.position
   })[0]
-}
-
-function uniqueOf(values: readonly (string | undefined)[]) {
-  return [
-    ...new Set(
-      values.filter((value) => {
-        return value !== undefined
-      })
-    )
-  ]
 }
 
 export function createLinearApi(apiKey: string) {
@@ -209,94 +266,24 @@ export function createLinearApi(apiKey: string) {
 
   const linear = new LinearSdk(request)
 
-  const readyTickets = async (
-    filter: ReadyTicketsFilter
+  const labelledTickets = async (
+    filter: LabelledTicketsFilter
   ): Promise<LinearTicket[]> => {
-    const issues = await linear.paginate(
-      (variables) => {
-        return linear.issues(variables)
-      },
-      { filter: readyTicketsFilter(filter) }
-    )
+    const readPage = async (after?: string): Promise<LabelledTicketNode[]> => {
+      const { issues } = await request<LabelledTicketsPage>(
+        LABELLED_TICKETS_QUERY,
+        { filter: labelledTicketsFilter(filter), after }
+      )
+      const { hasNextPage, endCursor } = issues.pageInfo
 
-    if (issues.length === 0) {
-      return []
+      return hasNextPage && endCursor !== null && endCursor !== undefined
+        ? [...issues.nodes, ...(await readPage(endCursor))]
+        : issues.nodes
     }
 
-    const [states, labels] = await Promise.all([
-      linear.paginate(
-        (variables) => {
-          return linear.workflowStates(variables)
-        },
-        {
-          filter: {
-            team: {
-              id: {
-                in: uniqueOf(
-                  issues.map(({ teamId }) => {
-                    return teamId
-                  })
-                )
-              }
-            }
-          }
-        }
-      ),
-      linear.paginate(
-        (variables) => {
-          return linear.issueLabels(variables)
-        },
-        {
-          filter: {
-            id: {
-              in: uniqueOf(
-                issues.flatMap(({ labelIds }) => {
-                  return labelIds
-                })
-              )
-            }
-          }
-        }
-      )
-    ])
-    const labelNames = new Map(
-      labels.map(({ id, name }) => {
-        return [id, name]
-      })
-    )
+    const nodes = await readPage()
 
-    return issues.flatMap(
-      ({ id, identifier, title, url, stateId, teamId, labelIds }) => {
-        if (stateId === undefined) {
-          return []
-        }
-
-        const teamStates = states.filter((state) => {
-          return state.teamId === teamId
-        })
-
-        return {
-          id,
-          identifier,
-          title,
-          url,
-          stateId,
-          isStarted: teamStates.some((state) => {
-            return state.id === stateId && state.type === STARTED_STATE_TYPE
-          }),
-          labels: uniqueOf(
-            labelIds.map((labelId) => {
-              return labelNames.get(labelId)
-            })
-          ),
-          startedStateId: firstState(
-            teamStates.filter(({ type }) => {
-              return type === STARTED_STATE_TYPE
-            })
-          )?.id
-        }
-      }
-    )
+    return nodes.map(linearTicketOf)
   }
 
   const moveTicket = async (id: string, stateId: string) => {
@@ -362,7 +349,7 @@ export function createLinearApi(apiKey: string) {
   }
 
   return {
-    readyTickets,
+    labelledTickets,
     teamKeys,
     moveTicket,
     readResetTicket,
