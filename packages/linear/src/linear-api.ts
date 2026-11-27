@@ -1,4 +1,5 @@
 import {
+  LinearDocument,
   LinearError,
   LinearGraphQLClient,
   LinearSdk,
@@ -7,6 +8,8 @@ import {
   type Attachment,
   type Issue,
   type IssueLabel,
+  type PageInfo,
+  type User,
   type WorkflowState
 } from '@linear/sdk'
 import { AsyncRetryer, RateLimiter } from '@tanstack/pacer'
@@ -50,15 +53,27 @@ type LabelledTicketNode = Pick<
 > & {
   state: Pick<WorkflowState, 'id' | 'name' | 'type'>
   labels: { nodes: Pick<IssueLabel, 'name' | 'color'>[] }
-  assignee: { name: string; avatarUrl?: string | null } | null
+  assignee: Pick<User, 'name' | 'avatarUrl'> | null
   team: { states: { nodes: Pick<WorkflowState, 'id' | 'position'>[] } }
 }
 
 type LabelledTicketsPage = {
   issues: {
     nodes: LabelledTicketNode[]
-    pageInfo: { hasNextPage: boolean; endCursor?: string | null }
+    pageInfo: Pick<PageInfo, 'hasNextPage' | 'endCursor'>
   }
+}
+
+type LabelledTicketsVariables = LinearDocument.IssuesQueryVariables & {
+  startedState: LinearDocument.WorkflowStateFilter
+}
+
+const PRIORITY_ORDER: LinearDocument.IssueSortInput[] = [
+  { priority: { order: LinearDocument.PaginationSortOrder.Descending } }
+]
+
+const STARTED_STATE: LinearDocument.WorkflowStateFilter = {
+  type: { eq: STARTED_STATE_TYPE }
 }
 
 export type LinearTicket = Pick<
@@ -79,8 +94,8 @@ export type ResetTicket = Pick<Issue, 'id' | 'identifier'> & {
   backlogState: Pick<WorkflowState, 'id' | 'name' | 'position'> | undefined
 }
 
-const LABELLED_TICKETS_QUERY = `query labelledTickets($filter: IssueFilter!, $after: String) {
-  issues(filter: $filter, sort: [{ priority: { order: Descending } }], first: ${TICKETS_PER_PAGE}, after: $after) {
+const LABELLED_TICKETS_QUERY = `query labelledTickets($filter: IssueFilter, $sort: [IssueSortInput!], $first: Int, $after: String, $startedState: WorkflowStateFilter) {
+  issues(filter: $filter, sort: $sort, first: $first, after: $after) {
     nodes {
       id
       identifier
@@ -91,7 +106,7 @@ const LABELLED_TICKETS_QUERY = `query labelledTickets($filter: IssueFilter!, $af
       state { id name type }
       labels(first: ${LABELS_PER_TICKET}) { nodes { name color } }
       assignee { name avatarUrl }
-      team { states(filter: { type: { eq: "${STARTED_STATE_TYPE}" } }) { nodes { id position } } }
+      team { states(filter: $startedState) { nodes { id position } } }
     }
     pageInfo { hasNextPage endCursor }
   }
@@ -100,7 +115,7 @@ const LABELLED_TICKETS_QUERY = `query labelledTickets($filter: IssueFilter!, $af
 function labelledTicketsFilter({
   readyLabel,
   stateTypes
-}: LabelledTicketsFilter) {
+}: LabelledTicketsFilter): LinearDocument.IssueFilter {
   return {
     and: [
       { labels: { some: { name: { eq: readyLabel } } } },
@@ -270,9 +285,16 @@ export function createLinearApi(apiKey: string) {
     filter: LabelledTicketsFilter
   ): Promise<LinearTicket[]> => {
     const readPage = async (after?: string): Promise<LabelledTicketNode[]> => {
+      const variables: LabelledTicketsVariables = {
+        filter: labelledTicketsFilter(filter),
+        sort: PRIORITY_ORDER,
+        first: TICKETS_PER_PAGE,
+        after,
+        startedState: STARTED_STATE
+      }
       const { issues } = await request<LabelledTicketsPage>(
         LABELLED_TICKETS_QUERY,
-        { filter: labelledTicketsFilter(filter), after }
+        variables
       )
       const { hasNextPage, endCursor } = issues.pageInfo
 
