@@ -1,10 +1,17 @@
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { FeedbackList } from '#/components/feedback/feedback-list.tsx'
 import { listFeedbackQueryOpts } from '#/queries/feedback.ts'
+import { listWorkersQueryOpts } from '#/queries/workers.ts'
 
 const FeedbackPage = () => {
   const feedbackQuery = useSuspenseQuery(listFeedbackQueryOpts())
+  const workersQuery = useQuery(listWorkersQueryOpts())
+  const workerThreadIds = new Set(
+    (workersQuery.data ?? []).map(({ threadId }) => {
+      return threadId
+    })
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-panel flex-col gap-6 px-4 py-8 sm:px-6">
@@ -17,9 +24,11 @@ const FeedbackPage = () => {
           task.
         </p>
       </div>
-      <div className="rounded-xl border bg-card px-4">
-        <FeedbackList reports={feedbackQuery.data} showsThread />
-      </div>
+      <FeedbackList
+        reports={feedbackQuery.data}
+        showsThread
+        workerThreadIds={workerThreadIds}
+      />
     </div>
   )
 }

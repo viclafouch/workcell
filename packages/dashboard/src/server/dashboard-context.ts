@@ -6,7 +6,6 @@ export type HarnessName = (typeof HARNESS_NAMES)[number]
 
 export type DashboardBrand = {
   name: string
-  stylesheetUrl?: string
   logoUrl?: string
 }
 

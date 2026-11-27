@@ -18,6 +18,7 @@ const MODEL_IDS = {
   orchestrator: 'gpt-6-luna',
   worker: 'claude-opus-5-5',
   compaction: 'claude-haiku-5-5',
+  title: 'claude-haiku-5-5',
   memory: 'claude-haiku-5-5',
   grader: 'kimi-k3'
 }
@@ -206,6 +207,11 @@ describe('createModels on a model gateway', () => {
           api: 'anthropic-messages',
           model: 'claude-haiku-5-5'
         },
+        title: {
+          provider: 'model-gateway',
+          api: 'anthropic-messages',
+          model: 'claude-haiku-5-5'
+        },
         memory: {
           provider: 'model-gateway',
           api: 'anthropic-messages',
@@ -221,6 +227,14 @@ describe('createModels on a model gateway', () => {
   })
 })
 
+function titleConfig(title?: string) {
+  return toModelConfig({
+    defaultModelId: 'claude-opus-5-5',
+    roleModelIds: { compaction: 'claude-haiku-5-5', title },
+    gatewayUrl: 'https://llm.example.com'
+  })
+}
+
 describe('toModelConfig', () => {
   it('gives each role the default model, unless the role sets its own', () => {
     expect(
@@ -234,11 +248,17 @@ describe('toModelConfig', () => {
         orchestrator: 'claude-haiku-5-5',
         worker: 'kimi-k3',
         compaction: 'claude-haiku-5-5',
+        title: 'claude-haiku-5-5',
         memory: 'claude-haiku-5-5',
         grader: 'claude-haiku-5-5'
       },
       gatewayUrl: 'https://llm.example.com'
     })
+  })
+
+  it('gives the title role the compaction model, unless it sets its own', () => {
+    expect(titleConfig().modelIds.title).toBe('claude-haiku-5-5')
+    expect(titleConfig('kimi-k3').modelIds.title).toBe('kimi-k3')
   })
 })
 

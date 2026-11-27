@@ -38,11 +38,11 @@ const FencedCode = ({ children }: FencedCodeProps) => {
 
 const COMPONENTS = { pre: FencedCode } satisfies MarkdownComponents
 
-type AgentMarkdownProps = {
+type ChatMarkdownProps = {
   text: string
 }
 
-export const AgentMarkdown = ({ text }: AgentMarkdownProps) => {
+export const ChatMarkdown = ({ text }: ChatMarkdownProps) => {
   return (
     <div className="typeset typeset-chat">
       <Markdown

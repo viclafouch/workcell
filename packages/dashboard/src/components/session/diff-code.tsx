@@ -8,6 +8,7 @@ import {
   CodeBlockLine,
   CodeBlockTitle
 } from '#/components/ui/code-block.tsx'
+import { PathLabel } from './path-label.tsx'
 
 type DiffLineVariant = 'added' | 'removed' | 'highlighted' | 'default'
 
@@ -33,10 +34,11 @@ const contentOfLine = (line: string, variant: DiffLineVariant) => {
 
 type DiffCodeProps = {
   patch: string
-  title: string
+  path: string
+  className?: string
 }
 
-export const DiffCode = ({ patch, title }: DiffCodeProps) => {
+export const DiffCode = ({ patch, path, className }: DiffCodeProps) => {
   const allLines = patch.replace(/\n$/u, '').split('\n')
   const firstHunk = allLines.findIndex((line) => {
     return line.startsWith('@@')
@@ -48,17 +50,20 @@ export const DiffCode = ({ patch, title }: DiffCodeProps) => {
   })
 
   return (
-    <CodeBlock size="sm">
+    <CodeBlock size="sm" className={className}>
       <CodeBlockHeader>
-        <CodeBlockTitle>
-          <GitCompareIcon aria-hidden />
-          {title}
+        <CodeBlockTitle className="min-w-0">
+          <GitCompareIcon aria-hidden className="shrink-0" />
+          <PathLabel path={path} className="font-mono" />
         </CodeBlockTitle>
         <CodeBlockActions>
           <CodeBlockCopyButton value={patch} />
         </CodeBlockActions>
       </CodeBlockHeader>
-      <CodeBlockContent className="max-h-code" aria-label={title}>
+      <CodeBlockContent
+        className="max-h-code"
+        aria-label={`Changes to ${path}`}
+      >
         {lines.map((line) => {
           return (
             <CodeBlockLine key={line.id} variant={line.variant}>

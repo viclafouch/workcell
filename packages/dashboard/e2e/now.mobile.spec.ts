@@ -7,10 +7,7 @@ test.describe('the page of what runs now on a phone', () => {
     await page.goto('/')
 
     await expect(
-      page.getByRole('heading', {
-        level: 1,
-        name: 'Three workers are on a task.'
-      })
+      page.getByRole('heading', { level: 1, name: 'Two workers are working.' })
     ).toBeVisible()
 
     const overflow = await page.evaluate(() => {

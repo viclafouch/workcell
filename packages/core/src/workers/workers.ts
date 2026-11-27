@@ -50,6 +50,7 @@ export type WorkerTask = {
   repository: string
   entrySkill?: string
   subject?: string
+  originThreadId?: string
   branch?: string
   inputId?: string
 }
@@ -403,8 +404,7 @@ export function createWorkers({
   const openNamedWorker = async (
     workerTask: WorkerTask
   ): Promise<OpenedWorker> => {
-    const { starter, task, entrySkill, repository, subject, branch, inputId } =
-      workerTask
+    const { starter, ...taskFields } = workerTask
 
     if (!isStarter(starter)) {
       throw refusalOf(starter)
@@ -419,19 +419,14 @@ export function createWorkers({
     )
     const metadata: WorkerMetadata = {
       name: pickFreeName(workerNames, liveNames),
-      task,
-      entrySkill,
-      repository,
-      subject,
-      branch,
-      inputId
+      ...taskFields
     }
     const session = await host.open(harness, {
       threadId: randomUUIDv7(),
       user: starter
     })
     await session.updateIndexEntry({
-      title: `${metadata.name} · ${subject ?? task}`,
+      title: `${metadata.name} · ${taskFields.subject ?? taskFields.task}`,
       metadata
     })
 

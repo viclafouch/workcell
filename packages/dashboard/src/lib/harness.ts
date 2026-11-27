@@ -19,10 +19,26 @@ export const harnessUrl = (harness: HarnessName) => {
   return `${HARNESS_ROUTE}/${harness}`
 }
 
-export const createHostClient = (harness: HarnessName) => {
+type HostClientParams = {
+  onOpen?: () => void
+}
+
+export const createHostClient = (
+  harness: HarnessName,
+  { onOpen }: HostClientParams = {}
+) => {
   return createHarnessClient({
     url: harnessUrl(harness),
-    threadId: HOST_LEVEL_THREAD
+    threadId: HOST_LEVEL_THREAD,
+    fetch: async (input, init) => {
+      const response = await fetch(input, init)
+
+      if (response.ok) {
+        onOpen?.()
+      }
+
+      return response
+    }
   })
 }
 

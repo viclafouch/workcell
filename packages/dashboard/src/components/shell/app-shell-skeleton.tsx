@@ -4,7 +4,7 @@ import { Spinner } from '#/components/ui/spinner.tsx'
 export const AppShellSkeleton = () => {
   return (
     <div className="flex min-h-dvh">
-      <div className="hidden w-64 shrink-0 flex-col gap-6 border-r bg-sidebar p-4 md:flex">
+      <div className="skeleton-sidebar hidden shrink-0 flex-col gap-6 border-r bg-sidebar p-4 md:flex">
         <Skeleton className="h-6 w-28" />
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-20" />

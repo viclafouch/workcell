@@ -9,12 +9,19 @@ import {
 } from '#/components/ui/empty.tsx'
 import { FeedbackItem } from './feedback-item.tsx'
 
+const NO_WORKER_THREADS: ReadonlySet<string> = new Set()
+
 type FeedbackListProps = {
   reports: readonly FeedbackReport[]
   showsThread: boolean
+  workerThreadIds?: ReadonlySet<string>
 }
 
-export const FeedbackList = ({ reports, showsThread }: FeedbackListProps) => {
+export const FeedbackList = ({
+  reports,
+  showsThread,
+  workerThreadIds = NO_WORKER_THREADS
+}: FeedbackListProps) => {
   if (reports.length === 0) {
     return (
       <Empty className="border">
@@ -40,6 +47,7 @@ export const FeedbackList = ({ reports, showsThread }: FeedbackListProps) => {
             key={report.id}
             report={report}
             showsThread={showsThread}
+            isWorkerThread={workerThreadIds.has(report.threadId)}
           />
         )
       })}

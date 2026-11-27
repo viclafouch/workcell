@@ -20,6 +20,10 @@ import {
   TraceTitle
 } from '#/components/ui/trace.tsx'
 import { HighlightedCode } from './highlighted-code.tsx'
+import { PathLabel } from './path-label.tsx'
+import { QuestionStep } from './question-step.tsx'
+
+const QUESTION_TOOL = 'question'
 
 type ToolKind = {
   icon: LucideIcon
@@ -115,6 +119,10 @@ type ToolStepProps = {
 }
 
 export const ToolStep = ({ part }: ToolStepProps) => {
+  if (part.name === QUESTION_TOOL) {
+    return <QuestionStep part={part} />
+  }
+
   const kind = kindOfTool(part.name)
   const { icon: Icon } = kind
   const subject = subjectOf(part, kind)
@@ -123,15 +131,24 @@ export const ToolStep = ({ part }: ToolStepProps) => {
       <TraceIcon>
         <Icon />
       </TraceIcon>
-      <TraceTitle>
-        {verbOf(part, kind)}
-        {subject === '' ? null : (
-          <>
-            {' '}
-            <code className="font-mono">{subject}</code>
-          </>
-        )}
-      </TraceTitle>
+      {kind.subjectKey === 'path' && subject !== '' ? (
+        <TraceTitle className="flex gap-[1ch]">
+          <span className="shrink-0">{verbOf(part, kind)}</span>
+          <code className="flex min-w-0 font-mono">
+            <PathLabel path={subject} />
+          </code>
+        </TraceTitle>
+      ) : (
+        <TraceTitle>
+          {verbOf(part, kind)}
+          {subject === '' ? null : (
+            <>
+              {' '}
+              <code className="font-mono">{subject}</code>
+            </>
+          )}
+        </TraceTitle>
+      )}
       {kind === GENERIC_TOOL ? null : (
         <TraceDescription className="font-mono">{part.name}</TraceDescription>
       )}

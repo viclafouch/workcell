@@ -86,7 +86,12 @@ export const PlanStep = ({ state }: PlanStepProps) => {
                   <TraceIcon>
                     <Icon />
                   </TraceIcon>
-                  <TraceTitle>{item.text}</TraceTitle>
+                  <TraceTitle
+                    dir="auto"
+                    className="whitespace-normal wrap-anywhere"
+                  >
+                    {item.text}
+                  </TraceTitle>
                 </TraceLine>
               )
             })}

@@ -257,7 +257,7 @@ export function createOrchestratorThreads({
         const task: TaskUpdateChunk = {
           type: 'task_update',
           id: event.toolCallId,
-          title: event.toolCallName,
+          title: lines.toolTask(event.toolCallName),
           status: 'in_progress'
         }
         tasks.set(task.id, task)

@@ -16,6 +16,7 @@ import {
   TableRow
 } from '#/components/ui/table.tsx'
 import { statusOfWorker } from '#/constants/worker-status.ts'
+import { formatAgo, formatDateTime } from '#/lib/dates.ts'
 import { formatUsd } from '#/lib/money.ts'
 
 const features = tableFeatures({})
@@ -27,22 +28,60 @@ const columns = helper.columns([
     header: 'Worker',
     cell: ({ row }) => {
       return (
+        <span dir="auto" className="font-semibold">
+          {row.original.name}
+        </span>
+      )
+    }
+  }),
+  helper.accessor('topic', {
+    header: 'Task',
+    cell: ({ row }) => {
+      return (
         <Link
           to="/workers/$threadId"
           params={{ threadId: row.original.threadId }}
-          className="font-semibold underline-offset-4 hover:underline"
+          dir="auto"
+          className="line-clamp-2 underline-offset-4 hover:underline"
         >
-          {row.original.name}
+          {row.original.topic}
         </Link>
       )
     }
   }),
-  helper.accessor('topic', { header: 'Task' }),
   helper.display({
     id: 'outcome',
     header: 'Outcome',
     cell: ({ row }) => {
-      return <StatusPill status={statusOfWorker(row.original)} />
+      const { outcome } = row.original
+
+      return (
+        <span className="flex flex-col items-start gap-1">
+          <StatusPill status={statusOfWorker(row.original)} />
+          {outcome?.cause === undefined ? null : (
+            <span className="line-clamp-2 text-label text-muted-foreground">
+              {outcome.cause}
+            </span>
+          )}
+        </span>
+      )
+    }
+  }),
+  helper.display({
+    id: 'ended',
+    header: 'Ended',
+    cell: ({ row }) => {
+      const changedAt = row.original.outcome?.changedAt
+
+      return changedAt === undefined ? null : (
+        <time
+          dateTime={new Date(changedAt).toISOString()}
+          title={formatDateTime(changedAt)}
+          className="whitespace-nowrap"
+        >
+          {formatAgo(changedAt)}
+        </time>
+      )
     }
   }),
   helper.accessor('spentUsd', {
@@ -61,7 +100,7 @@ export const FinishedTasksTable = ({ workers }: FinishedTasksTableProps) => {
   const table = useTable({ features, columns, data: workers })
 
   return (
-    <Card className="py-0">
+    <Card className="stacked-table py-0">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((group) => {
@@ -86,7 +125,11 @@ export const FinishedTasksTable = ({ workers }: FinishedTasksTableProps) => {
               <TableRow key={row.id}>
                 {row.getAllCells().map((cell) => {
                   return (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      data-label={String(cell.column.columnDef.header)}
+                      className="align-top whitespace-normal"
+                    >
                       <table.FlexRender cell={cell} />
                     </TableCell>
                   )

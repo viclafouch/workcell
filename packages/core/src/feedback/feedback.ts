@@ -69,24 +69,33 @@ const reportInputSchema = z.object({
   source: z.enum(['agent', 'user']).describe(SEND_FEEDBACK_TEXT.source)
 })
 
-type ReportInput = z.infer<typeof reportInputSchema>
+const feedbackReportSchema = reportInputSchema.extend({
+  id: z.string(),
+  at: z.string(),
+  harness: z.string(),
+  agent: z.string().optional(),
+  model: z.string(),
+  task: z.string().optional(),
+  threadId: z.string(),
+  threadLink: z.string().optional(),
+  runId: z.string(),
+  reporter: z.string().optional(),
+  version: z.string()
+})
 
-export type FeedbackReport = ReportInput & {
-  id: string
-  at: string
-  harness: string
-  agent?: string
-  model: string
-  task?: string
-  threadId: string
-  threadLink?: string
-  runId: string
-  reporter?: string
-  version: string
-}
+export type FeedbackReport = z.infer<typeof feedbackReportSchema>
 
-export type FeedbackPluginState = {
-  reports: FeedbackReport[]
+const feedbackPluginStateSchema = z.object({
+  reports: z.array(feedbackReportSchema)
+})
+
+export type FeedbackPluginState = z.infer<typeof feedbackPluginStateSchema>
+
+export function feedbackReportsOf(plugins: Record<string, unknown>) {
+  return (
+    feedbackPluginStateSchema.safeParse(plugins[FEEDBACK_PLUGIN]).data
+      ?.reports ?? []
+  )
 }
 
 export type DeliverFeedback = (

@@ -1,5 +1,6 @@
 import { InfoIcon, TriangleAlertIcon } from 'lucide-react'
 import type { ViewMessage } from '@tanstack/ai-harness/view'
+import { ChatMarkdown } from '#/components/markdown/chat-markdown.tsx'
 import { Alert, AlertDescription } from '#/components/ui/alert.tsx'
 import { Bubble, BubbleContent } from '#/components/ui/bubble.tsx'
 import {
@@ -23,8 +24,8 @@ const ChatTurn = ({ message }: ChatTurnProps) => {
       <Message align="end">
         <MessageContent>
           <Bubble align="end" variant="muted">
-            <BubbleContent className="whitespace-pre-wrap">
-              {message.text}
+            <BubbleContent dir="auto">
+              <ChatMarkdown text={message.text} />
             </BubbleContent>
           </Bubble>
         </MessageContent>
@@ -60,7 +61,7 @@ type SessionChatProps = {
 export const SessionChat = ({ messages, isStreaming }: SessionChatProps) => {
   return (
     <MessageScrollerProvider autoScroll>
-      <MessageScroller className="h-chat rounded-xl border bg-card">
+      <MessageScroller className="h-full min-h-0 rounded-xl border bg-card">
         <MessageScrollerViewport>
           <MessageScrollerContent
             aria-label="Transcript"

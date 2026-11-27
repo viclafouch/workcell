@@ -163,4 +163,23 @@ describe('the setup of a worker sandbox', () => {
     ])
     expect(recorded.events.at(-1)).toStrictEqual({ step: 'done' })
   })
+
+  it('shows the failed step and its cause in the view of the worker', async () => {
+    const url = await createMigratedDatabase()
+    await using agent = await openWorkers(url, [{ text: 'Done.' }], {
+      originUrl: origin.url,
+      setup: ['exit 3']
+    })
+
+    const worker = await agent.workers.startWorker({
+      starter: TEST_STARTER,
+      repository: REPOSITORY,
+      task: 'Say done.'
+    })
+    await worker.firstTurn
+    const [view] = await agent.viewWorkers()
+
+    expect(view?.sandboxFailure?.step).toBe('setup')
+    expect(view?.sandboxFailure?.cause).toBeTypeOf('string')
+  })
 })

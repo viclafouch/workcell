@@ -5,5 +5,5 @@ const usd = new Intl.NumberFormat('en', {
 })
 
 export const formatUsd = (amount: number) => {
-  return usd.format(amount)
+  return Number.isFinite(amount) ? usd.format(amount) : 'Not known'
 }

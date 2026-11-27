@@ -87,6 +87,7 @@ function viewOf(facts: Partial<Parameters<typeof workerViewOf>[0]> = {}) {
     pendingWaits: [],
     spentUsd: 1.5,
     budgetUsd: 5,
+    sandboxFailure: undefined,
     ...facts
   })
 }
@@ -107,6 +108,8 @@ describe('the view of a worker', () => {
       name: 'Alpha',
       repository: 'acme/app',
       topic: 'Fix the ticket.',
+      originThreadId: undefined,
+      lastActiveAt: WORKER.updatedAt,
       phase: 'tool',
       command: 'pnpm test',
       turnUsd: 0.4,
@@ -115,7 +118,21 @@ describe('the view of a worker', () => {
       branch: 'task-1-fix',
       pullRequest: 'https://example.com/acme/app/pull/7',
       waits: ['question'],
-      startupMs: undefined
+      startupMs: undefined,
+      sandboxFailure: undefined
+    })
+  })
+
+  it('shows the step and the cause of a sandbox that failed to start', () => {
+    const sandboxFailure = {
+      step: 'create' as const,
+      cause: 'The image of the sandbox is missing.',
+      failedAt: 1
+    }
+
+    expect(viewOf({ activity: undefined, sandboxFailure })).toMatchObject({
+      phase: 'idle',
+      sandboxFailure
     })
   })
 

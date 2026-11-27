@@ -73,6 +73,20 @@ const OUTCOME_STATUSES = {
   }
 } as const satisfies Record<Outcome, WorkerStatus>
 
+const OUTCOME_STATUSES_WITHOUT_PULL_REQUEST = {
+  ...OUTCOME_STATUSES,
+  success: {
+    tone: 'success',
+    label: 'Done',
+    hint: 'It finished its task with nothing to merge.'
+  },
+  flawed: {
+    tone: 'success',
+    label: 'Done after changes',
+    hint: 'A person asked for changes before it finished.'
+  }
+} as const satisfies Record<Outcome, WorkerStatus>
+
 export const LIFECYCLE_STAGES = [
   'Sandbox',
   'Work',
@@ -89,15 +103,45 @@ export const STAGE_HINTS = {
   Done: 'The task ended.'
 } as const satisfies Record<LifecycleStage, string>
 
+const SETUP_STEP_NAMES = {
+  create: 'creation',
+  clone: 'clone',
+  setup: 'setup commands',
+  restore: 'restore of its changes',
+  bind: 'binding'
+} as const satisfies Record<
+  NonNullable<WorkerView['sandboxFailure']>['step'],
+  string
+>
+
+const sandboxFailedStatus = ({
+  step,
+  cause
+}: NonNullable<WorkerView['sandboxFailure']>): WorkerStatus => {
+  return {
+    tone: 'failed',
+    label: 'Sandbox failed',
+    hint: `The ${SETUP_STEP_NAMES[step]} of its sandbox failed: ${cause}`
+  }
+}
+
 export const statusOfWorker = ({
   phase,
-  outcome
+  outcome,
+  pullRequest,
+  sandboxFailure
 }: WorkerView): WorkerStatus => {
   if (outcome === undefined) {
-    return PHASE_STATUSES[phase]
+    return sandboxFailure !== undefined && phase === 'idle'
+      ? sandboxFailedStatus(sandboxFailure)
+      : PHASE_STATUSES[phase]
   }
 
-  const status = OUTCOME_STATUSES[outcome.value]
+  const status = (
+    pullRequest === undefined
+      ? OUTCOME_STATUSES_WITHOUT_PULL_REQUEST
+      : OUTCOME_STATUSES
+  )[outcome.value]
 
   return outcome.cause === undefined
     ? status
@@ -121,4 +165,28 @@ export const stageOfWorker = ({
 
 export const matchIsLiveTone = (tone: StatusTone) => {
   return tone === 'running'
+}
+
+export type WorkerGroup = 'needsYou' | 'working' | 'asleep' | 'finished'
+
+export const groupOfWorker = (worker: WorkerView): WorkerGroup => {
+  const { phase, waits } = worker
+
+  if (phase === 'finished') {
+    return 'finished'
+  }
+
+  if (
+    phase === 'waiting' ||
+    waits.length > 0 ||
+    statusOfWorker(worker).tone === 'failed'
+  ) {
+    return 'needsYou'
+  }
+
+  return phase === 'idle' ? 'asleep' : 'working'
+}
+
+export const groupWorkers = (workers: readonly WorkerView[]) => {
+  return Object.groupBy(workers, groupOfWorker)
 }

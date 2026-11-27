@@ -1,6 +1,6 @@
 import { BotIcon, BrainIcon, CircleAlertIcon, FileIcon } from 'lucide-react'
 import type { MediaPart, ViewPart } from '@tanstack/ai-harness/view'
-import { AgentMarkdown } from '#/components/markdown/agent-markdown.tsx'
+import { ChatMarkdown } from '#/components/markdown/chat-markdown.tsx'
 import {
   Attachment,
   AttachmentContent,
@@ -122,7 +122,7 @@ export const AssistantParts = ({ parts }: AssistantPartsProps) => {
       {parts.map((part, index) => {
         if (part.type === 'text') {
           // oxlint-disable-next-line react/no-array-index-key -- a text part has no id but its position in the message
-          return <AgentMarkdown key={index} text={part.text} />
+          return <ChatMarkdown key={index} text={part.text} />
         }
 
         if (part.type === 'reasoning') {

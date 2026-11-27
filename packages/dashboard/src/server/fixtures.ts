@@ -12,6 +12,10 @@ const OLDER_FEEDBACK_AGE = Temporal.Duration.from({ hours: 2 })
 
 const BLOCKED_AGE = Temporal.Duration.from({ hours: 3 })
 
+const ASLEEP_AGE = Temporal.Duration.from({ hours: 26 })
+
+const SANDBOX_FAILURE_AGE = Temporal.Duration.from({ minutes: 5 })
+
 const agoInMs = (age: Temporal.Duration) => {
   return Temporal.Now.instant().subtract(age).epochMilliseconds
 }
@@ -26,6 +30,8 @@ export const FIXTURE_WORKERS: WorkerView[] = [
     name: 'Alpha',
     repository: 'acme/web',
     topic: 'Send a signed-out visitor back to the page they asked for',
+    originThreadId: BOT_FIXTURE_THREAD,
+    lastActiveAt: agoInMs(FEEDBACK_AGE),
     phase: 'tool',
     command: 'pnpm vitest run src/auth',
     turnUsd: 0.18,
@@ -59,6 +65,34 @@ export const FIXTURE_WORKERS: WorkerView[] = [
       state: 'setup',
       step: 'clone',
       elapsedMs: 12_000
+    }
+  },
+  {
+    threadId: 'worker-foxtrot-readme',
+    name: 'Foxtrot',
+    repository: 'acme/docs',
+    topic: 'Fix the typos of the package READMEs',
+    lastActiveAt: agoInMs(ASLEEP_AGE),
+    phase: 'idle',
+    spentUsd: 0.3,
+    budgetUsd: 5,
+    waits: []
+  },
+  {
+    threadId: 'worker-golf-node-version',
+    name: 'Golf',
+    repository: 'acme/api',
+    topic: 'Say which Node version the repository asks for',
+    lastActiveAt: agoInMs(SANDBOX_FAILURE_AGE),
+    phase: 'idle',
+    spentUsd: 0.04,
+    budgetUsd: 5,
+    waits: [],
+    sandboxFailure: {
+      step: 'create',
+      cause:
+        'The image of the sandbox is missing: build it before the first sandbox.',
+      failedAt: agoInMs(SANDBOX_FAILURE_AGE)
     }
   },
   {

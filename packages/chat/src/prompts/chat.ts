@@ -19,7 +19,26 @@ export type ChatLines = {
   reject: string
   stop: string
   decisions: Record<WorkerApproval['answer'], string>
+  toolTask: (toolName: string) => string
 }
+
+const TOOL_TASKS = new Map([
+  ['read_file', 'Reading a file'],
+  ['list_files', 'Listing files'],
+  ['grep', 'Searching the code'],
+  ['bash', 'Running a command'],
+  ['write_file', 'Writing a file'],
+  ['edit_file', 'Editing a file'],
+  ['webfetch', 'Reading a web page'],
+  ['websearch', 'Searching the web'],
+  ['todo_write', 'Updating the plan'],
+  ['question', 'Asking a question'],
+  ['send_feedback', 'Sending feedback'],
+  ['list_workers', 'Checking the workers'],
+  ['start_worker', 'Starting a worker'],
+  ['message_worker', 'Messaging a worker'],
+  ['stop_worker', 'Stopping a worker']
+])
 
 export const CHAT_LINES: ChatLines = {
   stoppedTurn: 'Stopped.',
@@ -45,5 +64,8 @@ export const CHAT_LINES: ChatLines = {
   approve: 'Approve',
   reject: 'Reject',
   stop: 'Stop',
-  decisions: { once: 'approved', reject: 'rejected' }
+  decisions: { once: 'approved', reject: 'rejected' },
+  toolTask: (toolName) => {
+    return TOOL_TASKS.get(toolName) ?? 'Using a tool'
+  }
 }

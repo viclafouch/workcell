@@ -3,6 +3,7 @@ import { FileDiffIcon, FileMinusIcon, FilePlusIcon } from 'lucide-react'
 import { Button } from '#/components/ui/button.tsx'
 import type { FileChange } from '#/lib/workspace-events.ts'
 import { DiffCode } from './diff-code.tsx'
+import { PathLabel } from './path-label.tsx'
 
 const CHANGE_ICONS = {
   created: FilePlusIcon,
@@ -48,7 +49,7 @@ export const ChangedFiles = ({ changes }: ChangedFilesProps) => {
                 }}
               >
                 <Icon aria-hidden />
-                <span className="truncate font-mono">{change.path}</span>
+                <PathLabel path={change.path} className="font-mono" />
                 <span className="ml-auto tabular text-label">
                   <span className="text-status-success">
                     +{change.additions}
@@ -66,10 +67,7 @@ export const ChangedFiles = ({ changes }: ChangedFilesProps) => {
           secret file.
         </p>
       ) : (
-        <DiffCode
-          patch={selected.patch}
-          title={`Changes to ${selected.path}`}
-        />
+        <DiffCode patch={selected.patch} path={selected.path} />
       )}
     </div>
   )
