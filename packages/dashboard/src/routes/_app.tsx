@@ -4,6 +4,7 @@ import { AppShellSkeleton } from '#/components/shell/app-shell-skeleton.tsx'
 import { AppSidebar } from '#/components/shell/app-sidebar.tsx'
 import { SidebarInset, SidebarProvider } from '#/components/ui/sidebar.tsx'
 import { TooltipProvider } from '#/components/ui/tooltip.tsx'
+import { DEFAULT_BRAND_NAME, pageTitleOf } from '#/constants/brand.ts'
 import { useHostStatus } from '#/hooks/use-host-status.ts'
 import { readIsSidebarOpen } from '#/lib/sidebar-state.ts'
 import { getBrandQueryOpts } from '#/queries/brand.ts'
@@ -13,6 +14,7 @@ const TOOLTIP_DELAY_MS = 400
 const AppLayout = () => {
   const brand = Route.useLoaderData()
   useHostStatus('worker')
+  useHostStatus('bot')
 
   return (
     <TooltipProvider delay={TOOLTIP_DELAY_MS}>
@@ -35,16 +37,9 @@ export const Route = createFileRoute('/_app')({
     return {
       meta: [
         {
-          title:
-            loaderData === undefined
-              ? 'What runs now'
-              : `${loaderData.name}: what runs now`
+          title: pageTitleOf(loaderData?.name ?? DEFAULT_BRAND_NAME)
         }
-      ],
-      links:
-        loaderData?.stylesheetUrl === undefined
-          ? []
-          : [{ rel: 'stylesheet', href: loaderData.stylesheetUrl }]
+      ]
     }
   },
   pendingComponent: AppShellSkeleton,

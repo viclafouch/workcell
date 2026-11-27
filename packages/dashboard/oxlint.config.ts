@@ -52,6 +52,7 @@ export default defineConfig({
       { ignorePackages: true, checkTypeImports: true }
     ],
     'workcell-dashboard/no-link-as-button': 'error',
+    'jsx-a11y/no-noninteractive-tabindex': ['error', { tags: ['hr'] }],
     'react/forbid-elements': [
       'error',
       {

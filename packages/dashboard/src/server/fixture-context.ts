@@ -1,5 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises'
 import { createHarnessHost, defineHarness } from '@tanstack/ai-harness'
+import { title } from '@tanstack/ai-harness/plugins'
 import { createHarnessHandler } from '@tanstack/ai-harness/server'
 import { memoryPersistence } from '@tanstack/ai-persistence'
 import {
@@ -75,6 +76,8 @@ const WORKER_TURN: FakeResponseStep[] = [
   })
 ]
 
+const BOT_THREAD_TITLE = 'What runs this morning'
+
 const BOT_TURN: FakeResponseStep[] = [
   {
     text: 'Three workers run now. Bravo waits for your answer on a command it wants to run.'
@@ -92,7 +95,15 @@ export const createFixtureContext = async (): Promise<DashboardContext> => {
   botModel.setResponses(BOT_TURN)
   const hostFree = await createHostFreeSandbox()
   const worker = defineTestWorker({ host, model: workerModel, hostFree })
-  const bot = defineHarness({ name: 'workcell/bot-fixture', adapter: botModel })
+  const titleModel = fakeText()
+  titleModel.setResponses([{ text: BOT_THREAD_TITLE }])
+  const bot = defineHarness({
+    name: 'workcell/bot-fixture',
+    adapter: botModel,
+    plugins: () => {
+      return [title({ adapter: titleModel })]
+    }
+  })
   const workerSession = await host.open(worker, {
     threadId: LIVE_FIXTURE_THREAD,
     user: TEST_STARTER

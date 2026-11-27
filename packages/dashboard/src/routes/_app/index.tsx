@@ -1,8 +1,19 @@
-import { ActivityIcon, BotIcon, CircleCheckIcon } from 'lucide-react'
+import {
+  ActivityIcon,
+  BotIcon,
+  ChevronRightIcon,
+  CircleCheckIcon
+} from 'lucide-react'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from '#/components/ui/collapsible.tsx'
 import { FinishedTasksTable } from '#/components/worker/finished-tasks-table.tsx'
 import { WorkerLanes } from '#/components/worker/worker-lanes.tsx'
+import { groupWorkers } from '#/constants/worker-status.ts'
 import { listBotThreadsQueryOpts } from '#/queries/bot-threads.ts'
 import { listWorkersQueryOpts } from '#/queries/workers.ts'
 import { BotThreads } from './-components/bot-threads.tsx'
@@ -13,29 +24,38 @@ import { SectionHeading } from './-components/section-heading.tsx'
 const NowPage = () => {
   const workersQuery = useSuspenseQuery(listWorkersQueryOpts())
   const botThreadsQuery = useQuery(listBotThreadsQueryOpts())
-  const running = workersQuery.data.filter(({ phase }) => {
-    return phase !== 'finished'
-  })
-  const finished = workersQuery.data.filter(({ phase }) => {
-    return phase === 'finished'
-  })
+  const {
+    needsYou = [],
+    working = [],
+    asleep = [],
+    finished = []
+  } = groupWorkers(workersQuery.data)
 
   return (
     <div className="mx-auto flex w-full max-w-panel flex-col gap-12 px-4 py-8 sm:px-6">
-      <NowHeadline workers={running} />
+      <NowHeadline working={working} needsYou={needsYou} asleep={asleep} />
+      {needsYou.length === 0 ? null : (
+        <section
+          aria-labelledby="needs-you-heading"
+          className="flex flex-col gap-4"
+        >
+          <SectionHeading id="needs-you-heading">Needs you</SectionHeading>
+          <WorkerLanes workers={needsYou} label="Workers that need you" />
+        </section>
+      )}
       <section
-        aria-labelledby="running-heading"
+        aria-labelledby="working-heading"
         className="flex flex-col gap-4"
       >
-        <SectionHeading id="running-heading">Running</SectionHeading>
-        {running.length === 0 ? (
+        <SectionHeading id="working-heading">Working</SectionHeading>
+        {working.length === 0 ? (
           <EmptySection
             icon={ActivityIcon}
-            title="No worker runs"
+            title="No worker works right now"
             description="A task handed to the bot starts a worker here."
           />
         ) : (
-          <WorkerLanes workers={running} label="Running workers" />
+          <WorkerLanes workers={working} label="Working workers" />
         )}
       </section>
       <section aria-labelledby="bot-heading" className="flex flex-col gap-4">
@@ -52,9 +72,34 @@ const NowPage = () => {
             description="Each conversation with the bot shows here."
           />
         ) : (
-          <BotThreads threads={botThreadsQuery.data} />
+          <BotThreads
+            threads={botThreadsQuery.data}
+            workers={workersQuery.data}
+          />
         )}
       </section>
+      {asleep.length === 0 ? null : (
+        <Collapsible
+          render={<section aria-labelledby="asleep-heading" />}
+          className="group/asleep flex flex-col gap-4"
+        >
+          <h2 id="asleep-heading" className="text-lg font-semibold">
+            <CollapsibleTrigger className="press inline-flex items-center gap-2 rounded-md">
+              <ChevronRightIcon
+                aria-hidden
+                className="size-5 transition-transform duration-(--duration-fast) ease-(--ease-out-strong) group-data-[open]/asleep:rotate-90 motion-reduce:transition-none"
+              />
+              Asleep
+              <span className="font-normal text-muted-foreground tabular">
+                {asleep.length}
+              </span>
+            </CollapsibleTrigger>
+          </h2>
+          <CollapsibleContent hiddenUntilFound>
+            <WorkerLanes workers={asleep} label="Asleep workers" />
+          </CollapsibleContent>
+        </Collapsible>
+      )}
       <section
         aria-labelledby="finished-heading"
         className="flex flex-col gap-4"

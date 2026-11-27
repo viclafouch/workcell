@@ -7,7 +7,9 @@ import {
   Scripts,
   ScriptOnce
 } from '@tanstack/react-router'
+import { DEFAULT_BRAND_NAME, pageTitleOf } from '#/constants/brand.ts'
 import { COLOR_SCHEME_SCRIPT } from '#/lib/color-scheme.ts'
+import { SIDEBAR_WIDTH_SCRIPT } from '#/lib/sidebar-width.ts'
 import appCss from '#/styles.css?url'
 
 type RootDocumentProps = {
@@ -25,6 +27,7 @@ const RootDocument = ({ children }: RootDocumentProps) => {
         />
         <HeadContent />
         <ScriptOnce>{COLOR_SCHEME_SCRIPT}</ScriptOnce>
+        <ScriptOnce>{SIDEBAR_WIDTH_SCRIPT}</ScriptOnce>
       </head>
       <body>
         <a
@@ -56,7 +59,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             content:
               'What the workers and the bot of this project do right now.'
           },
-          { title: 'What runs now' }
+          { title: pageTitleOf(DEFAULT_BRAND_NAME) }
         ],
         links: [
           { rel: 'stylesheet', href: appCss },

@@ -10,7 +10,7 @@ type ConnectionStatusProps = {
 const describe = ({
   connection,
   status
-}: ConnectionStatusProps): WorkerStatus => {
+}: ConnectionStatusProps): WorkerStatus | null => {
   if (connection === 'reconnecting') {
     return {
       tone: 'waiting',
@@ -27,17 +27,13 @@ const describe = ({
     }
   }
 
-  return {
-    tone: 'idle',
-    label: 'Not streaming',
-    hint: 'The thread sleeps, so the page holds no stream to the host. It opens one again when the thread wakes up.'
-  }
+  return null
 }
 
 export const ConnectionStatus = (props: ConnectionStatusProps) => {
+  const status = describe(props)
+
   return (
-    <output>
-      <StatusPill status={describe(props)} />
-    </output>
+    <output>{status === null ? null : <StatusPill status={status} />}</output>
   )
 }

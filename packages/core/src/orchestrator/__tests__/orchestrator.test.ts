@@ -38,7 +38,8 @@ import {
   askOrchestrator,
   closeWorkerTestbed,
   openWorkers,
-  openWorkerTestbed
+  openWorkerTestbed,
+  ORCHESTRATOR_THREAD
 } from '#/workers/__tests__/worker-testbed.ts'
 
 const PUBLISH_TOOL = 'publish_note'
@@ -189,7 +190,7 @@ describe('the orchestrator', () => {
     )
   })
 
-  it('starts a worker for an allowed starter, as that starter, and the worker outlives the thread', async () => {
+  it('starts a worker for an allowed starter, as that starter, and the worker outlives the thread and names it', async () => {
     const url = await createMigratedDatabase()
     await using agent = await openWorkers(
       url,
@@ -212,7 +213,7 @@ describe('the orchestrator', () => {
       `Alpha starts the task on ${REPOSITORY}.`
     )
     await expect(agent.workers.listWorkers()).resolves.toMatchObject([
-      { name: 'Alpha', subject: 'TASK-7' }
+      { name: 'Alpha', subject: 'TASK-7', originThreadId: ORCHESTRATOR_THREAD }
     ])
     const { entries } = await agent.host.sessions.list({
       harness: agent.harness.name

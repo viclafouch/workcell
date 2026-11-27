@@ -23,6 +23,9 @@ export const LifecycleRail = ({ stage, tone }: LifecycleRailProps) => {
         value={position}
         max={LIFECYCLE_STAGES.length}
         data-status={tone}
+        getAriaValueText={() => {
+          return `${stage}, stage ${position} of ${LIFECYCLE_STAGES.length}`
+        }}
         className="cell-meter"
       >
         <ProgressLabel className="text-sm font-normal">

@@ -64,6 +64,15 @@ export function budgetStateOf(plugins: Record<string, unknown>) {
   return budgetStateSchema.safeParse(plugins[BUDGET_PLUGIN]).data
 }
 
+export function capUsdOf(
+  plugins: Record<string, unknown>,
+  limits: BudgetLimits
+) {
+  const state = budgetStateOf(plugins)
+
+  return state?.capUsd ?? (state?.spentAtLastAnswerUsd ?? 0) + limits.maxCostUsd
+}
+
 export function spentUsdOf(
   pricing: Pick<ModelPricing, 'costOfUsage'>,
   { usage, plugins }: TaskSpending

@@ -17,6 +17,7 @@ export const workerMetadataSchema = z.looseObject({
   entrySkill: z.string().optional(),
   repository: z.string(),
   subject: z.string().optional(),
+  originThreadId: z.string().optional(),
   branch: z.string().optional(),
   pullRequest: z.string().optional(),
   inputId: z.string().optional(),

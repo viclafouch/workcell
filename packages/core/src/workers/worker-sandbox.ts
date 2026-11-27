@@ -54,6 +54,14 @@ type RunningStep = { step: WorkerSandboxStep; startedAt: number }
 
 type RunningSteps = Map<string, RunningStep>
 
+export type SandboxSetupFailure = {
+  step: WorkerSandboxStep['step']
+  cause: string
+  failedAt: number
+}
+
+type SetupFailures = Map<string, SandboxSetupFailure>
+
 export type SandboxInSetup = WorkerSandboxStep & {
   state: 'setup'
   id: string | undefined
@@ -99,13 +107,19 @@ function durationSince(startedAt: number) {
 type SetupStepsParams = {
   threadId: string
   runningSteps: RunningSteps
+  setupFailures: SetupFailures
   log: StepLog
   emitSetup: EmitSetup
+}
+
+function causeOf(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function setupSteps({
   threadId,
   runningSteps,
+  setupFailures,
   log,
   emitSetup
 }: SetupStepsParams) {
@@ -138,6 +152,11 @@ function setupSteps({
     const running = takeRunning()
 
     if (running !== undefined) {
+      setupFailures.set(threadId, {
+        step: running.step.step,
+        cause: causeOf(error),
+        failedAt: Date.now()
+      })
       log.error(
         {
           ...running.step,
@@ -169,6 +188,22 @@ function setupViewOf(
   }
 }
 
+function createSetupTracking() {
+  const runningSteps: RunningSteps = new Map()
+  const setupFailures: SetupFailures = new Map()
+
+  return {
+    runningSteps,
+    setupFailures,
+    isInSetup: (threadId: string) => {
+      return runningSteps.has(threadId)
+    },
+    setupFailureOf: (threadId: string) => {
+      return setupFailures.get(threadId)
+    }
+  }
+}
+
 export function createWorkerSandbox({
   sandboxes,
   repositoryOf,
@@ -180,7 +215,8 @@ export function createWorkerSandbox({
 }: CreateWorkerSandboxParams) {
   const opened = new Map<string, OpenedSandbox>()
   const setupEmitters = new Map<string, EmitSetup>()
-  const runningSteps: RunningSteps = new Map()
+  const { runningSteps, setupFailures, isInSetup, setupFailureOf } =
+    createSetupTracking()
 
   const logOf = ({ threadId, name }: NamedWorker) => {
     return logger.child({ module: 'agents', threadId, name })
@@ -261,6 +297,7 @@ export function createWorkerSandbox({
     const steps = setupSteps({
       threadId: run.threadId,
       runningSteps,
+      setupFailures,
       log: logOf(run),
       emitSetup
     })
@@ -272,6 +309,7 @@ export function createWorkerSandbox({
       .finally(() => {
         emitSetup({ step: 'done' })
       })
+    setupFailures.delete(run.threadId)
     logOf(run).info(
       { path: live === null ? 'fresh sandbox' : 'reattach' },
       'worker sandbox bound'
@@ -362,10 +400,6 @@ export function createWorkerSandbox({
     return isLive ? (current ?? null) : null
   }
 
-  const isInSetup = (threadId: string) => {
-    return runningSteps.has(threadId)
-  }
-
   const inspect = async (
     threadId: string
   ): Promise<SandboxInSetup | SandboxReady | null> => {
@@ -413,6 +447,7 @@ export function createWorkerSandbox({
 
   const forget = async (worker: NamedWorker) => {
     opened.delete(worker.threadId)
+    setupFailures.delete(worker.threadId)
     await changes.remove(worker.threadId)
     await Promise.all(
       Object.values(sandboxes).map((sandbox) => {
@@ -464,6 +499,7 @@ export function createWorkerSandbox({
     rebind,
     save,
     isInSetup,
+    setupFailureOf,
     inspect,
     readDiff,
     forget,

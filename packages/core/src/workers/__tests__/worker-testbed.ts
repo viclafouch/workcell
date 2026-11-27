@@ -153,6 +153,26 @@ export async function waitForArchive(agent: OpenedWorkers, threadId: string) {
 
 export type OpenedWorkers = Awaited<ReturnType<typeof openWorkers>>
 
+const TITLES_A_TEST_ASKS_FOR = 50
+
+const FAKE_MODEL_ID = 'fake-model'
+
+export const TEST_THREAD_TITLE = 'A test thread'
+
+export function alwaysTitled(
+  title = TEST_THREAD_TITLE,
+  modelId = FAKE_MODEL_ID
+) {
+  const titleModel = fakeText({ model: modelId })
+  titleModel.setResponses(
+    Array.from({ length: TITLES_A_TEST_ASKS_FOR }, () => {
+      return { text: title }
+    })
+  )
+
+  return titleModel
+}
+
 export async function openWorkers(
   url: string,
   responses: FakeResponseStep[],
@@ -167,11 +187,13 @@ export async function openWorkers(
     orchestratorScope,
     model = fakeText(),
     compactionModel = model,
+    titleModel = alwaysTitled(TEST_THREAD_TITLE, model.model),
     subagentModel,
     pricing = FAKE_MODEL_PRICING,
     starterIds = [TEST_STARTER.id],
     plugins = [],
     orchestratorPlugins = [],
+    orchestratorTitle,
     orchestratorSkillDirs,
     orchestratorSkillServers,
     skillServers,
@@ -201,11 +223,13 @@ export async function openWorkers(
     orchestratorScope?: string
     model?: FakeTextAdapter<string>
     compactionModel?: FakeTextAdapter<string>
+    titleModel?: FakeTextAdapter<string>
     subagentModel?: FakeTextAdapter<string>
     pricing?: ModelPricing
     starterIds?: readonly string[]
     plugins?: readonly HarnessPlugin[]
     orchestratorPlugins?: readonly HarnessPlugin[]
+    orchestratorTitle?: HarnessPlugin | null
     orchestratorSkillDirs?: readonly string[]
     orchestratorSkillServers?: readonly McpSkillServer[]
     skillServers?: readonly McpSkillServer[]
@@ -270,7 +294,8 @@ export async function openWorkers(
         orchestrator: model,
         worker: model,
         subagent: subagentModel,
-        compaction: compactionModel
+        compaction: compactionModel,
+        title: titleModel
       },
       pricing,
       secrets: SANDBOX_SECRETS,
@@ -303,6 +328,7 @@ export async function openWorkers(
         scope: orchestratorScope,
         limits: orchestratorLimits,
         plugins: orchestratorPlugins,
+        title: orchestratorTitle,
         skills: {
           dirs: orchestratorSkillDirs ?? [],
           servers: orchestratorSkillServers
@@ -463,11 +489,13 @@ export async function outcomeOf(agent: OpenedWorkers, threadId: string) {
   return workerMetadataSchema.parse(entry?.metadata).outcome
 }
 
+export const ORCHESTRATOR_THREAD = 'slack/CTEST/1.0001'
+
 export async function askOrchestrator(
   agent: OpenedWorkers,
   {
     user = TEST_STARTER,
-    threadId = 'slack/CTEST/1.0001',
+    threadId = ORCHESTRATOR_THREAD,
     inputId = 'slack:CTEST:1.0001',
     message = 'What runs?'
   } = {}

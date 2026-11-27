@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
 import type { AnyTextAdapter } from '@tanstack/ai'
 import {
@@ -5,6 +6,7 @@ import {
   type HarnessPlugin,
   type PermissionMode
 } from '@tanstack/ai-harness'
+import { title } from '@tanstack/ai-harness/plugins'
 import {
   resolveAllSecrets,
   type SandboxDefinition,
@@ -12,7 +14,7 @@ import {
 } from '@tanstack/ai-sandbox'
 import type { ModelPricing } from './budget/budget.ts'
 import type { BudgetLimits } from './budget/limits.ts'
-import type { FeedbackOptions } from './feedback/feedback.ts'
+import { feedbackReportsOf, type FeedbackOptions } from './feedback/feedback.ts'
 import { createRecentFeedback } from './feedback/recent-feedback.ts'
 import { sendFiles, type ReadAgentFile } from './files/send-files.ts'
 import {
@@ -62,6 +64,8 @@ import { createWorkers, type OnWorkerStart } from './workers/workers.ts'
 
 const FINISHED_TASK_DAYS = 7
 
+const SESSIONS_READ_FOR_FEEDBACK = 50
+
 type WorkcellLogger = {
   child: (bindings: Record<string, unknown>) => LeveledLog
 }
@@ -74,6 +78,7 @@ type OpenWorkcellParams = {
     orchestrator: AnyTextAdapter
     worker: AnyTextAdapter
     compaction: AnyTextAdapter
+    title?: AnyTextAdapter
     subagent?: AnyTextAdapter
   }
   pricing: ModelPricing
@@ -91,6 +96,7 @@ type OpenWorkcellParams = {
     name: string
     limits: BudgetLimits
     plugins: readonly HarnessPlugin[]
+    title?: HarnessPlugin | null
     scope?: string
     skills?: {
       dirs: readonly string[]
@@ -144,16 +150,18 @@ export class SchemaBehindError extends StartRefusalError {
 export class DuplicateSandboxPackageError extends StartRefusalError {
   readonly sandboxIds: readonly string[]
 
+  readonly coreCopy = fileURLToPath(import.meta.resolve('@tanstack/ai-sandbox'))
+
   constructor(sandboxIds: readonly string[]) {
     super(
-      `The core cannot read the workspace secrets of ${sandboxIds.join(', ')}: two copies of @tanstack/ai-sandbox are loaded. Install from the parent workspace only, then force a reinstall, such as \`pnpm install --force\`.`
+      `The core cannot read the workspace secrets of ${sandboxIds.join(', ')}: they come from another copy of @tanstack/ai-sandbox than the one the core loads. Two copies install when the project resolves a peer of TanStack to another version than Workcell does, such as an optional peer of Vite. List each copy and the peers that split it with the \`why\` command of your package manager, such as \`pnpm why --recursive @tanstack/ai-sandbox\`, pin those peers to one version, then install again.`
     )
     this.name = 'DuplicateSandboxPackageError'
     this.sandboxIds = sandboxIds
   }
 
   get details() {
-    return { sandboxIds: this.sandboxIds }
+    return { sandboxIds: this.sandboxIds, coreCopy: this.coreCopy }
   }
 }
 
@@ -285,10 +293,12 @@ export async function openWorkcell({
   const startLog = logger.child({ module: 'host' })
   await requireCurrentSchema(database, migrateCommand, startLog)
   const subagentModel = models.subagent ?? models.worker
+  const titleModel = models.title ?? models.compaction
   pricing.requirePrices([
     models.orchestrator.model,
     models.worker.model,
     models.compaction.model,
+    titleModel.model,
     subagentModel.model
   ])
   const isStarter = isStarterIn(senders.starterIds)
@@ -406,6 +416,7 @@ export async function openWorkcell({
     activity,
     workerSandbox,
     pricing,
+    defaultLimits,
     secretValues
   })
   const orchestratorHarness = defineOrchestratorHarness({
@@ -422,6 +433,10 @@ export async function openWorkcell({
     ],
     adapter: models.orchestrator,
     compactionAdapter: models.compaction,
+    titlePlugin:
+      orchestratorOptions.title === undefined
+        ? title({ adapter: titleModel })
+        : orchestratorOptions.title,
     library,
     workers,
     viewWorkers,
@@ -447,7 +462,33 @@ export async function openWorkcell({
     viewWorkers,
     inspectWorkers,
     readWorkerDiff,
-    listRecentFeedback: recentFeedback.listRecentFeedback,
+    listRecentFeedback: async () => {
+      return recentFeedback.listRecentFeedback(async () => {
+        const { entries } = await host.sessions.list({
+          limit: SESSIONS_READ_FOR_FEEDBACK
+        })
+        const reports = await Promise.all(
+          entries.map(async (entry) => {
+            const owner = [harness, orchestratorHarness].find((candidate) => {
+              return candidate.name === entry.harness
+            })
+
+            if (owner === undefined) {
+              return []
+            }
+
+            const observed = await host.observe(owner, {
+              threadId: entry.threadId
+            })
+            const snapshot = await observed.snapshot()
+
+            return feedbackReportsOf(snapshot.plugins)
+          })
+        )
+
+        return reports.flat()
+      })
+    },
     [Symbol.asyncDispose]: async () => {
       await host.close({ recoverable: true })
       await skillSources[Symbol.asyncDispose]()

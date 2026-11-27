@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '#/components/ui/button.tsx'
 import { Spinner } from '#/components/ui/spinner.tsx'
+import { splitPatchByFile } from '#/lib/diff.ts'
 import { getWorkerDiffQueryOpts } from '#/queries/workers.ts'
 import { DiffCode } from './diff-code.tsx'
+
+const FILES_IN_FIRST_VIEW = 2
 
 type WholeDiffProps = {
   threadId: string
@@ -36,7 +39,24 @@ export const WholeDiff = ({ threadId }: WholeDiffProps) => {
         </p>
       ) : null}
       {typeof diffQuery.data === 'string' ? (
-        <DiffCode patch={diffQuery.data} title="The whole diff of the branch" />
+        <ul
+          aria-label="Changed files of the branch"
+          className="flex flex-col gap-3"
+        >
+          {splitPatchByFile(diffQuery.data).map(({ path, patch }, index) => {
+            return (
+              <li key={path}>
+                <DiffCode
+                  patch={patch}
+                  path={path}
+                  className={
+                    index < FILES_IN_FIRST_VIEW ? undefined : 'defer-render'
+                  }
+                />
+              </li>
+            )
+          })}
+        </ul>
       ) : null}
     </div>
   )

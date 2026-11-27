@@ -33,9 +33,24 @@ test.describe('the panel of one worker', () => {
     await page.getByRole('tab', { name: /Files/u }).click()
     await page.getByRole('button', { name: 'Read the whole diff' }).click()
 
-    await expect(page.getByLabel('The whole diff of the branch')).toContainText(
-      'export const afterSignIn'
-    )
+    await expect(
+      page.getByRole('list', { name: 'Changed files of the branch' })
+    ).toContainText('export const afterSignIn')
+  })
+
+  test('the panel fits the window: the page never scrolls, each pane scrolls on its own', async ({
+    page
+  }) => {
+    await page.goto('/workers/worker-alpha-login-redirect')
+    await expect(
+      page.getByText('The sign-in page now sends the visitor back')
+    ).toBeVisible()
+
+    const overflow = await page.evaluate(() => {
+      return document.documentElement.scrollHeight - window.innerHeight
+    })
+
+    expect(overflow).toBeLessThanOrEqual(0)
   })
 
   test('a worker the host does not know shows the way back', async ({

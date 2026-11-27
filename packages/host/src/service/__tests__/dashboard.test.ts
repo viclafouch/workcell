@@ -4,7 +4,7 @@ import { memoryPersistence } from '@tanstack/ai-persistence'
 import { fakeText } from '@tanstack/ai/testing'
 import type { FeedbackReport, WorkerView } from '@workcell/core'
 import { createLogger } from '#/logger.ts'
-import { dashboardRoute } from '#/service/dashboard.ts'
+import { dashboardRoute, type DashboardOptions } from '#/service/dashboard.ts'
 import { openHttpLayer } from '#/service/http-layer.ts'
 import { liveViewUrl, readLiveView } from '#/service/live-view.ts'
 
@@ -34,18 +34,21 @@ const silentLogger = createLogger({ level: 'silent' })
 type OpenDashboardParams = {
   viewWorkers?: () => Promise<WorkerView[]>
   feedback?: FeedbackReport[]
+  brand?: DashboardOptions['brand']
 }
 
 async function openServedDashboard({
   viewWorkers = async () => {
     return [WORKER_VIEW]
   },
-  feedback = []
+  feedback = [],
+  brand
 }: OpenDashboardParams = {}) {
   const host = createHarnessHost({ persistence: memoryPersistence() })
   const harness = defineHarness({ name: 'test/bot', adapter: fakeText() })
   const route = await dashboardRoute({
     logger: silentLogger,
+    brand,
     workcell: {
       host,
       harness,
@@ -55,7 +58,7 @@ async function openServedDashboard({
       readWorkerDiff: async () => {
         return null
       },
-      listRecentFeedback: () => {
+      listRecentFeedback: async () => {
         return feedback
       }
     }
@@ -95,14 +98,48 @@ describe('the dashboard of the host', () => {
     expect(response.headers.get('x-content-type-options')).toBe('nosniff')
   })
 
+  it('serves the page shell for a thread whose id holds a dot', async () => {
+    await using dashboard = await openServedDashboard()
+
+    const response = await fetch(
+      new URL('/threads/chat%3AC01%3A1795716657.721509', dashboard.origin)
+    )
+
+    expect(response.status).toBe(OK)
+    expect(response.headers.get('content-type')).toContain('text/html')
+  })
+
   it('answers 404 to a file it does not hold, and keeps crawlers away', async () => {
     await using dashboard = await openServedDashboard()
 
     const robots = await fetch(new URL('/robots.txt', dashboard.origin))
-    const unknownFile = await fetch(new URL('/llms.txt', dashboard.origin))
+    const statuses = await Promise.all(
+      ['/llms.txt', '/assets/missing.js'].map(async (path) => {
+        const response = await fetch(new URL(path, dashboard.origin))
+
+        return response.status
+      })
+    )
 
     expect(await robots.text()).toContain('Disallow: /')
-    expect(unknownFile.status).toBe(NOT_FOUND)
+    expect(statuses).toStrictEqual([NOT_FOUND, NOT_FOUND])
+  })
+
+  it('paints the brand from the first frame: its title and its stylesheets sit in the served shell', async () => {
+    await using dashboard = await openServedDashboard({
+      brand: {
+        name: 'Acme <Bot>',
+        stylesheets: [new URL(import.meta.url)]
+      }
+    })
+
+    const response = await fetch(dashboard.origin)
+    const shell = await response.text()
+
+    expect(shell).toContain('<title>Acme &lt;Bot&gt;: what runs now</title>')
+    expect(shell).toContain(
+      "@import url('/brand/stylesheets/0.css') layer(brand);"
+    )
   })
 
   it('answers 405 to a write on any route', async () => {

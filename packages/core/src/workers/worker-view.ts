@@ -1,11 +1,8 @@
 import { z } from 'zod'
 import type { HarnessHost, PendingWait, WaitKind } from '@tanstack/ai-harness'
 import { scrubSecrets } from '@tanstack/ai/byok'
-import {
-  budgetStateOf,
-  spentUsdOf,
-  type ModelPricing
-} from '#/budget/budget.ts'
+import { capUsdOf, spentUsdOf, type ModelPricing } from '#/budget/budget.ts'
+import type { BudgetLimits } from '#/budget/limits.ts'
 import { taskOutcomeSchema, type TaskOutcome } from '#/session/metadata.ts'
 import type { WorkerHarness } from './harness.ts'
 import type { WorkerLifecycle } from './lifecycle.ts'
@@ -22,6 +19,8 @@ export const workerViewSchema = z.object({
   name: z.string(),
   repository: z.string(),
   topic: z.string(),
+  originThreadId: z.string().optional(),
+  lastActiveAt: z.number().optional(),
   phase: z.enum([
     'setup',
     'queued',
@@ -43,6 +42,13 @@ export const workerViewSchema = z.object({
     })
   ),
   startupMs: z.number().optional(),
+  sandboxFailure: z
+    .object({
+      step: z.enum(['create', 'clone', 'setup', 'restore', 'bind']),
+      cause: z.string(),
+      failedAt: z.number()
+    })
+    .optional(),
   outcome: taskOutcomeSchema.omit({ costUsd: true }).optional(),
   sandbox: z
     .discriminatedUnion('state', [
@@ -76,7 +82,8 @@ type WorkerFacts = {
   isInSetup: boolean
   pendingWaits: readonly Pick<PendingWait, 'turn' | 'kind'>[]
   spentUsd: number
-  budgetUsd: number | undefined
+  budgetUsd: number
+  sandboxFailure: WorkerView['sandboxFailure']
 }
 
 type FinishedWorker = ListedWorker & { outcome: TaskOutcome }
@@ -88,8 +95,12 @@ type CreateWorkerViewParams = {
   readFinishedWorkers: () => Promise<FinishedWorker[]>
   lifecycle: Pick<WorkerLifecycle, 'isQueued'>
   activity: Pick<WorkerActivity, 'activityOf'>
-  workerSandbox: Pick<WorkerSandbox, 'isInSetup' | 'inspect' | 'readDiff'>
+  workerSandbox: Pick<
+    WorkerSandbox,
+    'isInSetup' | 'setupFailureOf' | 'inspect' | 'readDiff'
+  >
   pricing: Pick<ModelPricing, 'costOfUsage'>
+  defaultLimits: BudgetLimits
   secretValues: readonly string[]
 }
 
@@ -148,13 +159,22 @@ function sandboxViewOf(sandbox: InspectedSandbox): WorkerView['sandbox'] {
 }
 
 export function workerViewOf(facts: WorkerFacts): WorkerView {
-  const { worker, activity, pendingWaits, spentUsd, budgetUsd } = facts
+  const {
+    worker,
+    activity,
+    pendingWaits,
+    spentUsd,
+    budgetUsd,
+    sandboxFailure
+  } = facts
 
   return {
     threadId: worker.threadId,
     name: worker.name,
     repository: worker.repository,
     topic: worker.subject ?? firstLine(worker.task),
+    originThreadId: worker.originThreadId,
+    lastActiveAt: worker.updatedAt,
     phase: phaseOf(facts),
     command: activity?.command,
     turnUsd: activity?.turnUsd,
@@ -165,7 +185,8 @@ export function workerViewOf(facts: WorkerFacts): WorkerView {
     waits: pendingWaits.map(({ kind }) => {
       return kind
     }),
-    startupMs: worker.startupMs
+    startupMs: worker.startupMs,
+    sandboxFailure
   }
 }
 
@@ -178,6 +199,8 @@ export function finishedWorkerViewOf({
     name: worker.name,
     repository: worker.repository,
     topic: worker.subject ?? firstLine(worker.task),
+    originThreadId: worker.originThreadId,
+    lastActiveAt: worker.updatedAt,
     phase: 'finished',
     spentUsd: costUsd,
     branch: worker.branch,
@@ -207,13 +230,21 @@ export function createWorkerView({
   activity,
   workerSandbox,
   pricing,
+  defaultLimits,
   secretValues
 }: CreateWorkerViewParams) {
+  const sandboxFailureOf = (threadId: string) => {
+    const failure = workerSandbox.setupFailureOf(threadId)
+
+    return failure === undefined
+      ? undefined
+      : { ...failure, cause: scrubSecrets(failure.cause, secretValues) }
+  }
+
   const viewOf = async (worker: ListedWorker) => {
     const { threadId } = worker
     const observed = await host.observe(harness, { threadId })
     const { pendingWaits, plugins, usage } = await observed.snapshot()
-    const budget = budgetStateOf(plugins)
 
     return workerViewOf({
       worker,
@@ -222,7 +253,8 @@ export function createWorkerView({
       isInSetup: workerSandbox.isInSetup(threadId),
       pendingWaits,
       spentUsd: spentUsdOf(pricing, { usage, plugins }),
-      budgetUsd: budget?.capUsd
+      budgetUsd: capUsdOf(plugins, defaultLimits),
+      sandboxFailure: sandboxFailureOf(threadId)
     })
   }
 

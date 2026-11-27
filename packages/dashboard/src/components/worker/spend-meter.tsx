@@ -41,6 +41,9 @@ export const SpendMeter = ({ spentUsd, budgetUsd }: SpendMeterProps) => {
         max={budgetUsd}
         data-status={toneOfSpend(spentUsd / budgetUsd)}
         aria-label="Spend against the budget"
+        getAriaValueText={() => {
+          return `${formatUsd(spentUsd)} of ${formatUsd(budgetUsd)}`
+        }}
         className="cell-meter"
       >
         <ProgressLabel className="tabular text-sm font-normal">

@@ -18,6 +18,7 @@ export type ModelRole =
   | 'orchestrator'
   | 'worker'
   | 'compaction'
+  | 'title'
   | 'memory'
   | 'grader'
 
@@ -42,6 +43,7 @@ export function toModelConfig({
       orchestrator: roleModelIds.orchestrator ?? defaultModelId,
       worker: roleModelIds.worker ?? defaultModelId,
       compaction: roleModelIds.compaction ?? defaultModelId,
+      title: roleModelIds.title ?? roleModelIds.compaction ?? defaultModelId,
       memory: roleModelIds.memory ?? defaultModelId,
       grader: roleModelIds.grader ?? defaultModelId
     },

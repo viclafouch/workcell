@@ -51,6 +51,7 @@ type DefineOrchestratorHarnessParams = {
   name: string
   adapter: AnyTextAdapter
   compactionAdapter: AnyTextAdapter
+  titlePlugin: HarnessPlugin | null
   library: OrchestratorLibrary
   workers: Workers
   viewWorkers: ViewWorkers
@@ -85,6 +86,7 @@ export function defineOrchestratorHarness({
   scope = DEFAULT_ORCHESTRATOR_SCOPE,
   adapter,
   compactionAdapter,
+  titlePlugin,
   library,
   workers,
   viewWorkers,
@@ -131,6 +133,7 @@ export function defineOrchestratorHarness({
         starterOnlyGuard(isStarter),
         orchestratorSkills,
         usage({ model: pricing.modelCost }),
+        ...(titlePlugin === null ? [] : [titlePlugin]),
         workerBudget({
           pricing,
           defaultLimits: limits,

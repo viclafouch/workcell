@@ -73,9 +73,10 @@ describe('the start of a Workcell', () => {
     })
 
     assert.instanceOf(refusal, DuplicateSandboxPackageError)
-    expect(refusal.message).toContain('two copies of @tanstack/ai-sandbox')
-    expect(refusal.message).toContain('pnpm install --force')
+    expect(refusal.message).toContain('another copy of @tanstack/ai-sandbox')
+    expect(refusal.message).toContain('why --recursive @tanstack/ai-sandbox')
     expect(refusal.sandboxIds).toStrictEqual(['worker-test'])
+    expect(refusal.coreCopy).toContain('ai-sandbox')
   })
 
   it('refuses a library sandbox whose secrets come from a second copy of the sandbox package', async () => {

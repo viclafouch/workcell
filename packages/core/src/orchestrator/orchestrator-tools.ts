@@ -107,6 +107,7 @@ export function orchestratorTools({
             repository,
             task,
             subject,
+            originThreadId: context.run.threadId,
             inputId: context.run.idempotencyKey('start_worker', toolCallId)
           })
 

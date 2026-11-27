@@ -7,6 +7,7 @@ import type { DashboardContext } from './dashboard-context.ts'
 import { methodNotAllowed, notFound, READ_METHODS } from './responses.ts'
 import {
   brandOf,
+  brandShellOf,
   createBrandServer,
   matchIsBrandPath,
   type DashboardBrandOptions
@@ -35,7 +36,7 @@ const ASSETS_PATH = '/assets/'
 
 const PUBLIC_FILES = new Set(['/favicon.svg', '/robots.txt'])
 
-const FILE_PATH = /\.[a-z0-9]+$/iu
+const ROOT_FILE_PATH = /^\/[^/]+\.[a-z0-9]+$/iu
 
 const SERVER_PATHS = ['/api/', '/_serverFn/']
 
@@ -133,10 +134,11 @@ export const openDashboard = async ({
   brand: brandOptions = DEFAULT_BRAND,
   ...context
 }: OpenDashboardParams) => {
-  const [entry, shell] = await Promise.all([
+  const [entry, defaultShell] = await Promise.all([
     loadServerEntry(),
     readFile(SHELL, 'utf8')
   ])
+  const shell = brandShellOf(defaultShell, brandOptions)
   const requestContext: DashboardContext = {
     ...context,
     brand: brandOf(brandOptions)
@@ -177,7 +179,7 @@ export const openDashboard = async ({
       return serveBrand(request)
     }
 
-    if (FILE_PATH.test(pathname) || pathname.startsWith('/.well-known/')) {
+    if (ROOT_FILE_PATH.test(pathname) || pathname.startsWith('/.well-known/')) {
       return notFound()
     }
 

@@ -82,6 +82,7 @@ function mapRoles<Value>(
     orchestrator: toValue('orchestrator'),
     worker: toValue('worker'),
     compaction: toValue('compaction'),
+    title: toValue('title'),
     memory: toValue('memory'),
     grader: toValue('grader')
   }

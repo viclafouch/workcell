@@ -298,9 +298,9 @@ describe('an orchestrator thread', () => {
     expect(sent()).toStrictEqual([
       'status 100.0001 processing',
       `stream 100.0001 to ${STARTER} of ${TEAM}`,
-      'task call-1 list_workers in_progress',
-      'task call-1 list_workers in_progress {}',
-      'task call-1 list_workers complete',
+      'task call-1 Checking the workers in_progress',
+      'task call-1 Checking the workers in_progress {}',
+      'task call-1 Checking the workers complete',
       'text Alpha works on TASK-7.',
       'stop active'
     ])
@@ -386,8 +386,8 @@ describe('an orchestrator thread', () => {
 
     await chat.ask('Stop Bravo.')
 
-    expect(sent()).toContain('task call-1 stop_worker error')
-    expect(sent()).toContain('task call-2 list_workers complete')
+    expect(sent()).toContain('task call-1 Stopping a worker error')
+    expect(sent()).toContain('task call-2 Checking the workers complete')
   })
 
   it('answers a colleague in an allowed channel, an allowed starter anywhere, and nobody else', async () => {

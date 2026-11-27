@@ -27,15 +27,19 @@ const csrfMiddleware = createCsrfMiddleware({
 const INTERNAL_SERVER_ERROR = 500
 
 const tracingMiddleware = createMiddleware().server(
-  ({ request, context, next }) => {
+  ({ request, context, next, serverFnMeta }) => {
     const { pathname } = new URL(request.url)
+    const target = serverFnMeta?.name ?? pathname
 
     return trace
       .getTracer(TRACER_NAME)
-      .startActiveSpan(`${request.method} ${pathname}`, async (span) => {
+      .startActiveSpan(`${request.method} ${target}`, async (span) => {
         span.setAttributes({
           'http.request.method': request.method,
-          'url.path': pathname
+          'url.path': pathname,
+          ...(serverFnMeta === undefined
+            ? {}
+            : { 'code.function.name': serverFnMeta.name })
         })
 
         try {

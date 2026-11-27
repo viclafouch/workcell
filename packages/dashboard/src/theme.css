@@ -82,6 +82,11 @@
     --sidebar-accent-foreground: var(--accent-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--ring);
+    --sidebar-width-default: 16rem;
+    --sidebar-width-min: 13rem;
+    --sidebar-width-max: 32rem;
+    --sidebar-width-folded: 3rem;
+    --main-width-min: 36rem;
 
     --status-running: var(--primary);
     --status-waiting: light-dark(

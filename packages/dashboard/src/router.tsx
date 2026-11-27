@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { DefaultPending } from '#/components/app/default-pending.tsx'
@@ -6,6 +7,8 @@ import { RouteError } from '#/components/app/route-error.tsx'
 import { routeTree } from './routeTree.gen.ts'
 
 const QUERY_STALE_TIME_MS = 30_000
+
+z.config({ jitless: true })
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
