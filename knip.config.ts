@@ -3,7 +3,7 @@ import { defineConfig } from 'knip/config'
 export default defineConfig({
   treatConfigHintsAsErrors: true,
   workspaces: {
-    'packages/dashboard': {
+    'packages/console': {
       entry: [
         'src/components/ui/**/*.tsx',
         'src/hooks/use-mobile.ts',

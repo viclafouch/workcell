@@ -4,7 +4,7 @@
       "command": "pnpm",
       "args": [
         "--filter",
-        "@workcell/dashboard",
+        "@workcell/console",
         "exec",
         "playwright",
         "run-test-mcp-server"

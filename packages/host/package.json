@@ -1,7 +1,7 @@
 {
   "name": "@workcell/host",
   "private": true,
-  "description": "What the host process needs on a machine: the logger, the secret stores, the traces, the models, the login service, the HTTP layer with the dashboard, and the machine check.",
+  "description": "What the host process needs on a machine: the logger, the secret stores, the traces, the models, the login service, the HTTP layer with the console, and the machine check.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "@opentelemetry/core": "catalog:",
     "@opentelemetry/sdk-node": "catalog:",
     "@tanstack/pacer": "catalog:",
-    "@workcell/dashboard": "workspace:*",
+    "@workcell/console": "workspace:*",
     "pino": "catalog:",
     "pino-pretty": "catalog:",
     "pino-roll": "catalog:",

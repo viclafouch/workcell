@@ -72,15 +72,15 @@ async function statusUnderHost(url: URL, host: string) {
 describe('the HTTP layer of the host', () => {
   it('keeps the routes of each listener out of reach of the other', async () => {
     await using layer = await openHttpLayer({
-      operator: { port: 0, routes: [answering('/dashboard')] },
+      operator: { port: 0, routes: [answering('/console')] },
       webhook: { port: 0, routes: [answering('/webhooks/github')] },
       logger: silentLogger
     })
     const { operatorUrl, webhookUrl } = layer
 
-    expect(await statusOf(new URL('/dashboard', operatorUrl))).toBe(OK)
+    expect(await statusOf(new URL('/console', operatorUrl))).toBe(OK)
     expect(await statusOf(new URL('/webhooks/github', webhookUrl))).toBe(OK)
-    expect(await statusOf(new URL('/dashboard', webhookUrl))).toBe(NOT_FOUND)
+    expect(await statusOf(new URL('/console', webhookUrl))).toBe(NOT_FOUND)
     expect(await statusOf(new URL('/webhooks/github', operatorUrl))).toBe(
       NOT_FOUND
     )
@@ -117,16 +117,16 @@ describe('the HTTP layer of the host', () => {
       openHttpLayer({
         operator: {
           port: 0,
-          routes: [answering('/dashboard'), answering('/dashboard')]
+          routes: [answering('/console'), answering('/console')]
         },
         logger: silentLogger
       })
-    ).rejects.toThrow('/dashboard')
+    ).rejects.toThrow('/console')
   })
 
   it('starts no webhook listener without a webhook route', async () => {
     await using layer = await openHttpLayer({
-      operator: { port: 0, routes: [answering('/dashboard')] },
+      operator: { port: 0, routes: [answering('/console')] },
       webhook: { port: 0, routes: [] },
       logger: silentLogger
     })
@@ -136,13 +136,13 @@ describe('the HTTP layer of the host', () => {
 
   it('refuses a foreign host on the operator listener', async () => {
     await using layer = await openHttpLayer({
-      operator: { port: 0, routes: [answering('/dashboard')] },
+      operator: { port: 0, routes: [answering('/console')] },
       logger: silentLogger
     })
-    const dashboard = new URL('/dashboard', layer.operatorUrl)
+    const consoleUrl = new URL('/console', layer.operatorUrl)
 
-    expect(await statusOf(dashboard)).toBe(OK)
-    expect(await statusUnderHost(dashboard, new URL(FOREIGN_SITE).host)).toBe(
+    expect(await statusOf(consoleUrl)).toBe(OK)
+    expect(await statusUnderHost(consoleUrl, new URL(FOREIGN_SITE).host)).toBe(
       FORBIDDEN
     )
   })
@@ -176,12 +176,12 @@ describe('the HTTP layer of the host', () => {
     await stream.body?.cancel().catch(() => {})
 
     await using second = await openHttpLayer({
-      operator: { port: operatorPort, routes: [answering('/dashboard')] },
+      operator: { port: operatorPort, routes: [answering('/console')] },
       webhook: { port: webhookPort, routes: [answering('/webhooks/github')] },
       logger: silentLogger
     })
 
-    expect(await statusOf(new URL('/dashboard', second.operatorUrl))).toBe(OK)
+    expect(await statusOf(new URL('/console', second.operatorUrl))).toBe(OK)
     expect(await statusOf(new URL('/webhooks/github', second.webhookUrl))).toBe(
       OK
     )
@@ -189,13 +189,13 @@ describe('the HTTP layer of the host', () => {
 
   it('refuses to start on a port already in use, and names it', async () => {
     await using holder = await openHttpLayer({
-      operator: { port: 0, routes: [answering('/dashboard')] },
+      operator: { port: 0, routes: [answering('/console')] },
       logger: silentLogger
     })
     const takenPort = portOf(holder.operatorUrl)
 
     const refusal = openHttpLayer({
-      operator: { port: takenPort, routes: [answering('/dashboard')] },
+      operator: { port: takenPort, routes: [answering('/console')] },
       logger: silentLogger
     })
 
@@ -209,7 +209,7 @@ describe('the HTTP layer of the host', () => {
       logger: silentLogger
     })
     const free = await openHttpLayer({
-      operator: { port: 0, routes: [answering('/dashboard')] },
+      operator: { port: 0, routes: [answering('/console')] },
       logger: silentLogger
     })
     const operatorPort = portOf(free.operatorUrl)
@@ -217,7 +217,7 @@ describe('the HTTP layer of the host', () => {
 
     await expect(
       openHttpLayer({
-        operator: { port: operatorPort, routes: [answering('/dashboard')] },
+        operator: { port: operatorPort, routes: [answering('/console')] },
         webhook: {
           port: portOf(holder.webhookUrl),
           routes: [answering('/webhooks/github')]
@@ -227,10 +227,10 @@ describe('the HTTP layer of the host', () => {
     ).rejects.toBeInstanceOf(StartRefusalError)
 
     await using reopened = await openHttpLayer({
-      operator: { port: operatorPort, routes: [answering('/dashboard')] },
+      operator: { port: operatorPort, routes: [answering('/console')] },
       logger: silentLogger
     })
 
-    expect(await statusOf(new URL('/dashboard', reopened.operatorUrl))).toBe(OK)
+    expect(await statusOf(new URL('/console', reopened.operatorUrl))).toBe(OK)
   })
 })

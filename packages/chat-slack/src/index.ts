@@ -4,6 +4,6 @@ export {
   SLACK_SECRET_NAMES,
   slackPlatform
 } from './slack-platform.ts'
-export { slackDashboardChat } from './slack-dashboard-chat.ts'
+export { slackConsoleChat } from './slack-console-chat.ts'
 export { SLACK_FORMATTING, slackFormatting } from './slack-formatting.ts'
 export { slackThreadLinks } from './slack-thread-links.ts'

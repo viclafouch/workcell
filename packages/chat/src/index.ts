@@ -55,4 +55,4 @@ export {
   type ChatPerson,
   type ChatThreadContext,
   type ChatThreadMessage
-} from './dashboard/chat-thread-contexts.ts'
+} from './console/chat-thread-contexts.ts'
