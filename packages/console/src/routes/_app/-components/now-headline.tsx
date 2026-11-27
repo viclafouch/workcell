@@ -1,4 +1,5 @@
 import type { WorkerView } from '@workcell/core'
+import { PlacesLine } from '#/components/worker/places-line.tsx'
 import { countWord } from '#/lib/count-words.ts'
 
 const workSentence = (count: number) => {
@@ -56,6 +57,7 @@ export const NowHeadline = ({
       >
         {restSentence(needsYou, asleep)}
       </p>
+      <PlacesLine workers={[...working, ...needsYou, ...asleep]} />
     </div>
   )
 }

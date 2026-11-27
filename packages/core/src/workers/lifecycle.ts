@@ -212,6 +212,28 @@ function restartToFillTheFreeSlots(turns: AsyncQueuer<TurnSlot>) {
 
 type QueueListener = (threadId: string) => void
 
+type PlaceListener = () => void
+
+function createPlaceSignal() {
+  const listeners = new Set<PlaceListener>()
+
+  const freePlace = () => {
+    for (const listener of listeners) {
+      listener()
+    }
+  }
+
+  const onPlaceFree = (listener: PlaceListener) => {
+    listeners.add(listener)
+
+    return () => {
+      listeners.delete(listener)
+    }
+  }
+
+  return { freePlace, onPlaceFree }
+}
+
 function createTurnQueue(maxRunningTurns: number) {
   const listeners = new Set<QueueListener>()
 
@@ -383,6 +405,12 @@ export async function destroyEverySandbox(
   log.info({ count: listed.length }, 'sandboxes destroyed at stop')
 }
 
+function sandboxKeysOf(sandboxes: RepositorySandboxes, threadId: string) {
+  return Object.values(sandboxes).map((sandbox) => {
+    return sandbox.key({ threadId, runId: threadId })
+  })
+}
+
 export function createWorkerLifecycle({
   host,
   sandboxes,
@@ -398,19 +426,14 @@ export function createWorkerLifecycle({
 }: CreateWorkerLifecycleParams) {
   const busyThreads = new Set<string>()
   const turnQueue = createTurnQueue(maxRunningTurns)
+  const places = createPlaceSignal()
 
   const logOf = ({ threadId, name }: NamedWorker) => {
     return logger.child({ module: 'agents', threadId, name })
   }
 
-  const sandboxKeysOf = (threadId: string) => {
-    return Object.values(sandboxes).map((sandbox) => {
-      return sandbox.key({ threadId, runId: threadId })
-    })
-  }
-
   const destroySandboxOf = async (worker: NamedWorker) => {
-    const keys = new Set(sandboxKeysOf(worker.threadId))
+    const keys = new Set(sandboxKeysOf(sandboxes, worker.threadId))
     const listed = await sandboxProvider.list()
     const owned = listed.filter(({ key }) => {
       return keys.has(key)
@@ -445,7 +468,8 @@ export function createWorkerLifecycle({
         await destroySandboxOf(end.worker)
       },
       workerSandbox,
-      host
+      host,
+      freePlace: places.freePlace
     })
   }
 
@@ -620,7 +644,7 @@ export function createWorkerLifecycle({
   const sweep = async (liveWorkers: SweptWorker[]) => {
     const workersByKey = new Map<string, SweptWorker>(
       liveWorkers.flatMap((worker) => {
-        return sandboxKeysOf(worker.threadId).map((key) => {
+        return sandboxKeysOf(sandboxes, worker.threadId).map((key) => {
           return [key, worker]
         })
       })
@@ -665,6 +689,7 @@ export function createWorkerLifecycle({
     finish,
     isQueued: turnQueue.isQueued,
     onQueueChange: turnQueue.onQueueChange,
+    onPlaceFree: places.onPlaceFree,
     sweep,
     stopIdleTimers: idleTimers.stopAll
   }

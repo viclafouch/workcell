@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import {
+  getCapacity,
   getWorkerDiff,
   listWorkerIdentities,
   listWorkers
@@ -24,6 +25,16 @@ export const getWorkerDiffQueryOpts = (threadId: string) => {
     },
     staleTime: 0,
     enabled: false
+  })
+}
+
+export const getCapacityQueryOpts = () => {
+  return queryOptions({
+    queryKey: ['capacity'],
+    queryFn: () => {
+      return getCapacity()
+    },
+    staleTime: Infinity
   })
 }
 

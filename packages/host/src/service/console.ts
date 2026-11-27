@@ -25,7 +25,10 @@ export type ConsoleWorkcell = Pick<
   | 'inspectWorkers'
   | 'readWorkerDiff'
   | 'listRecentFeedback'
-> & { orchestrator: Pick<Workcell['orchestrator'], 'harness'> }
+> & {
+  workers: Pick<Workcell['workers'], 'capacity'>
+  orchestrator: Pick<Workcell['orchestrator'], 'harness'>
+}
 
 export type ConsoleOptions = {
   brand?: ConsoleBrandOptions
@@ -60,6 +63,7 @@ export async function consoleRoute({
       bot: handlerOf(workcell.host, workcell.orchestrator.harness)
     },
     workers: {
+      capacity: workcell.workers.capacity,
       view: workcell.viewWorkers,
       inspect: workcell.inspectWorkers,
       diff: workcell.readWorkerDiff

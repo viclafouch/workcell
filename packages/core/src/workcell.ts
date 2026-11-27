@@ -115,6 +115,7 @@ type OpenWorkcellParams = {
   }
   defaultLimits: BudgetLimits
   plugins: readonly HarnessPlugin[]
+  capacity: number
   maxRunningTurns: number
   finishedTaskDays?: number
   permissionMode?: PermissionMode
@@ -271,6 +272,7 @@ export async function openWorkcell({
   defaultLimits,
   plugins,
   permissionMode = 'acceptEdits',
+  capacity,
   maxRunningTurns,
   finishedTaskDays = FINISHED_TASK_DAYS,
   idleSandboxMs,
@@ -404,6 +406,7 @@ export async function openWorkcell({
     permissionMode,
     logger,
     readMessage: messageReaderOf(models.worker),
+    capacity,
     onWorkerStart
   })
   const { viewWorkers, inspectWorkers, readWorkerDiff } = createWorkerView({

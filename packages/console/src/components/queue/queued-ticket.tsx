@@ -36,10 +36,10 @@ const LabelChip = ({ label }: LabelChipProps) => {
 
 type QueuedTicketItemProps = {
   ticket: QueuedTicket
-  place: number | null
+  rank: number | null
 }
 
-export const QueuedTicketItem = ({ ticket, place }: QueuedTicketItemProps) => {
+export const QueuedTicketItem = ({ ticket, rank }: QueuedTicketItemProps) => {
   const { key, title, url, state, labels, assignees, priority, blocker } =
     ticket
   const hiddenLabels = labels.length - SHOWN_LABELS
@@ -52,17 +52,18 @@ export const QueuedTicketItem = ({ ticket, place }: QueuedTicketItemProps) => {
     >
       <ItemMedia
         className="w-8 justify-center self-start pt-0.5"
-        data-status={place === null ? 'failed' : undefined}
+        data-status={rank === null ? 'failed' : undefined}
       >
-        {place === null ? (
+        {rank === null ? (
           <>
             <CircleSlashIcon aria-hidden className="size-5 text-status" />
             <span className="sr-only">Cannot start</span>
           </>
         ) : (
           <span className="text-2xl leading-none font-semibold tabular">
-            <span className="sr-only">Place </span>
-            {place}
+            <span className="sr-only">Number </span>
+            {rank}
+            <span className="sr-only"> in line</span>
           </span>
         )}
       </ItemMedia>

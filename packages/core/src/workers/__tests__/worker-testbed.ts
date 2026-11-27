@@ -339,6 +339,7 @@ export async function openWorkers(
       skills: { dirs: [testbed.skillDir], servers: skillServers },
       defaultLimits: limits,
       plugins: [holdSecondTurn, allowGit, ...plugins],
+      capacity: workerNames.length,
       maxRunningTurns,
       idleSandboxMs,
       observability,

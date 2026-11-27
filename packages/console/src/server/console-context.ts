@@ -58,6 +58,7 @@ export type ConsoleContext = {
   logger: ConsoleLogger
   harness: Record<HarnessName, (request: Request) => Promise<Response>>
   workers: {
+    capacity: number
     view: () => Promise<WorkerView[]>
     inspect: () => Promise<WorkerView[]>
     diff: (threadId: string) => Promise<string | null>

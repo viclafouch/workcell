@@ -13,6 +13,12 @@ export const listWorkers = createServerFn({ method: 'GET' }).handler(
   }
 )
 
+export const getCapacity = createServerFn({ method: 'GET' }).handler(
+  ({ context }) => {
+    return context.workers.capacity
+  }
+)
+
 export const listWorkerIdentities = createServerFn({ method: 'GET' }).handler(
   ({ context }) => {
     return context.workerIdentities ?? []

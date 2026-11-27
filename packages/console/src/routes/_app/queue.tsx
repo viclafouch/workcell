@@ -3,12 +3,17 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import type { QueuedTicket } from '@workcell/core'
 import { QueueList } from '#/components/queue/queue-list.tsx'
+import { PlacesLine } from '#/components/worker/places-line.tsx'
 import {
   blockedSentence,
   startableTicketsOf,
   waitSentence
 } from '#/lib/queue.ts'
 import { getQueueQueryOpts } from '#/queries/queue.ts'
+import {
+  getCapacityQueryOpts,
+  listWorkersQueryOpts
+} from '#/queries/workers.ts'
 import { EmptySection } from './-components/empty-section.tsx'
 
 type QueueTicketsProps = {
@@ -18,6 +23,7 @@ type QueueTicketsProps = {
 
 const QueueTickets = ({ tracker, tickets }: QueueTicketsProps) => {
   const blockedCount = tickets.length - startableTicketsOf(tickets).length
+  const workersQuery = useSuspenseQuery(listWorkersQueryOpts())
 
   return (
     <div className="mx-auto flex w-full max-w-panel flex-col gap-8 px-4 py-8 sm:px-6">
@@ -33,6 +39,7 @@ const QueueTickets = ({ tracker, tickets }: QueueTicketsProps) => {
             {blockedSentence(blockedCount)}
           </p>
         )}
+        <PlacesLine workers={workersQuery.data} />
       </div>
       {tickets.length === 0 ? (
         <EmptySection
@@ -84,8 +91,12 @@ const QueuePage = () => {
 
 export const Route = createFileRoute('/_app/queue')({
   staticData: { section: 'Overview', crumb: 'Queue' },
-  loader: ({ context }) => {
-    return context.queryClient.query(getQueueQueryOpts())
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.query(getQueueQueryOpts()),
+      context.queryClient.query(listWorkersQueryOpts()),
+      context.queryClient.query(getCapacityQueryOpts())
+    ])
   },
   head: () => {
     return { meta: [{ title: 'Queue' }] }

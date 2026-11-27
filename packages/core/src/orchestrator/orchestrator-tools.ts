@@ -15,7 +15,7 @@ import {
   workerLine
 } from '#/prompts/orchestrator.ts'
 import type { ViewWorkers } from '#/workers/worker-view.ts'
-import type { Workers } from '#/workers/workers.ts'
+import { NoFreePlaceError, type Workers } from '#/workers/workers.ts'
 
 const TOOLS_PLUGIN = 'workcell/orchestrator-tools'
 
@@ -102,18 +102,26 @@ export function orchestratorTools({
             return `${starterOnlyRefusal('start work')}${busyLine(live, subject)}`
           }
 
-          const { name, isNew } = await workers.startWorker({
-            starter,
-            repository,
-            task,
-            subject,
-            originThreadId: context.run.threadId,
-            inputId: context.run.idempotencyKey('start_worker', toolCallId)
-          })
+          try {
+            const { name, isNew } = await workers.startWorker({
+              starter,
+              repository,
+              task,
+              subject,
+              originThreadId: context.run.threadId,
+              inputId: context.run.idempotencyKey('start_worker', toolCallId)
+            })
 
-          return isNew
-            ? `${name} starts the task on ${repository}.`
-            : `${name} already works on this task.`
+            return isNew
+              ? `${name} starts the task on ${repository}.`
+              : `${name} already works on this task.`
+          } catch (error) {
+            if (error instanceof NoFreePlaceError) {
+              return error.message
+            }
+
+            throw error
+          }
         }
       )
 

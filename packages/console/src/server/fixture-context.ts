@@ -18,6 +18,7 @@ import { DEFAULT_BRAND_NAME } from '#/constants/brand.ts'
 import type { ConsoleContext } from './console-context.ts'
 import {
   BOT_FIXTURE_THREAD,
+  FIXTURE_CAPACITY,
   FIXTURE_DIFF,
   FIXTURE_FEEDBACK,
   FIXTURE_QUEUE,
@@ -150,6 +151,7 @@ export const createFixtureContext = async (): Promise<ConsoleContext> => {
       }
     },
     workers: {
+      capacity: FIXTURE_CAPACITY,
       view: async () => {
         return FIXTURE_WORKERS
       },

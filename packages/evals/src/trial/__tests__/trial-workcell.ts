@@ -138,6 +138,7 @@ export async function openTrialTestbed(databaseUrl: string) {
         defaultLimits: ROOMY_LIMITS,
         plugins,
         permissionMode,
+        capacity: 1,
         maxRunningTurns: 2
       })
 

@@ -15,7 +15,10 @@ import { FinishedTasksTable } from '#/components/worker/finished-tasks-table.tsx
 import { WorkerLanes } from '#/components/worker/worker-lanes.tsx'
 import { groupWorkers } from '#/constants/worker-status.ts'
 import { listBotThreadsQueryOpts } from '#/queries/bot-threads.ts'
-import { listWorkersQueryOpts } from '#/queries/workers.ts'
+import {
+  getCapacityQueryOpts,
+  listWorkersQueryOpts
+} from '#/queries/workers.ts'
 import { BotThreads } from './-components/bot-threads.tsx'
 import { EmptySection } from './-components/empty-section.tsx'
 import { NowHeadline } from './-components/now-headline.tsx'
@@ -123,8 +126,11 @@ const NowPage = () => {
 
 export const Route = createFileRoute('/_app/')({
   staticData: { section: 'Overview', crumb: 'Now' },
-  loader: ({ context }) => {
-    return context.queryClient.query(listWorkersQueryOpts())
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.query(listWorkersQueryOpts()),
+      context.queryClient.query(getCapacityQueryOpts())
+    ])
   },
   component: NowPage
 })

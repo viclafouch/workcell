@@ -41,6 +41,7 @@ type WorkersOptions = {
   permissionMode: PermissionMode
   logger: WorkerLogger
   readMessage: MessageReader
+  capacity: number
   onWorkerStart?: OnWorkerStart
 }
 
@@ -94,6 +95,21 @@ export type WorkerApproval = {
   answer: 'once' | 'reject'
 }
 
+export class NoFreePlaceError extends Error {
+  readonly capacity: number
+
+  readonly holders: readonly string[]
+
+  constructor(capacity: number, holders: readonly string[]) {
+    super(
+      `The project runs ${capacity} ${capacity === 1 ? 'worker' : 'workers'} at most, and ${holders.join(', ')} ${holders.length === 1 ? 'holds' : 'hold'} every place: a new worker starts once one of their tasks ends.`
+    )
+    this.name = 'NoFreePlaceError'
+    this.capacity = capacity
+    this.holders = holders
+  }
+}
+
 function refuseSecondWorker(
   workers: ListedWorker[],
   { subject, branch }: WorkerTask
@@ -109,6 +125,28 @@ function refuseSecondWorker(
     throw new Error(
       `${busy.name} already works on ${busy.subject ?? busy.branch}: steer it in its thread ${busy.threadId}, or wait until it finishes.`
     )
+  }
+}
+
+function refuseWithoutPlace(workers: ListedWorker[], capacity: number) {
+  if (workers.length >= capacity) {
+    throw new NoFreePlaceError(
+      capacity,
+      workers.map(({ name }) => {
+        return name
+      })
+    )
+  }
+}
+
+function freePlacesOf(
+  readWorkers: () => Promise<ListedWorker[]>,
+  capacity: number
+) {
+  return async () => {
+    const workers = await readWorkers()
+
+    return Math.max(capacity - workers.length, 0)
   }
 }
 
@@ -355,6 +393,7 @@ export function createWorkers({
   permissionMode,
   logger,
   readMessage,
+  capacity,
   onWorkerStart = noStartMetadata
 }: WorkersOptions) {
   const locks = new InMemoryLockStore()
@@ -412,6 +451,7 @@ export function createWorkers({
 
     const workers = await readWorkers()
     refuseSecondWorker(workers, workerTask)
+    refuseWithoutPlace(workers, capacity)
     const liveNames = new Set(
       workers.map(({ name }) => {
         return name
@@ -617,7 +657,10 @@ export function createWorkers({
   }
 
   return {
+    capacity,
     startWorker,
+    freePlaces: freePlacesOf(readWorkers, capacity),
+    onPlaceFree: lifecycle.onPlaceFree,
     readWorkers,
     readFinishedWorkers,
     listWorkers,

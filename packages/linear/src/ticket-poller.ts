@@ -1,6 +1,7 @@
 import { setTimeout } from 'node:timers/promises'
 import type { HarnessUser } from '@tanstack/ai-harness'
 import {
+  NoFreePlaceError,
   startLoop,
   type QueuedTicket,
   type TicketQueue,
@@ -19,11 +20,19 @@ const TRACKER_NAME = 'Linear'
 
 type LogLine = (details: Record<string, unknown>, message: string) => void
 
-type TicketPollerParams = {
-  linear: LinearApi
+type IntakeWorkers = {
   startWorker: (
     workerTask: WorkerTask
   ) => Promise<{ name: string; isNew: boolean }>
+  freePlaces: () => Promise<number>
+  onPlaceFree: (listener: () => void) => () => void
+}
+
+type PollEnd = 'open' | 'full'
+
+type TicketPollerParams = {
+  linear: LinearApi
+  workers: IntakeWorkers
   starter: HarnessUser
   readyLabel: string
   repositoryLabels: Readonly<Record<string, string>>
@@ -54,7 +63,7 @@ function queuedTicketOf(
 
 export function createTicketPoller({
   linear,
-  startWorker,
+  workers,
   starter,
   readyLabel,
   repositoryLabels,
@@ -105,7 +114,7 @@ export function createTicketPoller({
     }
 
     try {
-      const { name, isNew } = await startWorker({
+      const { name, isNew } = await workers.startWorker({
         starter,
         repository,
         task: ticketTask({ ...ticket, repository }),
@@ -116,6 +125,8 @@ export function createTicketPoller({
         { ticket: identifier, worker: name, isNew },
         'ticket worker ready'
       )
+
+      return isNew
     } catch (error) {
       if (!isStarted) {
         await linear.moveTicket(id, state.id)
@@ -136,7 +147,7 @@ export function createTicketPoller({
     })
   }
 
-  const pollOnce = async ({ withStarted = false } = {}) => {
+  const pollOnce = async ({ withStarted = false } = {}): Promise<PollEnd> => {
     const tickets = await linear.labelledTickets({
       readyLabel,
       stateTypes: withStarted
@@ -147,11 +158,29 @@ export function createTicketPoller({
       return blockerOf(ticket) === null
     })
 
+    if (startableTickets.length === 0) {
+      return 'open'
+    }
+
+    let freePlaces = await workers.freePlaces()
+
     for (const ticket of startableTickets) {
+      if (freePlaces === 0) {
+        return 'full'
+      }
+
       try {
         // oxlint-disable-next-line no-await-in-loop -- the tickets start one at a time, in the order of the queue
-        await startTicket(ticket)
+        const isNew = await startTicket(ticket)
+
+        if (isNew) {
+          freePlaces -= 1
+        }
       } catch (error) {
+        if (error instanceof NoFreePlaceError) {
+          return 'full'
+        }
+
         failedStarts.set(
           ticket.id,
           Error.isError(error) ? error.message : String(error)
@@ -162,24 +191,46 @@ export function createTicketPoller({
         )
       }
     }
+
+    return freePlaces === 0 ? 'full' : 'open'
   }
 
   const run = async (signal: AbortSignal) => {
-    let isFirstPoll = true
+    let shouldReadStarted = true
+    let placeFreed = Promise.withResolvers<null>()
+    const wake = () => {
+      placeFreed.resolve(null)
+    }
+    const stopListening = workers.onPlaceFree(wake)
+    signal.addEventListener('abort', wake, { once: true })
 
-    while (!signal.aborted) {
-      try {
-        // oxlint-disable-next-line no-await-in-loop -- the poll reads once per interval
-        await pollOnce({ withStarted: isFirstPoll })
-        isFirstPoll = false
-      } catch (error) {
-        logger.error({ error }, 'ticket poll failed')
+    try {
+      while (!signal.aborted) {
+        placeFreed = Promise.withResolvers<null>()
+        let end: PollEnd = 'open'
+
+        try {
+          // oxlint-disable-next-line no-await-in-loop -- the poll reads once per interval
+          end = await pollOnce({ withStarted: shouldReadStarted })
+          shouldReadStarted &&= end === 'full'
+        } catch (error) {
+          logger.error({ error }, 'ticket poll failed')
+        }
+
+        // oxlint-disable-next-line no-await-in-loop -- the poll waits for the next interval, or for a place that frees
+        await Promise.race(
+          end === 'full'
+            ? [placeFreed.promise]
+            : [
+                placeFreed.promise,
+                setTimeout(pollIntervalMs, null, { signal }).catch(() => {
+                  return null
+                })
+              ]
+        )
       }
-
-      // oxlint-disable-next-line no-await-in-loop -- the poll waits between two reads
-      await setTimeout(pollIntervalMs, null, { signal }).catch(() => {
-        return null
-      })
+    } finally {
+      stopListening()
     }
   }
 
