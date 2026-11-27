@@ -19,6 +19,18 @@ test.describe('the page of what runs now', () => {
     await expect(page.getByRole('cell', { name: 'Blocked' })).toBeVisible()
   })
 
+  test('the page says how many places of the project the workers hold', async ({
+    page
+  }) => {
+    await page.goto('/')
+
+    await expect(
+      page.getByText(
+        'All 5 places are taken: the next task starts once one ends.'
+      )
+    ).toBeVisible()
+  })
+
   test('the asleep workers fold away until a person opens them', async ({
     page
   }) => {

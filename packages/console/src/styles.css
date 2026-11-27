@@ -320,6 +320,26 @@
     --status: var(--status-idle);
   }
 
+  .place-pip {
+    flex-shrink: 0;
+    inline-size: --spacing(2.5);
+    block-size: --spacing(2.5);
+    border: 1px solid var(--status);
+    border-radius: calc(infinity * 1px);
+
+    &[data-taken] {
+      background-color: var(--status);
+    }
+
+    @media (forced-colors: active) {
+      border-color: CanvasText;
+
+      &[data-taken] {
+        background-color: CanvasText;
+      }
+    }
+  }
+
   .label-dot {
     flex-shrink: 0;
     inline-size: --spacing(2);

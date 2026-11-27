@@ -36,13 +36,25 @@ test.describe('the queue', () => {
     ])
   })
 
-  test('a ticket shows its place, its priority, its assignee and a link to the tracker', async ({
+  test('a person reads how many places the workers take while the tickets wait', async ({
+    page
+  }) => {
+    await page.goto('/queue')
+
+    await expect(
+      page.getByText(
+        'All 5 places are taken: the next task starts once one ends.'
+      )
+    ).toBeVisible()
+  })
+
+  test('a ticket shows its rank in line, its priority, its assignee and a link to the tracker', async ({
     page
   }) => {
     await page.goto('/queue')
     const ticket = ticketOf(page, 'ENG-139')
 
-    await expect(ticket).toContainText('Place 2')
+    await expect(ticket).toContainText('Number 2 in line')
     await expect(ticket).toContainText('High')
     await expect(ticket).toContainText('Grace Hopper')
     await expect(
@@ -50,7 +62,7 @@ test.describe('the queue', () => {
     ).toHaveAttribute('target', '_blank')
   })
 
-  test('a ticket that cannot start takes no place, and names its cause', async ({
+  test('a ticket that cannot start takes no rank in line, and names its cause', async ({
     page
   }) => {
     await page.goto('/queue')
@@ -60,7 +72,7 @@ test.describe('the queue', () => {
     await expect(ticket).toContainText(
       'It needs a repository label: repo:web, repo:api.'
     )
-    await expect(ticket).not.toContainText('Place')
+    await expect(ticket).not.toContainText('in line')
   })
 
   test('the Now page shows the next tickets, and leads to the whole queue', async ({

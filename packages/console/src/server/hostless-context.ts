@@ -19,6 +19,6 @@ export const HOSTLESS_CONTEXT: ConsoleContext = {
   brand: { name: DEFAULT_BRAND_NAME },
   logger: STDERR_LOGGER,
   harness: { worker: refuseRequest, bot: refuseRequest },
-  workers: { view: refuse, inspect: refuse, diff: refuse },
+  workers: { capacity: 0, view: refuse, inspect: refuse, diff: refuse },
   feedback: { recent: refuse }
 }

@@ -4,7 +4,7 @@ Open the console in your browser to see what each robot does right now, without 
 
 ## What the page shows
 
-1. **Who works now**: each robot on a task, what it works on, and how much of its budget it spent.
+1. **Who works now**: each robot on a task, what it works on, how much of its budget it spent, and how many robots can still start.
 2. **Who waits for you**: the robots that stopped to ask a person, named at the top of the page.
 3. **One robot at a time**: open a robot to follow its plan, each command it runs with its result, and each file it changes, as it happens.
 4. **What it finished lately**: each task with how it ended and what it cost.

@@ -24,6 +24,8 @@ const agoAsText = (age: Temporal.Duration) => {
   return Temporal.Now.instant().subtract(age).toString()
 }
 
+export const FIXTURE_CAPACITY = 5
+
 export const FIXTURE_WORKERS: WorkerView[] = [
   {
     threadId: LIVE_FIXTURE_THREAD,

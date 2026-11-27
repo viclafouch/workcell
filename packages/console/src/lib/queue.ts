@@ -15,7 +15,7 @@ export const waitSentence = (tracker: string, count: number) => {
 
 export const blockedSentence = (count: number) => {
   if (count === 0) {
-    return 'A worker takes them from the top.'
+    return 'A worker takes them from the top, each time a place frees.'
   }
 
   return count === 1

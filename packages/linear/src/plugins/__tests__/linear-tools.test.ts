@@ -399,6 +399,7 @@ describe('the Linear tools', () => {
       isStarter: isStarterIn([TEST_STARTER.id]),
       repositories: [HOST_FREE_REPOSITORY],
       workerNames: ['Alpha'],
+      capacity: 1,
       permissionMode: 'bypass',
       readMessage: createMessageReader({
         modalities: undefined,

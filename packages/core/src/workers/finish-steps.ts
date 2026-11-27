@@ -33,6 +33,7 @@ type FinishStepsParams = WorkerEnd & {
   destroySandbox: () => Promise<void>
   workerSandbox: Pick<WorkerSandbox, 'forget'>
   host: HarnessHost
+  freePlace: () => void
 }
 
 export function finishSteps({
@@ -46,7 +47,8 @@ export function finishSteps({
   log,
   destroySandbox,
   workerSandbox,
-  host
+  host,
+  freePlace
 }: FinishStepsParams): FinishStep[] {
   return [
     {
@@ -102,6 +104,7 @@ export function finishSteps({
       run: async () => {
         await host.sessions.archive({ threadId: worker.threadId })
         log.info({}, 'worker finished')
+        freePlace()
       }
     }
   ]

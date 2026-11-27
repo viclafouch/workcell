@@ -52,6 +52,7 @@ async function openServedConsole({
     workcell: {
       host,
       harness,
+      workers: { capacity: 2 },
       orchestrator: { harness },
       viewWorkers,
       inspectWorkers: viewWorkers,

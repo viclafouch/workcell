@@ -132,5 +132,7 @@ export type {
   WakeWorkerParams,
   WorkerApproval,
   WorkerFinish,
-  WorkerTask
+  WorkerTask,
+  Workers
 } from './workers/workers.ts'
+export { NoFreePlaceError } from './workers/workers.ts'

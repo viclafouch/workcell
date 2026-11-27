@@ -6,27 +6,27 @@ type QueueListProps = {
   label: string
 }
 
-const withPlaces = (tickets: readonly QueuedTicket[]) => {
-  let place = 0
+const withRanks = (tickets: readonly QueuedTicket[]) => {
+  let rank = 0
 
   return tickets.map((ticket) => {
     if (ticket.blocker !== undefined) {
-      return { ticket, place: null }
+      return { ticket, rank: null }
     }
 
-    place += 1
+    rank += 1
 
-    return { ticket, place }
+    return { ticket, rank }
   })
 }
 
 export const QueueList = ({ tickets, label }: QueueListProps) => {
   return (
     <ol aria-label={label} className="flex flex-col gap-2">
-      {withPlaces(tickets).map(({ ticket, place }) => {
+      {withRanks(tickets).map(({ ticket, rank }) => {
         return (
           <li key={ticket.key}>
-            <QueuedTicketItem ticket={ticket} place={place} />
+            <QueuedTicketItem ticket={ticket} rank={rank} />
           </li>
         )
       })}
