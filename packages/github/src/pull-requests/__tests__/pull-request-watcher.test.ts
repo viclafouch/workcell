@@ -43,7 +43,7 @@ describe('the pull request of a worker', () => {
       {
         repository: REPOSITORY,
         branch: WORKER.branch,
-        pullRequest: openPullRequest()
+        pullRequest: openPullRequest(checks('PENDING'))
       }
     ]
     const { watcher, updates } = openWatcher()
@@ -97,7 +97,7 @@ describe('the pull request of a worker', () => {
       {
         repository: REPOSITORY,
         branch: WORKER.branch,
-        pullRequest: openPullRequest()
+        pullRequest: openPullRequest(checks('PENDING'))
       }
     ]
     const { watcher, updates } = openWatcher({

@@ -8,7 +8,7 @@ Leave a comment on the review page that a robot opened: the robot reads it at th
 2. **Writes the change** on its own line of work.
 3. **Saves the change** under the name of the person who runs the agent, with a line that says a robot helped.
 4. **Opens a review page** (a pull request), and names itself in the summary of the page.
-5. **Stays on that page** until a person merges it.
+5. **Merges the page itself** once every check is green, then closes its box. Your team can turn this off: a person then merges.
 
 ## Ask the lead robot about GitHub
 
@@ -34,12 +34,19 @@ The agent looks at the review page of each robot at every check. Each event wake
 
 A comment on a spot of the change, from a person or a review bot, wakes the robot too. The robot reads the conversation of that spot: the file, the place in the file, who wrote it, and the answers below it. It answers in that conversation, under the name of the person who runs the agent, then marks the conversation resolved once its fix is on the page.
 
-Four events need no robot: the agent handles them itself, so they cost nothing.
+## The robot merges on its own
 
-- **All the checks of the page turn green**: the agent says so in the thread of the robot, with the link, once for each new version of the page. The page then waits for a person.
+The checks are the safety lock. Once every check of the page is green, every conversation on a spot of the change is resolved, and GitHub says the page can merge, the agent wakes the robot with the one merge it may run. The robot runs exactly that merge, and nothing else. When your project uses a merge queue, the page goes into the queue.
+
+- **A person must approve first**, such as an owner of the code: the agent names who in the thread of the robot, once for each new version of the page, and the robot merges once they approve.
+- **GitHub refuses the merge**: the robot stops, and the agent tells the person who handed the work over in the thread, with the answer of GitHub.
+
+Four more events need no robot: the agent handles them itself, so they cost nothing.
+
 - **The page enters the merge queue**: the agent says so in the thread of the robot, with the link.
-- **A person merges the page**: the agent posts a short report with the link of the page, and closes the box of the robot for good.
+- **The page merges**: the agent posts a short report with the link of the page, and closes the box of the robot for good.
 - **The checks go red more times than your team allows**: the agent says so in the thread of the robot, for each new red version of the page, and lets the robot rest. The robot works on it again only when a person tells it to in the thread.
+- **Your team turned the merge off, and all the checks turn green**: the agent says so in the thread of the robot, with the link, once for each new version of the page. The page then waits for a person.
 
 ## What the robot skips
 
@@ -49,13 +56,13 @@ Four events need no robot: the agent handles them itself, so they cost nothing.
 
 ## What the robot never does
 
-- Send its change to the main lines of the project. It works on its own line only.
+- Send its change to the main lines of the project another way than its review page, or before its checks are green.
 - Erase history on GitHub.
 - Delete a line of work on GitHub.
 - Answer a conversation of another review page.
 - Write on GitHub for a question you ask the lead robot.
 
-Your team can refuse more actions, such as a merge. A person then always merges.
+Your team can refuse more actions, such as a command the robot should never run.
 
 ## The robot reports what got in its way
 

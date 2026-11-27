@@ -33,6 +33,12 @@ const PROJECT_LINES: PullRequestLines = {
   },
   closed: ({ pullRequestUrl }) => {
     return `dropped ${pullRequestUrl}`
+  },
+  mergeRefused: ({ cause }) => {
+    return `refused: ${cause}`
+  },
+  approvalWait: ({ reviewers }) => {
+    return `waiting on ${reviewers.join(', ')}`
   }
 }
 
@@ -56,6 +62,12 @@ function pullRequestWith(
     comments: { nodes: [] },
     reviews: { nodes: [] },
     timelineItems: { nodes: [] },
+    isDraft: false,
+    isInMergeQueue: false,
+    isMergeQueueEnabled: false,
+    reviewDecision: null,
+    reviewRequests: { nodes: [] },
+    baseRepository: { viewerDefaultMergeMethod: 'SQUASH' },
     ...changes
   }
 }
@@ -98,13 +110,18 @@ const WAITING_ON_AN_OWNER = pullRequestWith({
   }
 })
 
-function actionsOf(pullRequest: WatchedPullRequest, lines?: PullRequestLines) {
+function actionsOf(
+  pullRequest: WatchedPullRequest,
+  lines?: PullRequestLines,
+  merge?: boolean
+) {
   return pullRequestEvents({
     repository: REPOSITORY,
     pullRequest,
     viewerLogin: 'host-developer',
     subject: 'TASK-7',
-    lines
+    lines,
+    merge
   }).map(({ action }) => {
     return action
   })
@@ -255,9 +272,9 @@ describe('the events of a pull request', () => {
     ])
   })
 
-  it('writes the lines and the merged report of the project', () => {
+  it('writes the lines and the merged report of the project, the green line with merging turned off', () => {
     expect([
-      ...actionsOf(QUEUED, PROJECT_LINES),
+      ...actionsOf(QUEUED, PROJECT_LINES, false),
       ...actionsOf(MERGED, PROJECT_LINES)
     ]).toStrictEqual([
       { type: 'post', line: `green ${PULL_REQUEST_URL}` },

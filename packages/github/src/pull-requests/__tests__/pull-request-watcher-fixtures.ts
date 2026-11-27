@@ -116,6 +116,12 @@ export function openPullRequest(
     comments: { nodes: [] },
     reviews: { nodes: [] },
     timelineItems: { nodes: [] },
+    isDraft: false,
+    isInMergeQueue: false,
+    isMergeQueueEnabled: false,
+    reviewDecision: null,
+    reviewRequests: { nodes: [] },
+    baseRepository: { viewerDefaultMergeMethod: 'SQUASH' },
     ...changes
   }
 }
@@ -305,6 +311,7 @@ type OpenWatcherParams = {
   finishWorker?: (finish: WorkerFinish) => Promise<boolean>
   refusedUpdates?: number
   maxRedRounds?: number
+  merge?: boolean
 }
 
 export function openWatcher({
@@ -313,7 +320,8 @@ export function openWatcher({
     return true
   },
   refusedUpdates = 0,
-  maxRedRounds
+  maxRedRounds,
+  merge
 }: OpenWatcherParams = {}) {
   let updatesToRefuse = refusedUpdates
   const workers = [...liveWorkers]
@@ -365,6 +373,7 @@ export function openWatcher({
     reviewGate: REVIEW_GATE,
     personChecks: ['Validate risk'],
     maxRedRounds,
+    merge,
     pollIntervalMs: 60_000,
     logger: { info: record, error: record }
   })
