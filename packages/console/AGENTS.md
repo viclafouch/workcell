@@ -14,6 +14,16 @@ Before editing files for a substantial task:
 
 The read-only page of the host, a TanStack Start app in SPA mode. `../../AGENTS.md` holds the rules of Workcell, `README.md` how a distribution mounts and brands the page. This file holds what a change of the page follows.
 
+## Three skills open every change
+
+Any work on the page, a fix or a whole panel, first loads three skills and follows them through to the end of the task:
+
+1. `frontend-design`: the look of each screen and each panel.
+2. `mobile-native`: how the page feels on a phone.
+3. `modern-web-guidance`: the current platform feature for each piece of HTML, CSS and browser JavaScript, before you write it.
+
+Pass the task as the arguments of each skill: with none, a skill answers with a greeting.
+
 ## The page reads only
 
 - Steering stays in the chat and over MCP, where the code checks the starter. A route answers `GET` alone, and the harness route refuses `describe`, the read that opens a session and mounts its plugins.
@@ -41,7 +51,7 @@ A domain names the same slice in each layer: `src/components/<domain>`, `src/que
 
 ## Motion and browsers
 
-CSS carries every motion it can, and motion answers a change the person can see. The browser floor is the build target in `vite.config.ts`, the Baseline of 2024: a feature newer than the floor ships with a fallback that renders the same. Reduced motion, forced colours and more contrast each get their rendering. Read the guide of Modern Web Guidance for each platform feature before you write it.
+CSS carries every motion it can, and motion answers a change the person can see. The browser floor is the build target in `vite.config.ts`, the Baseline of 2024: a feature newer than the floor ships with a fallback that renders the same. Reduced motion, forced colours and more contrast each get their rendering.
 
 ## Done means seen
 
